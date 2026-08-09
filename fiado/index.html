@@ -1454,6 +1454,15 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    /* ─── Legibilidade (público idoso) ─── */
+    html { font-size: 17px; }
+    .btn { font-size: 1rem; }
+    .filtros button { font-size: 0.95rem; padding: 0.8rem 0.4rem; min-height: 3rem; }
+    .hint, .lista-dica { font-size: 0.9rem; }
+    .home-bar .btn { font-size: 0.95rem; padding: 0.6rem 0.8rem; }
+    .cliente-atalhos .btn { font-size: 0.9rem; min-height: 2.75rem; }
+    .field input, .field select, .field textarea { font-size: 1rem; }
   </style>
 </head>
 <body>
@@ -1671,6 +1680,7 @@
       <nav class="home-bar" aria-label="Ações da conta">
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
+          <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Colocar na tela inicial">Ícone</button>
           <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
         </div>
@@ -1702,6 +1712,38 @@
           <span class="hint-field">Deixe vazio se não quiser limitar. Ex.: 100</span>
         </label>
         <button type="button" class="btn primary full" id="btnSalvarCliente">Salvar</button>
+      </div>
+    </section>
+
+    <!-- MINHA CONTA (mercado) -->
+    <section id="viewConta" class="view">
+      <div class="topbar">
+        <button type="button" class="btn ghost" id="btnVoltarConta">←</button>
+        <h1>Minha conta</h1>
+      </div>
+      <div class="sheet">
+        <h2>Nome da loja</h2>
+        <label class="field">
+          Nome que aparece na tela
+          <input id="contaNome" type="text" placeholder="Ex.: Mercado do Luiz" autocomplete="organization" />
+        </label>
+        <button type="button" class="btn primary full" id="btnSalvarNomeLoja">Salvar nome</button>
+      </div>
+      <div class="sheet">
+        <h2>Trocar senha</h2>
+        <label class="field">
+          Senha atual
+          <input id="contaSenhaAtual" type="password" autocomplete="current-password" />
+        </label>
+        <label class="field">
+          Nova senha
+          <input id="contaSenhaNova" type="password" autocomplete="new-password" />
+        </label>
+        <label class="field">
+          Confirmar nova senha
+          <input id="contaSenhaNova2" type="password" autocomplete="new-password" />
+        </label>
+        <button type="button" class="btn primary full" id="btnTrocarSenhaMercado">Trocar senha</button>
       </div>
     </section>
 
@@ -2567,6 +2609,7 @@
       atualizarNomeMercadoUI();
       atualizarPillTrial();
       atualizarBotaoNuvemBackup();
+      atualizarBotaoConta();
       if (!isAdmin() && !onboardingFeito() && state.clientes.length === 0) {
         abrirOnboarding();
         return;
@@ -2744,6 +2787,65 @@
       return meta.actingMercadoId || null;
     }
 
+    function atualizarBotaoConta() {
+      const btn = $("#btnMinhaConta");
+      if (btn) btn.hidden = !(cloudOn() && !isAdmin() && !!FiadoCloud.getToken());
+    }
+
+    function abrirConta() {
+      if (!cloudOn() || isAdmin()) return;
+      const meta = FiadoCloud.getMeta() || {};
+      $("#contaNome").value = meta.nome || "";
+      $("#contaSenhaAtual").value = "";
+      $("#contaSenhaNova").value = "";
+      $("#contaSenhaNova2").value = "";
+      mostrar("#viewConta");
+    }
+
+    async function salvarNomeLoja() {
+      const nome = ($("#contaNome").value || "").trim();
+      if (nome.length < 2) {
+        toast("Nome muito curto", true);
+        return;
+      }
+      try {
+        const res = await FiadoCloud.atualizarPerfil({ nome });
+        if (!res || !res.ok) throw new Error((res && res.erro) || "Não salvou");
+        atualizarNomeMercadoUI();
+        toast("Nome da loja atualizado");
+      } catch (err) {
+        toast(err.message || "Erro ao salvar", true);
+      }
+    }
+
+    async function trocarSenhaMercado() {
+      const atual = $("#contaSenhaAtual").value || "";
+      const nova = $("#contaSenhaNova").value || "";
+      const nova2 = $("#contaSenhaNova2").value || "";
+      if (!atual) {
+        toast("Digite a senha atual", true);
+        return;
+      }
+      if (nova.length < 4) {
+        toast("Nova senha muito curta (mín. 4)", true);
+        return;
+      }
+      if (nova !== nova2) {
+        toast("As senhas novas não conferem", true);
+        return;
+      }
+      try {
+        const res = await FiadoCloud.atualizarPerfil({ senhaAtual: atual, senhaNova: nova });
+        if (!res || !res.ok) throw new Error((res && res.erro) || "Não trocou");
+        $("#contaSenhaAtual").value = "";
+        $("#contaSenhaNova").value = "";
+        $("#contaSenhaNova2").value = "";
+        toast("Senha trocada");
+      } catch (err) {
+        toast(err.message || "Erro ao trocar", true);
+      }
+    }
+
     function atualizarBotaoNuvemBackup() {
       const btn = $("#btnEnviarNuvem");
       const hint = $("#hintNuvemBackup");
@@ -2848,14 +2950,46 @@
                   <div><strong>${escapeHtml(m.nome || m.usuario)}</strong> · @${escapeHtml(m.usuario)}</div>
                   <div class="quando">${st}${aberto ? " · aberto agora" : ""}</div>
                 </div>
-                <button type="button" class="btn ${aberto ? "primary" : ""}" data-abrir-mercado="${m.id}">
-                  ${aberto ? "Já aberto" : "Abrir caderno"}
-                </button>
+                <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+                  <button type="button" class="btn ghost" data-editar-mercado="${m.id}">Editar</button>
+                  <button type="button" class="btn ${aberto ? "primary" : ""}" data-abrir-mercado="${m.id}">
+                    ${aberto ? "Já aberto" : "Abrir caderno"}
+                  </button>
+                </div>
+              </div>
+              <div class="log-item" data-edit-box="${m.id}" hidden>
+                <label class="field">
+                  Nome na tela
+                  <input type="text" data-edit-nome="${m.id}" value="${escapeHtml(m.nome || "")}" placeholder="Ex.: Mercado do Luiz" />
+                </label>
+                <label class="field">
+                  Nova senha do balcão
+                  <input type="text" data-edit-senha="${m.id}" placeholder="Deixe vazio pra manter a atual" autocomplete="off" />
+                </label>
+                <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+                  <button type="button" class="btn primary" data-salvar-mercado="${m.id}">Salvar</button>
+                  <button type="button" class="btn ghost" data-cancelar-edit="${m.id}">Cancelar</button>
+                </div>
               </div>`;
           })
           .join("");
         box.querySelectorAll("[data-abrir-mercado]").forEach((btn) => {
           btn.addEventListener("click", () => adminAbrirMercado(btn.dataset.abrirMercado));
+        });
+        box.querySelectorAll("[data-editar-mercado]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const panel = box.querySelector(`[data-edit-box="${btn.dataset.editarMercado}"]`);
+            if (panel) panel.hidden = !panel.hidden;
+          });
+        });
+        box.querySelectorAll("[data-cancelar-edit]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const panel = box.querySelector(`[data-edit-box="${btn.dataset.cancelarEdit}"]`);
+            if (panel) panel.hidden = true;
+          });
+        });
+        box.querySelectorAll("[data-salvar-mercado]").forEach((btn) => {
+          btn.addEventListener("click", () => adminSalvarMercado(btn.dataset.salvarMercado));
         });
       } catch (err) {
         box.innerHTML = `<div class="vazio" style="padding:0.8rem">${escapeHtml(err.message || "Erro ao listar")}</div>`;
@@ -2896,6 +3030,34 @@
         await renderAdmin();
       } catch (err) {
         toast(err.message || "Erro ao abrir", true);
+      }
+    }
+
+    async function adminSalvarMercado(id) {
+      if (!cloudOn() || !id) return;
+      const nome = (document.querySelector(`[data-edit-nome="${id}"]`)?.value || "").trim();
+      const senha = (document.querySelector(`[data-edit-senha="${id}"]`)?.value || "").trim();
+      if (!nome && !senha) {
+        toast("Informe um nome ou uma nova senha", true);
+        return;
+      }
+      if (senha && senha.length < 4) {
+        toast("Senha muito curta (mín. 4)", true);
+        return;
+      }
+      try {
+        const res = await FiadoCloud.atualizarMercado({ id, nome: nome || null, senha: senha || null });
+        if (!res || !res.ok) throw new Error((res && res.erro) || "Não salvou");
+        registrarAcao("Editou mercado (nome/senha)");
+        toast("Mercado atualizado");
+        const meta = FiadoCloud.getMeta();
+        if (meta.actingMercadoId === id && nome) {
+          FiadoCloud.patchMeta({ nome });
+          atualizarNomeMercadoUI();
+        }
+        await renderAdminMercados();
+      } catch (err) {
+        toast(err.message || "Erro ao salvar", true);
       }
     }
 
@@ -4140,6 +4302,13 @@
       atualizarHintLogin();
       mostrar("#viewLogin");
     });
+    $("#btnMinhaConta")?.addEventListener("click", abrirConta);
+    $("#btnVoltarConta")?.addEventListener("click", () => {
+      mostrar("#viewHome");
+      renderHome();
+    });
+    $("#btnSalvarNomeLoja")?.addEventListener("click", salvarNomeLoja);
+    $("#btnTrocarSenhaMercado")?.addEventListener("click", trocarSenhaMercado);
     $("#btnSairBloqueado").addEventListener("click", () => {
       limparSessao();
       atualizarHintLogin();

@@ -111,6 +111,7 @@ create or replace function public._mercado_ativo(p_sess sessoes)
 returns uuid
 language plpgsql
 stable
+set search_path = public, extensions
 as $$
 begin
   if p_sess.role = 'admin' and p_sess.acting_mercado_id is not null then
@@ -549,6 +550,50 @@ begin
 end;
 $$;
 
+-- ─── Perfil do próprio mercado (nome da loja / senha) ──
+create or replace function public.fiado_mercado_atualizar_perfil(
+  p_token text,
+  p_nome text default null,
+  p_senha_atual text default null,
+  p_senha_nova text default null
+)
+returns json
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  s sessoes;
+  m mercados;
+begin
+  s := _sessao_ok(p_token);
+  if s.role <> 'user' then
+    raise exception 'Só o próprio mercado';
+  end if;
+  select * into m from mercados where id = s.mercado_id;
+  if not found then
+    raise exception 'Mercado não encontrado';
+  end if;
+
+  if p_senha_nova is not null and trim(p_senha_nova) <> '' then
+    if length(trim(p_senha_nova)) < 4 then
+      return json_build_object('ok', false, 'erro', 'Nova senha muito curta (mín. 4).');
+    end if;
+    if m.senha_hash <> crypt(coalesce(p_senha_atual, ''), m.senha_hash) then
+      return json_build_object('ok', false, 'erro', 'Senha atual incorreta.');
+    end if;
+    update mercados set senha_hash = crypt(trim(p_senha_nova), gen_salt('bf')) where id = m.id;
+  end if;
+
+  if p_nome is not null and trim(p_nome) <> '' then
+    update mercados set nome = trim(p_nome) where id = m.id;
+    m.nome := trim(p_nome);
+  end if;
+
+  return json_build_object('ok', true, 'nome', m.nome);
+end;
+$$;
+
 -- Libera chamadas do anon key (app web)
 grant usage on schema public to anon, authenticated;
 grant execute on function public.fiado_login(text, text) to anon, authenticated;
@@ -562,6 +607,7 @@ grant execute on function public.fiado_admin_atualizar_mercado(text, uuid, text,
 grant execute on function public.fiado_admin_trocar_senha(text, text, text) to anon, authenticated;
 grant execute on function public.fiado_liberar_com_codigo(text, text) to anon, authenticated;
 grant execute on function public.fiado_mercado_info(text) to anon, authenticated;
+grant execute on function public.fiado_mercado_atualizar_perfil(text, text, text, text) to anon, authenticated;
 
 -- Bloqueia acesso direto às tabelas pelo anon
 alter table public.mercados enable row level security;
@@ -569,5 +615,9 @@ alter table public.sessoes enable row level security;
 alter table public.clientes enable row level security;
 alter table public.movimentos enable row level security;
 alter table public.admin_conta enable row level security;
+
+-- Helpers internos: só as funções acima chamam; fecha acesso externo
+revoke execute on function public._nova_sessao(text, uuid, uuid) from public, anon, authenticated;
+revoke execute on function public._sessao_ok(text) from public, anon, authenticated;
 
 -- Sem policies = ninguém acessa direto; só via SECURITY DEFINER RPCs

@@ -229,6 +229,17 @@
     });
   }
 
+  async function atualizarPerfil(opts) {
+    const data = await rpc("fiado_mercado_atualizar_perfil", {
+      p_token: getToken(),
+      p_nome: opts.nome ?? null,
+      p_senha_atual: opts.senhaAtual ?? null,
+      p_senha_nova: opts.senhaNova ?? null,
+    });
+    if (data && data.ok && data.nome) patchMeta({ nome: data.nome });
+    return data;
+  }
+
   async function mercadoInfo() {
     return rpc("fiado_mercado_info", { p_token: getToken() });
   }
@@ -264,6 +275,7 @@
     criarMercado,
     abrirMercado,
     atualizarMercado,
+    atualizarPerfil,
     trocarSenhaAdmin,
     liberarComCodigo,
     mercadoInfo,
