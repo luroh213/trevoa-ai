@@ -528,12 +528,36 @@
     const comprasCiclo = S.cartao.compras.reduce((a, c) => a + num(c.valor), 0);
     const faturaPaga = S.cartao.faturas[mk] ? num(S.cartao.faturas[mk].valor) : 0;
 
-    // Janela até o próximo salário: reserva só o que vence até lá
+    // Janela até o próximo salário: reserva só o que é da quinzena atual
     const prox = proxRenda();
     const diasAte = prox ? Math.max(1, Math.round((prox.d - hoje0) / 86400000)) : diasAteFimDoMes();
     let obrigAte = 0;
+    const rendaCaiuCalc = (() => {
+      let best = null;
+      for (const id in rec) {
+        const r = S.config.rendas.find((x) => x.id === id);
+        if (!r) continue;
+        const ts = num(rec[id].ts);
+        if (!best || ts > best.ts) best = { dia: r.dia, ts };
+      }
+      return best;
+    })();
+    const diasRenda = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
     S.contas.forEach((ct) => {
       if (pag[ct.id]) return;
+      if (rendaCaiuCalc) {
+        // Com salário marcado: só reserva contas daquela quinzena
+        const proxDia = diasRenda.length ? diasRenda[(diasRenda.indexOf(rendaCaiuCalc.dia) + 1) % diasRenda.length] : 32;
+        const viraMes = !diasRenda.length || proxDia <= rendaCaiuCalc.dia;
+        const naQuinzena = viraMes ? ct.dia >= rendaCaiuCalc.dia : (ct.dia >= rendaCaiuCalc.dia && ct.dia < proxDia);
+        if (naQuinzena) obrigAte += num(ct.valor);
+        return;
+      }
+      // Sem salário marcado ainda: não reserva contas de ANTES do app começar
+      if (S.inicio) {
+        const start = new Date(S.inicio);
+        if (mesKey(S.inicio) === mk && ct.dia < start.getDate()) return;
+      }
       const venc = new Date(hoje0.getFullYear(), hoje0.getMonth(), ct.dia);
       if (venc <= hoje0 || (prox && venc <= prox.d)) obrigAte += num(ct.valor);
     });
@@ -587,6 +611,33 @@
     return S.contas.filter((c) => !pag[c.id]).slice().sort((a, b) => a.dia - b.dia || a.nome.localeCompare(b.nome));
   }
 
+  // Última renda marcada como "Caiu" neste mês
+  function rendaRecenteCaiu() {
+    const mk = mesKey();
+    const rec = S.recebidos[mk] || {};
+    let best = null;
+    S.config.rendas.forEach((r) => {
+      if (!rec[r.id]) return;
+      const ts = num(rec[r.id].ts);
+      if (!best || ts > best.ts) best = { id: r.id, nome: r.nome, dia: r.dia, valor: num(r.valor) * (num(r.pessoas) || 1), ts };
+    });
+    return best;
+  }
+
+  // Contas da quinzena DESTA renda: do dia do salário até o dia do próximo (exclusive)
+  // Ex.: salário dia 15 → só contas dia 15–31. Salário dia 7 → só contas dia 7–14.
+  function contasDaQuinzena(renda) {
+    if (!renda) return [];
+    const dias = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
+    const idx = dias.indexOf(renda.dia);
+    const proxDia = dias.length ? dias[(idx + 1) % dias.length] : 32;
+    const viraMes = !dias.length || proxDia <= renda.dia;
+    return contasPendentes().filter((c) => {
+      if (viraMes) return c.dia >= renda.dia;
+      return c.dia >= renda.dia && c.dia < proxDia;
+    });
+  }
+
   function renderBaloes(lista) {
     if (!lista.length) return "";
     let html = `<div class="sect">Casa falando <span class="mini">dicas pra vocês</span></div><div class="chat">`;
@@ -610,31 +661,49 @@
     const out = [];
     if (!S.caixa) return out;
     garantirInicio();
-    const mk = c.mk;
-    const rec = S.recebidos[mk] || {};
     const tem = S.despensa.filter((d) => d.status === "tem");
     const faltando = S.despensa.filter((d) => d.status !== "tem");
     const limite = num(S.config.limiteCartao);
     const prox = c.prox;
     const hojeDia = new Date().getDate();
     const pend = contasPendentes();
-    const caiu = Object.keys(rec).length > 0;
+    const rendaCaiu = rendaRecenteCaiu();
+    const daQuinzena = contasDaQuinzena(rendaCaiu);
+    const outrasPend = rendaCaiu ? pend.filter((c) => !daQuinzena.some((x) => x.id === c.id)) : [];
 
-    // 1) Salário caiu → prioridade de contas (sempre no topo)
-    if (caiu && pend.length) {
-      const total = pend.reduce((a, x) => a + num(x.valor), 0);
-      const sobra = c.caixa - total;
-      const itens = pend.map((x, i) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} <span style="color:var(--ink-soft)">(dia ${x.dia})</span></li>`).join("");
-      out.push({
-        t: sobra >= 0 ? "ok" : "warn",
-        tit: "Salário caiu — vamos organizar!",
-        txt: `Paga nesta ordem (prioridade):<ol>${itens}</ol>Total das contas: <b>${fmt(total)}</b>. ${sobra >= 0 ? `Depois disso ainda sobra <b>${fmt(sobra)}</b> pra viver até o próximo.` : `Falta <b>${fmt(Math.abs(sobra))}</b> — segura gasto e espera o próximo salário.`}`,
-      });
-    } else if (!caiu && pend.length && prox) {
+    // 1) Salário caiu → só contas DESTA quinzena (+ fatura se houver)
+    if (rendaCaiu) {
+      const totalQ = daQuinzena.reduce((a, x) => a + num(x.valor), 0);
+      const fatura = c.comprasCiclo;
+      const totalPagar = totalQ + fatura;
+      const sobra = c.caixa - totalPagar;
+      let itens = daQuinzena.map((x) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} <span style="color:var(--ink-soft)">(dia ${x.dia})</span></li>`).join("");
+      if (fatura > 0) itens += `<li><b>Fatura do cartão</b> ${fmt(fatura)}</li>`;
+      if (!itens) {
+        out.push({
+          t: "ok",
+          tit: `${esc(rendaCaiu.nome)} caiu!`,
+          txt: `Nenhuma conta da quinzena do dia ${rendaCaiu.dia} em aberto. Pode respirar — sobra <b>${fmt(c.caixa)}</b> até o próximo.`,
+        });
+      } else {
+        out.push({
+          t: sobra >= 0 ? "ok" : "warn",
+          tit: `${esc(rendaCaiu.nome)} caiu — quinzena do dia ${rendaCaiu.dia}`,
+          txt: `Paga nesta ordem (só o que é desta quinzena):<ol>${itens}</ol>Total desta rodada: <b>${fmt(totalPagar)}</b>. ${sobra >= 0 ? `Depois sobra <b>${fmt(sobra)}</b> pra viver.` : `Falta <b>${fmt(Math.abs(sobra))}</b> — segura gasto.`}`,
+        });
+      }
+      if (outrasPend.length) {
+        out.push({
+          t: "warn",
+          tit: "Fora desta quinzena",
+          txt: `Ainda tem em aberto de outra data (não é prioridade de agora): ${outrasPend.map((x) => `<b>${esc(x.nome)}</b> ${fmt(x.valor)} dia ${x.dia}`).join(" · ")}. Resolve quando sobrar.`,
+        });
+      }
+    } else if (pend.length && prox) {
       out.push({
         t: "warn",
         tit: "Contas na fila",
-        txt: `Tem <b>${pend.length}</b> conta${pend.length > 1 ? "s" : ""} pra pagar (${fmt(pend.reduce((a, x) => a + num(x.valor), 0))}). Quando o salário do dia ${prox.d.getDate()} cair, eu te mostro a ordem certinha.`,
+        txt: `Tem <b>${pend.length}</b> conta${pend.length > 1 ? "s" : ""} pra pagar (${fmt(pend.reduce((a, x) => a + num(x.valor), 0))}). Quando o salário do dia ${prox.d.getDate()} cair, mostro só a prioridade daquela quinzena.`,
       });
     }
 
