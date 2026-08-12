@@ -1,4 +1,4 @@
-const CACHE = "nossacasa-v13";
+const CACHE = "nossacasa-v14";
 const ASSETS = [
   "./",
   "./index.html",

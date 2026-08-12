@@ -183,6 +183,7 @@
 
     /* balãozinho amigável (assistente da casa) */
     .chat { margin-top: 0.85rem; }
+    .chatbox { max-height: 22rem; overflow-y: auto; padding-right: 0.15rem; }
     .balao { display: flex; gap: 0.65rem; margin-top: 0.7rem; animation: rise 0.35s ease-out both; }
     .balao .ava {
       width: 2.5rem; height: 2.5rem; border-radius: 50%; flex-shrink: 0;
@@ -205,6 +206,10 @@
     .balao.bad .msg { background: #fff5f5; border-color: #e8b0b0; }
     .balao.bad .who { color: var(--bad); }
     .balao.ok .msg { background: #f3faf5; border-color: #b5d9c0; }
+    .balao.eu { flex-direction: row-reverse; }
+    .balao.eu .ava { background: linear-gradient(160deg, #5a7fb0 0%, #3a5a8c 100%); box-shadow: 0 6px 12px rgba(58, 90, 140, 0.25); }
+    .balao.eu .msg { background: #eef4fc; border-color: #b7c9e4; border-radius: 1.15rem 0.25rem 1.15rem 1.15rem; }
+    .balao.eu .who { color: #3a5a8c; }
 
     /* barra do cartão */
     .bar { height: 1.05rem; border-radius: 999px; background: #e7ede8; overflow: hidden; display: flex; margin: 0.55rem 0 0.3rem; }
@@ -377,7 +382,7 @@
         faturaEstimada: 0, // se ainda não lançou compras, chute opcional
         lazerMes: 200, // orçamento de lazer/iFood sem culpa
         metaGuardar: 0,
-        quemEu: "Die",
+        quemEu: "Luiz",
         quemEla: "Esposa",
         lembretesOn: false,
         aiOn: true,
@@ -387,14 +392,15 @@
         { id: uid(), nome: "Energia", valor: 230, dia: 7 },
         { id: uid(), nome: "Internet", valor: 80, dia: 7 },
       ],
-      pagamentos: {}, // "AAAA-MM": { contaId: {valor, ts} }
-      recebidos: {},  // "AAAA-MM": { rendaId: {valor, ts} }
-      gastos: [],     // dinheiro (pix/débito): {id, desc, cat, valor, ts}
-      cartao: { compras: [], faturas: {} }, // faturas: "AAAA-MM": {valor, ts}
-      despensa: [],   // {id, nome, cat, status: tem|pouco|acabou}
-      lista: [],      // {id, nome, cat}
-      gatos: [],      // {id, nome, sexo, nasc, peso, racao, obs, vacinas:[{id,nome,data,proxima}]}
-      checklist: {},  // "AAAA-MM": { faturaGuardada: true }
+      pagamentos: {},
+      recebidos: {},
+      gastos: [],
+      cartao: { compras: [], faturas: {} },
+      despensa: [],
+      lista: [],
+      gatos: [],
+      checklist: {},
+      chat: [], // [{role:'eu'|'casa', tit?, txt, t?, ts}]
     };
   }
 
@@ -425,7 +431,7 @@
     if (out.caixa && !out.inicio) out.inicio = out.caixa.em || Date.now();
     if (!(num(out.config.lazerMes) > 0)) out.config.lazerMes = 200;
     if (out.config.diaVencFatura == null) out.config.diaVencFatura = 19;
-    if (!out.config.quemEu) out.config.quemEu = "Die";
+    if (!out.config.quemEu || out.config.quemEu === "Die") out.config.quemEu = "Luiz";
     if (!out.config.quemEla) out.config.quemEla = "Esposa";
     if (out.config.lembretesOn == null) out.config.lembretesOn = false;
     if (out.config.aiOn == null) out.config.aiOn = !!(window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey);
@@ -433,6 +439,7 @@
     // Key em config.secrets.js (Drop) → liga IA sem colar nada
     if (window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey) out.config.aiOn = true;
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
+    out.chat = Array.isArray(doc.chat) ? doc.chat : [];
     return out;
   }
 
@@ -869,7 +876,7 @@
   // Resposta do chat "posso gastar..." + discernimento (ex.: entrou 400)
   function nomesQuem() {
     return {
-      eu: (S.config.quemEu || "Die").trim() || "Die",
+      eu: (S.config.quemEu || "Luiz").trim() || "Luiz",
       ela: (S.config.quemEla || "Esposa").trim() || "Esposa",
     };
   }
@@ -958,18 +965,24 @@
       ? "https://api.openai.com/v1/chat/completions"
       : "https://api.groq.com/openai/v1/chat/completions";
     const model = provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant";
+    const nq = nomesQuem();
+    const hist = (S.chat || []).slice(-12).map((m) => ({
+      role: m.role === "eu" ? "user" : "assistant",
+      content: m.role === "eu" ? String(m.txt || "") : `${m.tit ? m.tit + ". " : ""}${String(m.txt || "").replace(/<[^>]+>/g, " ")}`,
+    }));
+    const messages = [
+      {
+        role: "system",
+        content: `Você é a 'Nossa Casa', assistente financeira do casal. Fale com ${nq.eu} e ${nq.ela}. Responda em português do Brasil, curto, claro, sem jargão, didático pra leigo. Use só os dados do contexto. Se faltar dado, diga. Nunca invente saldo. Não cumprimente de novo se a conversa já começou — vá direto ao ponto.`,
+      },
+      { role: "user", content: `Contexto financeiro atual:\n${contextoCasaTexto(c)}` },
+      ...hist,
+      { role: "user", content: pergunta },
+    ];
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
-      body: JSON.stringify({
-        model,
-        temperature: 0.3,
-        max_tokens: 400,
-        messages: [
-          { role: "system", content: "Você é a 'Nossa Casa', assistente financeira do casal. Responda em português do Brasil, curto, claro, sem jargão. Use só os dados do contexto. Se faltar dado, diga. Nunca invente saldo." },
-          { role: "user", content: `Contexto:\n${contextoCasaTexto(c)}\n\nPergunta: ${pergunta}` },
-        ],
-      }),
+      body: JSON.stringify({ model, temperature: 0.3, max_tokens: 450, messages }),
     });
     if (!res.ok) throw new Error("IA HTTP " + res.status);
     const data = await res.json();
@@ -1089,6 +1102,52 @@
     return html;
   }
 
+  function renderChatConversa() {
+    const nq = nomesQuem();
+    const msgs = S.chat || [];
+    let html = `
+      <div class="sect">Chat com a casa <span class="mini">IA + cérebro local</span></div>
+      <div class="card">
+        <div class="chatbox" id="chatbox">`;
+    if (!msgs.length) {
+      html += `<div class="vazio">Manda um oi pro Luiz/esposa — pergunta tipo: "posso gastar quanto?" · "entrou 400, o que faço?" · "e a fatura?"</div>`;
+    }
+    msgs.forEach((m) => {
+      if (m.role === "eu") {
+        html += `
+        <div class="balao eu">
+          <div class="ava">${esc((nq.eu || "L").slice(0, 1).toUpperCase())}</div>
+          <div class="msg">
+            <div class="who">${esc(nq.eu)}</div>
+            <div class="txt">${esc(m.txt)}</div>
+          </div>
+        </div>`;
+      } else {
+        html += `
+        <div class="balao ${m.t || "ok"}">
+          <div class="ava">🏠</div>
+          <div class="msg">
+            <div class="who">Nossa Casa</div>
+            ${m.tit ? `<div class="tit">${m.tit}</div>` : ""}
+            <div class="txt">${m.txt}</div>
+          </div>
+        </div>`;
+      }
+    });
+    html += `</div>
+        <form class="mt" data-form="pergunte" style="margin-top:0.85rem;">
+          <label style="margin-top:0;">Sua mensagem</label>
+          <input name="q" id="chat-input" placeholder="Fala com a casa…" required autocomplete="off" />
+          <button class="btn full" type="submit">Enviar</button>
+          <div class="dica" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+            <span>Exemplos: posso gastar hoje? · e se 40 no iFood? · entrou 400?</span>
+            ${msgs.length ? `<a href="#" data-action="chat-limpar" style="color:var(--bad); font-weight:800; white-space:nowrap;">Limpar chat</a>` : ""}
+          </div>
+        </form>
+      </div>`;
+    return html;
+  }
+
   /* ─── Motor de dicas (poucas, claras, pra quem é leigo) ─── */
   function dicas(c) {
     const out = [];
@@ -1109,7 +1168,7 @@
     const lazerRest = c.lazerRest != null ? c.lazerRest : Math.max(0, lazerOrcamento() - lazerGastoMes());
     const meta = c.metaNum != null ? c.metaNum : metaEfetiva();
 
-    if (S.chatResposta) out.push(S.chatResposta);
+    // chat fica no painel "Chat com a casa" — não mistura com dicas
 
     // 1) UMA dica principal do momento (só essa fala de quinzena)
     if (rendaCaiu && pagarAgora.length) {
@@ -1240,17 +1299,13 @@
           <input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required />
         </div>
         <button class="btn small" type="submit" style="min-height:3rem;">Atualizar</button>
-      </form>
+      </form>`;
 
-      <form class="card mt" data-form="pergunte">
-        <label style="margin-top:0;">Pergunta pra casa</label>
-        <input name="q" placeholder="Entrou 400, o que faço?" value="" />
-        <button class="btn full" type="submit">Perguntar</button>
-        <div class="dica">Exemplos: posso gastar quanto hoje? · e se gastar 40? · entrou 400, o que faço? · posso iFood?</div>
-      </form>
+    html += renderChatConversa();
 
+    html += `
       <form class="card mt" data-form="simular">
-        <label style="margin-top:0;">E se gastar quanto? (simulador)</label>
+        <label style="margin-top:0;">E se gastar quanto? (simulador rápido)</label>
         <div style="display:flex; gap:0.6rem; align-items:flex-end;">
           <div style="flex:1;"><input name="valor" inputmode="decimal" placeholder="40,00" required /></div>
           <button class="btn small" type="submit" style="min-height:3rem;">Simular</button>
@@ -1812,7 +1867,7 @@
       <div class="sect">Casal, lembretes e IA</div>
       <form class="card" data-form="cfg-casa">
         <div class="row2">
-          <div><label>Seu nome</label><input name="quemEu" value="${esc(cfg.quemEu || "Die")}" /></div>
+          <div><label>Seu nome</label><input name="quemEu" value="${esc(cfg.quemEu || "Luiz")}" /></div>
           <div><label>Nome dela</label><input name="quemEla" value="${esc(cfg.quemEla || "Esposa")}" /></div>
         </div>
         <label style="font-weight:600; display:flex; align-items:center; gap:0.5rem; margin-top:0.8rem;">
@@ -1990,6 +2045,14 @@
       touch();
     },
 
+    "chat-limpar": (el) => {
+      if (el && el.preventDefault) el.preventDefault();
+      if (!confirm("Limpar conversa com a casa?")) return;
+      S.chat = [];
+      S.chatResposta = null;
+      touch();
+    },
+
     "exportar": () => {
       const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
@@ -2049,6 +2112,7 @@
       S.gastos = (S.gastos || []).filter((g) => num(g.ts) < ini.getTime());
       S.ultimaCompra = null;
       S.chatResposta = null;
+      // chat conversa fica (histórico); se quiser limpar: botão no chat
       touch();
       tab = "mes";
       render();
@@ -2100,19 +2164,46 @@
       touch();
     },
     "pergunte": async (f) => {
-      const c = calc();
-      const q = f.q.value;
-      S.chatResposta = { t: "ok", tit: "Casa pensando…", txt: "Só um segundo." };
+      const q = String(f.q.value || "").trim();
+      if (!q) return;
+      if (!S.chat) S.chat = [];
+      S.chat.push({ role: "eu", txt: q, ts: Date.now() });
+      S.chat.push({ role: "casa", t: "ok", tit: "Casa pensando…", txt: "Só um segundo.", ts: Date.now() });
+      if (S.chat.length > 40) S.chat = S.chat.slice(-40);
       render();
-      window.scrollTo(0, 0);
-      S.chatResposta = await responderPerguntaSmart(q, c);
+      const box = document.getElementById("chatbox");
+      if (box) box.scrollTop = box.scrollHeight;
+      const c = calc();
+      const ans = await responderPerguntaSmart(q, c);
+      S.chat = S.chat.filter((m) => !(m.tit === "Casa pensando…" && m.role === "casa"));
+      S.chat.push({
+        role: "casa",
+        t: ans.t || "ok",
+        tit: ans.tit || "Casa",
+        txt: ans.txt || "",
+        ts: Date.now(),
+      });
+      if (S.chat.length > 40) S.chat = S.chat.slice(-40);
       touch();
-      window.scrollTo(0, 0);
+      requestAnimationFrame(() => {
+        const b2 = document.getElementById("chatbox");
+        if (b2) b2.scrollTop = b2.scrollHeight;
+        const inp = document.getElementById("chat-input");
+        if (inp) inp.focus();
+      });
     },
     "simular": (f) => {
-      S.chatResposta = simularGasto(f.valor.value, calc());
+      if (!S.chat) S.chat = [];
+      const v = f.valor.value;
+      S.chat.push({ role: "eu", txt: `E se gastar ${v}?`, ts: Date.now() });
+      const ans = simularGasto(v, calc());
+      S.chat.push({ role: "casa", t: ans.t || "ok", tit: ans.tit || "Simulação", txt: ans.txt || "", ts: Date.now() });
+      if (S.chat.length > 40) S.chat = S.chat.slice(-40);
       touch();
-      window.scrollTo(0, 0);
+      requestAnimationFrame(() => {
+        const b2 = document.getElementById("chatbox");
+        if (b2) b2.scrollTop = b2.scrollHeight;
+      });
     },
     "compra": (f) => {
       S.cartao.compras.push({ id: uid(), desc: f.desc.value.trim(), valor: num(f.valor.value), ts: Date.now() });
@@ -2199,7 +2290,7 @@
       touch();
     },
     "cfg-casa": async (f) => {
-      S.config.quemEu = f.quemEu.value.trim() || "Die";
+      S.config.quemEu = f.quemEu.value.trim() || "Luiz";
       S.config.quemEla = f.quemEla.value.trim() || "Esposa";
       S.config.aiOn = !!(f.aiOn && f.aiOn.checked);
       S.config.aiProvider = f.aiProvider.value || "groq";
