@@ -1,0 +1,5 @@
+# Secrets locais (IA etc.) — vão no Netlify Drop, não no GitHub
+nossacasa/config.secrets.js
+*.secrets.js
+.env
+.env.*

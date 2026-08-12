@@ -349,6 +349,7 @@
   </div>
 
   <script src="./config.js"></script>
+  <script src="./config.secrets.js"></script>
   <script src="./cloud.js"></script>
   <script>
   /* ═══════════════════════ ESTADO ═══════════════════════ */
@@ -379,7 +380,7 @@
         quemEu: "Die",
         quemEla: "Esposa",
         lembretesOn: false,
-        aiOn: false,
+        aiOn: true,
       },
       contas: [
         { id: uid(), nome: "Aluguel", valor: 450, dia: 7 },
@@ -427,8 +428,10 @@
     if (!out.config.quemEu) out.config.quemEu = "Die";
     if (!out.config.quemEla) out.config.quemEla = "Esposa";
     if (out.config.lembretesOn == null) out.config.lembretesOn = false;
-    if (out.config.aiOn == null) out.config.aiOn = false;
-    if (!out.config.aiProvider) out.config.aiProvider = "groq";
+    if (out.config.aiOn == null) out.config.aiOn = !!(window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey);
+    if (!out.config.aiProvider) out.config.aiProvider = (window.NC_AI && window.NC_AI.provider) || "groq";
+    // Key em config.secrets.js (Drop) → liga IA sem colar nada
+    if (window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey) out.config.aiOn = true;
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
     return out;
   }
@@ -932,7 +935,12 @@
   }
 
   function getAiKey() {
-    try { return localStorage.getItem("nc-ai-key") || ""; } catch (_) { return ""; }
+    try {
+      const local = localStorage.getItem("nc-ai-key");
+      if (local) return local;
+    } catch (_) {}
+    const built = window.NC_AI && window.NC_AI.apiKey;
+    return built ? String(built) : "";
   }
   function setAiKey(k) {
     try {
@@ -943,8 +951,9 @@
 
   async function perguntarIA(pergunta, c) {
     const key = getAiKey();
-    if (!S.config.aiOn || !key) return null;
-    const provider = S.config.aiProvider || "groq";
+    const builtOn = !!(window.NC_AI && window.NC_AI.enabled && key);
+    if (!(S.config.aiOn || builtOn) || !key) return null;
+    const provider = S.config.aiProvider || (window.NC_AI && window.NC_AI.provider) || "groq";
     const url = provider === "openai"
       ? "https://api.openai.com/v1/chat/completions"
       : "https://api.groq.com/openai/v1/chat/completions";
@@ -1820,7 +1829,7 @@
         <label>Chave da API (fica só neste aparelho)</label>
         <input name="aiKey" type="password" autocomplete="off" placeholder="${getAiKey() ? "•••• já salva — cole pra trocar" : "cole a chave aqui"}" />
         <button class="btn full" type="submit">Salvar casal / lembretes / IA</button>
-        <div class="dica">Sem chave: a casa já pensa sozinha (discernimento + simulador). Com Groq grátis: respostas mais “conversa”. Se o navegador bloquear a API, volta pro cérebro local.</div>
+        <div class="dica">IA já vem ligada com a key do casal (Groq). Pode desligar acima se quiser só o cérebro local.</div>
       </form>
 
       <div class="sect">Conta da casa</div>

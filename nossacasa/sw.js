@@ -1,8 +1,9 @@
-const CACHE = "nossacasa-v12";
+const CACHE = "nossacasa-v13";
 const ASSETS = [
   "./",
   "./index.html",
   "./config.js",
+  "./config.secrets.js",
   "./cloud.js",
   "./manifest.webmanifest",
   "./icon.svg",
