@@ -794,7 +794,7 @@
     }
 
     // 7) Projeção próximo salário
-    if (prox && !caiu) {
+    if (prox && !rendaCaiu) {
       const sobra = prox.valor - c.comprasCiclo;
       out.push({
         t: sobra >= 0 ? "ok" : "bad",
