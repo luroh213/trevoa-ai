@@ -382,6 +382,7 @@
         faturaEstimada: 0, // se ainda não lançou compras, chute opcional
         lazerMes: 200, // orçamento de lazer/iFood sem culpa
         metaGuardar: 0,
+        emergenciaMeta: 2000, // fundo emergência (meta alvo)
         quemEu: "Luiz",
         quemEla: "Esposa",
         lembretesOn: false,
@@ -395,12 +396,14 @@
       pagamentos: {},
       recebidos: {},
       gastos: [],
-      cartao: { compras: [], faturas: {} },
+      cartao: { compras: [], faturas: {}, parcelas: [] }, // parcelas futuras após pagar fatura
       despensa: [],
       lista: [],
       gatos: [],
       checklist: {},
-      chat: [], // [{role:'eu'|'casa', tit?, txt, t?, ts}]
+      chat: [],
+      emergencia: { guardado: 0 }, // quanto já juntou no fundo
+      mesesFechados: {}, // "AAAA-MM": { ts, snap }
     };
   }
 
@@ -425,21 +428,24 @@
     out.gatos = Array.isArray(doc.gatos) ? doc.gatos : [];
     out.pagamentos = doc.pagamentos && typeof doc.pagamentos === "object" ? doc.pagamentos : {};
     out.recebidos = doc.recebidos && typeof doc.recebidos === "object" ? doc.recebidos : {};
-    out.cartao = Object.assign({ compras: [], faturas: {} }, doc.cartao || {});
+    out.cartao = Object.assign({ compras: [], faturas: {}, parcelas: [] }, doc.cartao || {});
     if (!Array.isArray(out.cartao.compras)) out.cartao.compras = [];
     if (!out.cartao.faturas || typeof out.cartao.faturas !== "object") out.cartao.faturas = {};
+    if (!Array.isArray(out.cartao.parcelas)) out.cartao.parcelas = [];
     if (out.caixa && !out.inicio) out.inicio = out.caixa.em || Date.now();
     if (!(num(out.config.lazerMes) > 0)) out.config.lazerMes = 200;
     if (out.config.diaVencFatura == null) out.config.diaVencFatura = 19;
+    if (!(num(out.config.emergenciaMeta) >= 0)) out.config.emergenciaMeta = 2000;
     if (!out.config.quemEu || out.config.quemEu === "Die") out.config.quemEu = "Luiz";
     if (!out.config.quemEla) out.config.quemEla = "Esposa";
     if (out.config.lembretesOn == null) out.config.lembretesOn = false;
     if (out.config.aiOn == null) out.config.aiOn = !!(window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey);
     if (!out.config.aiProvider) out.config.aiProvider = (window.NC_AI && window.NC_AI.provider) || "groq";
-    // Key em config.secrets.js (Drop) → liga IA sem colar nada
     if (window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey) out.config.aiOn = true;
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
     out.chat = Array.isArray(doc.chat) ? doc.chat : [];
+    out.emergencia = Object.assign({ guardado: 0 }, doc.emergencia || {});
+    out.mesesFechados = doc.mesesFechados && typeof doc.mesesFechados === "object" ? doc.mesesFechados : {};
     return out;
   }
 
@@ -861,6 +867,57 @@
     return metaSugerida();
   }
 
+  function emergenciaMeta() {
+    const m = num(S.config.emergenciaMeta);
+    return m > 0 ? m : 2000;
+  }
+  function emergenciaGuardado() {
+    return Math.max(0, num((S.emergencia || {}).guardado));
+  }
+
+  function avancarParcelasAposFatura() {
+    if (!S.cartao.parcelas) S.cartao.parcelas = [];
+    const next = [];
+    S.cartao.parcelas.forEach((p) => {
+      const rest = Math.max(0, (parseInt(p.restantes, 10) || 0) - 1);
+      if (rest > 0) {
+        const total = parseInt(p.total, 10) || 1;
+        const parcelaNum = total - rest + 1;
+        S.cartao.compras.push({
+          id: uid(),
+          desc: `${p.desc} (${parcelaNum}/${total})`,
+          valor: num(p.valorParcela),
+          ts: Date.now(),
+          parcelaDe: p.id,
+        });
+        next.push(Object.assign({}, p, { restantes: rest }));
+      }
+    });
+    S.cartao.parcelas = next;
+  }
+
+  function snapMesAtual() {
+    const r = resumoMesDados();
+    const c = r.c;
+    const mk = c.mk;
+    const previstoContas = S.contas.reduce((a, x) => a + num(x.valor), 0);
+    return {
+      ts: Date.now(),
+      entrou: c.entrouMes,
+      previstoRenda: c.previstoMes,
+      saiu: r.saiu,
+      contasPagas: c.contasPagas,
+      previstoContas,
+      gastos: c.gastosMes,
+      fatura: c.faturaPaga,
+      meta: c.metaNum,
+      juntadoEst: r.juntadoEst,
+      ifood: r.ifood,
+      mercado: r.mercado,
+      emergencia: emergenciaGuardado(),
+    };
+  }
+
   function lazerOrcamento() {
     const l = num(S.config.lazerMes);
     return l > 0 ? l : 200;
@@ -967,6 +1024,9 @@
       `Pode gastar/dia até próximo salário: ${fmt(c.porDia)} (${c.diasAte} dias). Livre viver: ${fmt(c.livreViver)}. Reservado obrigatório: ${fmt(c.obrigAte)}.`,
       `Lazer/iFood orçamento mês: ${fmt(lazer)}. Já gasto lazer: ${fmt(lazerGastoMes())}. Lazer que ainda pode: ${fmt(c.lazerRest)}.`,
       `META juntar (calculada pelo app): ${fmt(meta)}. ${num(S.config.metaGuardar) > 0 ? "Meta foi forçada manualmente." : "Meta automática = ~50% da sobra (renda − contas − fatura − lazer)."}`,
+      `FUNDO EMERGÊNCIA: guardado ${fmt(emergenciaGuardado())} / meta ${fmt(emergenciaMeta())}.`,
+      `Parcelas futuras no cartão: ${(S.cartao.parcelas || []).map((p) => `${p.desc} ${p.restantes}x${fmt(p.valorParcela)}`).join(" | ") || "nenhuma"}.`,
+      `Mês fechado: ${(S.mesesFechados && S.mesesFechados[mesKey()]) ? "sim" : "não"}.`,
       `Contas do mês: renda prevista ${fmt(rendaMes)} − contas ${fmt(contasMes)} − fatura ${fmt(fat)} − lazer ${fmt(lazer)} = sobra bruta ${fmt(sobraBruta)} → meta sugerida ${fmt(metaSugerida())}.`,
       `Rendas: ${rendaLinhas || "nenhuma"}.`,
       `Esperando salário: ${c.esperandoSalario ? "SIM" : "não"}. Próximo salário: dia ${c.prox ? c.prox.d.getDate() : "-"} valor ~${c.prox ? fmt(c.prox.valor) : "-"}.`,
@@ -1593,6 +1653,54 @@
         <div class="dica">Sobra ≈ entrou − contas − gastos − fatura paga. Caixa real em Hoje é o que manda.</div>
       </div>
 
+      <div class="sect">Fundo de emergência</div>
+      <div class="card">
+        <div class="bar"><div class="fill lim" style="width:${barraPct(emergenciaGuardado(), emergenciaMeta())}%"></div></div>
+        <div class="bar-legend"><span>Guardado</span><span>${fmt(emergenciaGuardado())} / ${fmt(emergenciaMeta())}</span></div>
+        <form class="buyrow mt" data-form="emergencia-add" style="grid-template-columns: 1fr auto;">
+          <input name="valor" inputmode="decimal" placeholder="Guardei quanto (R$)" required />
+          <button class="btn small" type="submit">Somar</button>
+        </form>
+        <div class="dica">É a reserva grande pra imprevisto (fora da meta mensal). Meta ajusta em Ajustes.</div>
+      </div>
+
+      <div class="sect">Previsto × real (contas)</div>
+      <div class="card">`;
+    const previstoContas = S.contas.reduce((a, x) => a + num(x.valor), 0);
+    S.contas.slice().sort((a, b) => a.dia - b.dia).forEach((x) => {
+      const p = pag[x.id];
+      const delta = p ? num(p.valor) - num(x.valor) : null;
+      html += `
+        <div class="item">
+          <div class="grow">
+            <div class="t">${esc(x.nome)} <span class="pill neu">dia ${x.dia}</span></div>
+            <div class="s">previsto ${fmt(x.valor)}${p ? ` · pago ${fmt(p.valor)}${delta ? ` (${delta > 0 ? "+" : ""}${fmt(delta)})` : ""}` : " · ainda não"}</div>
+          </div>
+          <div class="val">${p ? fmt(p.valor) : "—"}</div>
+        </div>`;
+    });
+    html += `
+        <div class="bar-legend" style="margin-top:0.5rem;"><span>Previsto total</span><span>${fmt(previstoContas)}</span></div>
+        <div class="bar-legend"><span>Pago total</span><span>${fmt(c.contasPagas)}</span></div>
+      </div>`;
+
+    const fechado = S.mesesFechados && S.mesesFechados[mk];
+    html += `
+      <div class="sect">Fechar mês</div>
+      <div class="card">
+        ${fechado ? `
+          <div class="alerta ok" style="margin-bottom:0.7rem;"><span>Mês fechado em ${dataBR(fechado.ts)}. Foto do fechamento salva.</span></div>
+          <div class="bar-legend"><span>Renda</span><span>${fmt(fechado.entrou)} / prev ${fmt(fechado.previstoRenda)}</span></div>
+          <div class="bar-legend"><span>Contas</span><span>${fmt(fechado.contasPagas)} / prev ${fmt(fechado.previstoContas)}</span></div>
+          <div class="bar-legend"><span>Gastos + fatura</span><span>${fmt((fechado.gastos || 0) + (fechado.fatura || 0))}</span></div>
+          <div class="bar-legend"><span>Sobra est.</span><span>${fmt(fechado.juntadoEst)} (meta ${fmt(fechado.meta)})</span></div>
+          <button class="btn ghost full" data-action="mes-reabrir">Reabrir mês</button>
+        ` : `
+          <div class="s" style="margin-bottom:0.7rem;">Trava um resumo deste mês (previsto × real). Continua podendo anotar depois; o fechamento é a foto.</div>
+          <button class="btn full" data-action="mes-fechar">Fechar ${esc(mesNome())}</button>
+        `}
+      </div>
+
       <div class="sect">Limpar / exportar</div>
       <div class="card">
         <div class="s" style="margin-bottom:0.7rem;">Apaga só os lançamentos de <b>${esc(mesNome())}</b>: salários marcados, contas pagas, gastos no dinheiro e fatura paga do mês. Contas cadastradas, despensa, gatos e saldo do banco <b>ficam</b>.</div>
@@ -1698,9 +1806,18 @@
       <form class="card" data-form="compra">
         <label>Descrição</label>
         <input name="desc" placeholder="Mercado, remédio…" required />
-        <label>Valor (R$)</label>
-        <input name="valor" inputmode="decimal" placeholder="120,00" required />
+        <div class="row2">
+          <div>
+            <label>Valor total (R$)</label>
+            <input name="valor" inputmode="decimal" placeholder="300,00" required />
+          </div>
+          <div>
+            <label>Parcelas</label>
+            <input name="parcelas" type="number" min="1" max="24" value="1" />
+          </div>
+        </div>
         <button class="btn full" type="submit">Lançar no cartão</button>
+        <div class="dica">Ex.: R$ 300 em 3× → entra R$ 100 nesta fatura; as outras 2 caem depois que pagar a fatura.</div>
       </form>
 
       <div class="sect">Compras do ciclo</div>
@@ -1717,6 +1834,22 @@
         </div>`;
     });
     html += `</div>`;
+
+    const fut = (S.cartao.parcelas || []).slice();
+    if (fut.length) {
+      html += `<div class="sect">Parcelas futuras</div><div class="card">`;
+      fut.forEach((p) => {
+        html += `
+          <div class="item">
+            <div class="grow">
+              <div class="t">${esc(p.desc)}</div>
+              <div class="s">${p.restantes}× de ${fmt(p.valorParcela)} (total ${p.total}× · ${fmt(p.valorTotal)})</div>
+            </div>
+            <div class="val">${fmt(num(p.valorParcela) * num(p.restantes))}</div>
+          </div>`;
+      });
+      html += `<div class="dica">Entram sozinhas no ciclo depois que vocês pagam a fatura.</div></div>`;
+    }
 
     const pags = Object.keys(S.cartao.faturas).sort().reverse().slice(0, 4);
     if (pags.length) {
@@ -1911,8 +2044,10 @@
           <div><label>Lazer/iFood do mês (R$)</label><input name="lazer" inputmode="decimal" value="${String(lazerOrcamento()).replace(".", ",")}" /></div>
           <div><label>Meta juntar (opcional)</label><input name="meta" inputmode="decimal" value="${num(cfg.metaGuardar) > 0 ? String(num(cfg.metaGuardar)).replace(".", ",") : ""}" placeholder="vazio = automática" /></div>
         </div>
-        <button class="btn full" type="submit">Salvar cartão e lazer</button>
-        <div class="dica">Meta automática agora: <b>${fmt(metaSugerida())}</b> — a casa calcula sozinha. Só preenche o campo se quiser forçar outro valor. Deixa vazio = automático.</div>
+        <label>Fundo emergência — meta (R$)</label>
+        <input name="emergencia" inputmode="decimal" value="${String(emergenciaMeta()).replace(".", ",")}" />
+        <button class="btn full" type="submit">Salvar cartão e metas</button>
+        <div class="dica">Meta automática agora: <b>${fmt(metaSugerida())}</b> — a casa calcula sozinha. Fundo emergência atual: <b>${fmt(emergenciaGuardado())}</b>.</div>
       </form>
 
       <div class="sect">Casal, lembretes e IA</div>
@@ -2048,10 +2183,27 @@
       if (!confirm(`Pagar fatura de ${fmt(valor)}?`)) return;
       S.cartao.faturas[c.mk] = { valor, ts: Date.now() };
       S.cartao.compras = [];
+      avancarParcelasAposFatura();
       touch();
     },
     "compra-del": (el) => {
       S.cartao.compras = S.cartao.compras.filter((x) => x.id !== el.dataset.id);
+      touch();
+    },
+
+    "mes-fechar": () => {
+      const mk = mesKey();
+      if (!confirm(`Fechar ${mesNome()}? Salva um resumo previsto × real.`)) return;
+      if (!S.mesesFechados) S.mesesFechados = {};
+      S.mesesFechados[mk] = snapMesAtual();
+      touch();
+      tab = "mes";
+      render();
+    },
+    "mes-reabrir": () => {
+      const mk = mesKey();
+      if (!confirm("Reabrir este mês? Apaga só o fechamento (lançamentos ficam).")) return;
+      if (S.mesesFechados) delete S.mesesFechados[mk];
       touch();
     },
 
@@ -2257,8 +2409,40 @@
       });
     },
     "compra": (f) => {
-      S.cartao.compras.push({ id: uid(), desc: f.desc.value.trim(), valor: num(f.valor.value), ts: Date.now() });
+      const desc = f.desc.value.trim();
+      const total = num(f.valor.value);
+      const n = Math.max(1, Math.min(24, parseInt(f.parcelas && f.parcelas.value, 10) || 1));
+      if (total <= 0) return;
+      const parcela = Math.round((total / n) * 100) / 100;
+      const pid = uid();
+      S.cartao.compras.push({
+        id: uid(),
+        desc: n > 1 ? `${desc} (1/${n})` : desc,
+        valor: parcela,
+        ts: Date.now(),
+        parcelaDe: n > 1 ? pid : null,
+      });
+      if (n > 1) {
+        if (!S.cartao.parcelas) S.cartao.parcelas = [];
+        S.cartao.parcelas.push({
+          id: pid,
+          desc,
+          valorParcela: parcela,
+          valorTotal: total,
+          total: n,
+          restantes: n - 1,
+        });
+      }
       touch();
+    },
+    "emergencia-add": (f) => {
+      const v = num(f.valor.value);
+      if (v <= 0) return;
+      if (!S.emergencia) S.emergencia = { guardado: 0 };
+      S.emergencia.guardado = emergenciaGuardado() + v;
+      touch();
+      tab = "mes";
+      render();
     },
     "des-add": (f) => {
       S.despensa.push({ id: uid(), nome: f.nome.value.trim(), cat: f.cat.value, status: "tem" });
@@ -2298,6 +2482,7 @@
       S.cartao.faturas[mesKey()] = { valor, ts: Date.now() };
       S.cartao.compras = [];
       S.config.faturaEstimada = 0;
+      avancarParcelasAposFatura();
       touch();
     },
     "gato-add": (f) => {
@@ -2338,6 +2523,7 @@
       const metaInput = rawMeta === "" ? 0 : num(rawMeta);
       const sug = metaSugerida();
       S.config.metaGuardar = metaInput > 0 && Math.round(metaInput) !== Math.round(sug) ? metaInput : 0;
+      if (f.emergencia) S.config.emergenciaMeta = Math.max(0, num(f.emergencia.value));
       touch();
     },
     "cfg-casa": async (f) => {
