@@ -195,7 +195,7 @@
     .statusbtn.pouco { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
     .statusbtn.acabou { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
 
-    .buyrow { display: grid; grid-template-columns: 1fr 5.2rem auto auto; gap: 0.45rem; align-items: center; padding: 0.6rem 0; border-top: 1px dashed var(--line); }
+    .buyrow { display: grid; grid-template-columns: 1fr 3.4rem 4.8rem auto auto; gap: 0.45rem; align-items: center; padding: 0.6rem 0; border-top: 1px dashed var(--line); }
     .buyrow:first-of-type { border-top: none; }
     .buyrow input { padding: 0.5rem 0.6rem; font-size: 0.95rem; border-radius: 0.7rem; }
     .buyrow .nome { font-weight: 800; }
@@ -318,7 +318,8 @@
 
   function defaultState() {
     return {
-      v: 1,
+      v: 2,
+      caixa: null, // {valor, em} — quanto tem no banco e quando informou; eventos com ts > em entram na conta
       config: {
         rendas: [
           { id: uid(), nome: "Salário 1", dia: 7, valor: 738, pessoas: 2 },
@@ -350,6 +351,7 @@
   } catch (_) {}
 
   let tab = "hoje";
+  let pagandoId = null;
   let saveTimer = null;
   let saving = false;
   let logado = false;
@@ -450,42 +452,129 @@
   });
 
   /* ═══════════════════════ CÁLCULO FINANCEIRO ═══════════════════════ */
+  // Próxima renda a cair (data + valor total do casal)
+  function proxRenda() {
+    const h = new Date(); h.setHours(0, 0, 0, 0);
+    let best = null;
+    S.config.rendas.forEach((r) => {
+      let d = new Date(h.getFullYear(), h.getMonth(), r.dia);
+      if (d < h) d = new Date(h.getFullYear(), h.getMonth() + 1, r.dia);
+      if (!best || d < best.d) best = { d, valor: num(r.valor) * (num(r.pessoas) || 1), nome: r.nome };
+    });
+    return best;
+  }
+
   function calc() {
     const mk = mesKey();
     const cfg = S.config;
     const rec = S.recebidos[mk] || {};
     const pag = S.pagamentos[mk] || {};
+    const hoje0 = new Date(); hoje0.setHours(0, 0, 0, 0);
 
+    // Caixa real: saldo informado + tudo que entrou/saiu DEPOIS dessa informação
+    const emBase = S.caixa ? num(S.caixa.em) : 0;
+    let entrou = 0, pagou = 0, faturasPagas = 0;
+    for (const k in S.recebidos) for (const id in S.recebidos[k]) {
+      const r = S.recebidos[k][id];
+      if (num(r.ts) > emBase) entrou += num(r.valor);
+    }
+    for (const k in S.pagamentos) for (const id in S.pagamentos[k]) {
+      const p = S.pagamentos[k][id];
+      if (num(p.ts) > emBase) pagou += num(p.valor);
+    }
+    for (const k in S.cartao.faturas) {
+      const f = S.cartao.faturas[k];
+      if (num(f.ts) > emBase) faturasPagas += num(f.valor);
+    }
+    const gastosPos = S.gastos.filter((g) => g.ts > emBase).reduce((a, g) => a + num(g.valor), 0);
+    const caixa = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas;
+
+    // Visão do mês (telas de controle)
     const entrouMes = Object.values(rec).reduce((a, r) => a + num(r.valor), 0);
     const previstoMes = cfg.rendas.reduce((a, r) => a + num(r.valor) * (num(r.pessoas) || 1), 0);
-
     let contasPagas = 0;
     for (const k in pag) contasPagas += num(pag[k].valor);
-    const contasFaltam = S.contas
-      .filter((c) => !pag[c.id])
-      .reduce((a, c) => a + num(c.valor), 0);
-
+    const contasFaltam = S.contas.filter((c) => !pag[c.id]).reduce((a, c) => a + num(c.valor), 0);
     const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
-    const gastosMes = S.gastos
-      .filter((g) => g.ts >= ini.getTime())
-      .reduce((a, g) => a + num(g.valor), 0);
-
+    const gastosMes = S.gastos.filter((g) => g.ts >= ini.getTime()).reduce((a, g) => a + num(g.valor), 0);
     const comprasCiclo = S.cartao.compras.reduce((a, c) => a + num(c.valor), 0);
     const faturaPaga = S.cartao.faturas[mk] ? num(S.cartao.faturas[mk].valor) : 0;
 
-    const caixa = entrouMes - contasPagas - gastosMes - faturaPaga;
-    const pendente = contasFaltam + comprasCiclo + num(cfg.metaGuardar);
-    const livre = caixa - pendente;
-    const dias = diasAteFimDoMes();
-    const porDia = livre / dias;
+    // Janela até o próximo salário: reserva só o que vence até lá
+    const prox = proxRenda();
+    const diasAte = prox ? Math.max(1, Math.round((prox.d - hoje0) / 86400000)) : diasAteFimDoMes();
+    let obrigAte = 0;
+    S.contas.forEach((ct) => {
+      if (pag[ct.id]) return;
+      const venc = new Date(hoje0.getFullYear(), hoje0.getMonth(), ct.dia);
+      if (venc <= hoje0 || (prox && venc <= prox.d)) obrigAte += num(ct.valor);
+    });
+    const livreAte = caixa - obrigAte;
+    const porDia = livreAte / diasAte;
 
-    return { mk, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, caixa, pendente, livre, dias, porDia };
+    return { mk, caixa, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, porDia };
+  }
+
+  // Duração média por unidade (dias) de um item da despensa, pelo histórico de compras
+  function duracaoMedia(d) {
+    const h = (d.hist || []).slice().sort((a, b) => a.ts - b.ts);
+    if (h.length < 2) return null;
+    let dias = 0, un = 0;
+    for (let i = 1; i < h.length; i++) {
+      dias += (h[i].ts - h[i - 1].ts) / 86400000;
+      un += num(h[i - 1].qtd) || 1;
+    }
+    return un > 0 ? dias / un : null;
   }
 
   function semaforo(porDia) {
-    if (porDia >= 50) return { cls: "verde", msg: "Pode pedir iFood 🍔", sub: "Dinheiro do mês tá tranquilo." };
+    if (porDia >= 50) return { cls: "verde", msg: "Pode pedir iFood 🍔", sub: "Dinheiro tranquilo até o próximo salário." };
     if (porDia >= 20) return { cls: "amarelo", msg: "Melhor comer de casa", sub: "Ainda tem dinheiro, mas vai com calma." };
     return { cls: "vermelho", msg: "Segura o iFood ✋", sub: "Foca no que tem na despensa." };
+  }
+
+  /* ─── Motor de dicas ─── */
+  function dicas(c) {
+    const out = [];
+    if (!S.caixa) return out;
+    const tem = S.despensa.filter((d) => d.status === "tem");
+    const faltando = S.despensa.filter((d) => d.status !== "tem");
+    const limite = num(S.config.limiteCartao);
+    const prox = c.prox;
+
+    if (c.caixa <= 0 && prox) {
+      out.push({ t: "bad", txt: `Zerados até dia ${prox.d.getDate()}. iFood ZERO. Cozinha o que tem em casa${tem.length ? ": " + tem.slice(0, 5).map((x) => esc(x.nome)).join(", ") : ""}.` });
+    } else if (c.porDia < 20 && tem.length) {
+      out.push({ t: "warn", txt: `Dinheiro curto. Antes de pedir comida, olha o que tem: ${tem.slice(0, 5).map((x) => esc(x.nome)).join(", ")}.` });
+    }
+
+    if (faltando.length && prox) {
+      out.push({ t: "warn", txt: `Põe na compra do dia ${prox.d.getDate()} (cartão): ${faltando.map((x) => esc(x.nome)).join(", ")}.` });
+    }
+
+    S.despensa.forEach((d) => {
+      const dm = duracaoMedia(d);
+      if (dm) {
+        const sugestao = Math.max(1, Math.ceil(30 / dm));
+        out.push({ t: "ok", txt: `${esc(d.nome)}: dura ~${Math.round(dm)} dia${Math.round(dm) > 1 ? "s" : ""} por unidade p/ vocês. Pro mês fechar, compra ${sugestao} un.` });
+      }
+    });
+
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    const ifood = S.gastos.filter((g) => g.cat === "iFood" && g.ts >= ini.getTime()).reduce((a, g) => a + num(g.valor), 0);
+    if (ifood > 0) {
+      out.push({ t: "warn", txt: `iFood já comeu ${fmt(ifood)} este mês — dava ${Math.max(1, Math.floor(ifood / 50))} compra${ifood >= 100 ? "s" : ""} de mercado de R$ 50.` });
+    }
+
+    if (c.comprasCiclo > limite) {
+      out.push({ t: "bad", txt: `Cartão passou do limite de ${fmt(limite)}. Até pagar a fatura, compra só no dinheiro.` });
+    }
+
+    if (prox) {
+      const sobra = prox.valor - c.comprasCiclo;
+      out.push({ t: sobra >= 0 ? "ok" : "bad", txt: `Dia ${prox.d.getDate()}: entra ${fmt(prox.valor)} − fatura ${fmt(c.comprasCiclo)} = sobra ${fmt(sobra)}.` });
+    }
+    return out;
   }
 
   /* ═══════════════════════ RENDER ═══════════════════════ */
@@ -504,19 +593,54 @@
   /* ─── Hoje ─── */
   function viewHoje() {
     const c = calc();
-    const sem = semaforo(c.porDia);
     const mk = c.mk;
     const rec = S.recebidos[mk] || {};
     const pag = S.pagamentos[mk] || {};
     const hojeDia = new Date().getDate();
 
+    // Primeiro uso / saldo não informado: pergunta quanto tem no banco
+    if (!S.caixa) {
+      return `
+      <div class="hero amarelo">
+        <div class="k">Começa aqui</div>
+        <div class="v" style="font-size:1.9rem;">Quanto vocês têm no banco hoje?</div>
+        <div class="sub">O app soma e tira tudo sozinho a partir daí. Atualize sempre que olhar o app do banco.</div>
+      </div>
+      <form class="card mt" data-form="caixa-set">
+        <label>Saldo em conta agora (R$)</label>
+        <input name="valor" inputmode="decimal" placeholder="0,00" required autofocus />
+        <button class="btn full" type="submit">Salvar saldo</button>
+        <div class="dica">Zerado? Pode pôr 0 — o app já projeta o salário do dia ${c.prox ? c.prox.d.getDate() : "?"}.</div>
+      </form>`;
+    }
+
+    const sem = semaforo(c.porDia);
     let html = `
       <div class="hero ${sem.cls}">
-        <div class="k">Pode gastar por dia</div>
-        <div class="v">${fmt(c.porDia)}</div>
+        <div class="k">Temos em conta</div>
+        <div class="v">${fmt(c.caixa)}</div>
         <div class="msg">${sem.msg}</div>
-        <div class="sub">${sem.sub} Livres até dia ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}: <b>${fmt(c.livre)}</b> · em conta: <b>${fmt(c.caixa)}</b></div>
-      </div>`;
+        <div class="sub">${sem.sub}</div>
+        <div class="sub" style="margin-top:0.5rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.5rem;">
+          Pode gastar <b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${c.prox ? c.prox.d.getDate() : "?"}
+          ${c.obrigAte > 0 ? ` · reservado p/ contas: <b>${fmt(c.obrigAte)}</b>` : ""}
+        </div>
+      </div>
+      <form class="card mt" data-form="caixa-set" style="display:flex; gap:0.6rem; align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="margin-top:0;">Banco mudou? Atualiza o saldo</label>
+          <input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required />
+        </div>
+        <button class="btn small" type="submit" style="min-height:3rem;">Atualizar</button>
+      </form>`;
+
+    // Dicas inteligentes
+    const ds = dicas(c);
+    if (ds.length) {
+      html += `<div class="sect">O que fazer agora</div><div class="card">`;
+      ds.forEach((d) => { html += `<div class="alerta ${d.t}"><span>•</span><span>${d.txt}</span></div>`; });
+      html += `</div>`;
+    }
 
     // Alertas
     const alertas = [];
@@ -621,11 +745,11 @@
             : `<button class="statusbtn acabou" data-action="conta-pagar" data-id="${x.id}">Pagar</button>`}
           <button class="statusbtn" data-action="conta-del" data-id="${x.id}">✕</button>
         </div>`;
-      if (!p) {
+      if (!p && pagandoId === x.id) {
         html += `
         <form class="buyrow" data-form="conta-paga" data-id="${x.id}" style="border-top:none; padding-top:0;">
-          <div class="nome"><span class="s">Valor real deste mês (ex.: energia varia)</span></div>
-          <input name="valor" inputmode="decimal" value="${String(num(x.valor)).replace(".", ",")}" />
+          <div class="nome"><span class="s">Valor real deste mês (energia varia, ajusta aqui)</span></div>
+          <input name="valor" inputmode="decimal" value="${String(num(x.valor)).replace(".", ",")}" required />
           <button class="btn small" type="submit">Confirmar</button>
           <span></span>
         </form>`;
@@ -722,10 +846,14 @@
       <div class="card">`;
     if (!S.lista.length) html += `<div class="vazio">Lista vazia. Ao marcar algo como "acabando" ou "acabou", ele aparece aqui.</div>`;
     S.lista.forEach((it) => {
+      const dep = S.despensa.find((d) => d.nome.toLowerCase() === it.nome.toLowerCase());
+      const dm = dep ? duracaoMedia(dep) : null;
+      const dica = dm ? `dura ~${Math.round(dm)}d/un · leva ${Math.max(1, Math.ceil(30 / dm))}` : "";
       html += `
         <form class="buyrow" data-form="lista-comprar" data-id="${it.id}">
-          <div class="nome">${esc(it.nome)}<span class="s">${esc(it.cat || "")}</span></div>
-          <input name="valor" inputmode="decimal" placeholder="R$" />
+          <div class="nome">${esc(it.nome)}<span class="s">${esc([it.cat, dica].filter(Boolean).join(" · "))}</span></div>
+          <input name="qtd" type="number" min="1" step="1" value="1" title="Quantidade" required />
+          <input name="valor" inputmode="decimal" placeholder="R$ total" title="Quanto custou" required />
           <button class="btn small" type="submit" data-pago="cartao">Cartão</button>
           <button class="btn small ghost" type="submit" data-pago="dinheiro">Dinheiro</button>
         </form>`;
@@ -733,6 +861,7 @@
     html += `
         <form class="buyrow" data-form="lista-add" style="border-top:1px dashed var(--line); margin-top:0.3rem;">
           <div class="nome"><input name="nome" placeholder="Adicionar à lista…" required style="border:none; padding:0; font-weight:800;" /></div>
+          <span></span>
           <span></span>
           <button class="btn small" type="submit">Add</button>
           <span></span>
@@ -745,9 +874,11 @@
     const ord = { acabou: 0, pouco: 1, tem: 2 };
     S.despensa.slice().sort((a, b) => ord[a.status] - ord[b.status] || a.nome.localeCompare(b.nome)).forEach((d) => {
       const lbl = d.status === "tem" ? "Tem" : d.status === "pouco" ? "Acabando" : "Acabou";
+      const dm = duracaoMedia(d);
+      const sub = [d.cat, dm ? `dura ~${Math.round(dm)}d/un` : ""].filter(Boolean).join(" · ");
       html += `
         <div class="item">
-          <div class="grow"><div class="t">${esc(d.nome)}</div><div class="s">${esc(d.cat)}</div></div>
+          <div class="grow"><div class="t">${esc(d.nome)}</div><div class="s">${esc(sub)}</div></div>
           <button class="statusbtn ${d.status}" data-action="des-status" data-id="${d.id}">${lbl}</button>
           <button class="statusbtn" data-action="des-del" data-id="${d.id}">✕</button>
         </div>`;
@@ -931,8 +1062,10 @@
     },
 
     "conta-pagar": (el) => {
-      const form = document.querySelector(`form[data-form="conta-paga"][data-id="${el.dataset.id}"] input`);
-      if (form) { form.focus(); form.select(); }
+      pagandoId = pagandoId === el.dataset.id ? null : el.dataset.id;
+      render();
+      const input = document.querySelector(`form[data-form="conta-paga"][data-id="${el.dataset.id}"] input`);
+      if (input) { input.focus(); input.select(); }
     },
     "conta-desfazer": (el) => {
       const mk = mesKey();
@@ -1036,6 +1169,11 @@
       const mk = mesKey();
       if (!S.pagamentos[mk]) S.pagamentos[mk] = {};
       S.pagamentos[mk][f.dataset.id] = { valor: num(f.valor.value), ts: Date.now() };
+      pagandoId = null;
+      touch();
+    },
+    "caixa-set": (f) => {
+      S.caixa = { valor: num(f.valor.value), em: Date.now() };
       touch();
     },
     "compra": (f) => {
@@ -1054,14 +1192,19 @@
       const it = S.lista.find((x) => x.id === f.dataset.id);
       if (!it) return;
       const valor = num(f.valor.value);
+      const qtd = Math.max(1, parseInt(f.qtd.value) || 1);
       const pago = btn && btn.dataset.pago === "dinheiro" ? "dinheiro" : "cartao";
-      if (valor > 0) {
-        if (pago === "cartao") S.cartao.compras.push({ id: uid(), desc: it.nome, valor, ts: Date.now() });
-        else S.gastos.push({ id: uid(), desc: it.nome, cat: "Mercado", valor, ts: Date.now() });
-      }
+      if (valor <= 0) return;
+      const desc = qtd > 1 ? `${it.nome} (${qtd} un)` : it.nome;
+      if (pago === "cartao") S.cartao.compras.push({ id: uid(), desc, valor, ts: Date.now() });
+      else S.gastos.push({ id: uid(), desc, cat: "Mercado", valor, ts: Date.now() });
       S.lista = S.lista.filter((x) => x.id !== it.id);
       const dep = S.despensa.find((d) => d.nome.toLowerCase() === it.nome.toLowerCase());
-      if (dep) dep.status = "tem";
+      if (dep) {
+        dep.status = "tem";
+        if (!dep.hist) dep.hist = [];
+        dep.hist.push({ ts: Date.now(), qtd, valor });
+      }
       touch();
     },
     "gato-add": (f) => {
