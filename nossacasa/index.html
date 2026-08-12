@@ -1232,9 +1232,32 @@
   function viewMes() {
     const r = resumoMesDados();
     const c = r.c;
+    const mk = c.mk;
     const maxBar = Math.max(c.entrouMes, r.saiu, 1);
     const meta = c.metaNum;
     const metaPct = barraPct(r.juntadoEst, meta || 1);
+    const pag = S.pagamentos[mk] || {};
+    const rec = S.recebidos[mk] || {};
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    const gastosMes = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts);
+
+    let detalhePago = "";
+    for (const id in pag) {
+      const ct = S.contas.find((x) => x.id === id);
+      const nome = ct ? ct.nome : "Conta antiga (apagada)";
+      detalhePago += `<div class="item"><div class="grow"><div class="t">${esc(nome)}</div><div class="s">pago ${dataBR(pag[id].ts)}</div></div><div class="val">${fmt(pag[id].valor)}</div></div>`;
+    }
+    let detalheEntrou = "";
+    for (const id in rec) {
+      const rd = S.config.rendas.find((x) => x.id === id);
+      const nome = rd ? rd.nome : "Renda";
+      detalheEntrou += `<div class="item"><div class="grow"><div class="t">${esc(nome)}</div><div class="s">caiu ${dataBR(rec[id].ts)}</div></div><div class="val">${fmt(rec[id].valor)}</div></div>`;
+    }
+    let detalheGastos = "";
+    gastosMes.forEach((g) => {
+      detalheGastos += `<div class="item"><div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)} · ${dataBR(g.ts)}</div></div><div class="val">${fmt(g.valor)}</div></div>`;
+    });
+
     let html = `
       <div class="hero ${r.saldo >= 0 ? "verde" : "vermelho"}">
         <div class="k">Este mês · ${esc(mesNome())}</div>
@@ -1256,6 +1279,17 @@
         <div class="hbar"><i style="width:${barraPct(c.faturaPaga, maxBar)}%"></i></div>
         <div class="bar-legend"><span>Cartão aberto (ciclo)</span><span>${fmt(c.comprasCiclo)}</span></div>
         <div class="hbar bad"><i style="width:${barraPct(c.comprasCiclo, maxBar)}%"></i></div>
+      </div>
+
+      <div class="sect">De onde veio o número</div>
+      <div class="card">
+        <div class="t" style="margin-bottom:0.4rem;">Entrou</div>
+        ${detalheEntrou || `<div class="vazio">Nenhum salário marcado.</div>`}
+        <div class="t" style="margin:0.8rem 0 0.4rem;">Contas pagas</div>
+        ${detalhePago || `<div class="vazio">Nenhuma conta paga.</div>`}
+        <div class="t" style="margin:0.8rem 0 0.4rem;">Gastos no dinheiro</div>
+        ${detalheGastos || `<div class="vazio">Nenhum gasto.</div>`}
+        ${c.faturaPaga ? `<div class="t" style="margin:0.8rem 0 0.4rem;">Fatura</div><div class="item"><div class="grow"><div class="t">Fatura paga</div></div><div class="val">${fmt(c.faturaPaga)}</div></div>` : ""}
       </div>
 
       <div class="sect">Onde o dinheiro foi</div>
@@ -1280,6 +1314,12 @@
         <div class="bar"><div class="fill lim" style="width:${meta > 0 ? metaPct : 0}%"></div></div>
         <div class="bar-legend"><span>Estimativa sobra do mês</span><span>${fmt(r.juntadoEst)} / meta ${fmt(meta)}</span></div>
         <div class="dica">Sobra ≈ entrou − contas − gastos − fatura paga. Caixa real em Hoje é o que manda.</div>
+      </div>
+
+      <div class="sect">Limpar</div>
+      <div class="card">
+        <div class="s" style="margin-bottom:0.7rem;">Apaga só os lançamentos de <b>${esc(mesNome())}</b>: salários marcados, contas pagas, gastos no dinheiro e fatura paga do mês. Contas cadastradas, despensa, gatos e saldo do banco <b>ficam</b>.</div>
+        <button class="btn danger full" data-action="limpar-mes">Limpar lançamentos deste mês</button>
       </div>`;
     return html;
   }
@@ -1621,6 +1661,7 @@
 
       <div class="card">
         <button class="btn ghost full" style="margin-top:0;" data-action="exportar">Exportar dados (JSON)</button>
+        <button class="btn danger full" data-action="limpar-mes">Limpar lançamentos deste mês</button>
         <button class="btn danger full" data-action="sair">Sair da conta</button>
       </div>`;
     return html;
@@ -1761,6 +1802,24 @@
       a.download = "nossa-casa-backup.json";
       a.click();
       URL.revokeObjectURL(a.href);
+    },
+
+    "limpar-mes": () => {
+      const nome = mesNome();
+      if (!confirm(`Limpar lançamentos de ${nome}?\n\nApaga: salários marcados, contas pagas, gastos no dinheiro e fatura paga deste mês.\n\nNÃO apaga: contas cadastradas, despensa, gatos, compras do cartão em aberto, saldo do banco.`)) return;
+      const mk = mesKey();
+      const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+      if (S.pagamentos) delete S.pagamentos[mk];
+      if (S.recebidos) delete S.recebidos[mk];
+      if (S.checklist) delete S.checklist[mk];
+      if (S.cartao && S.cartao.faturas) delete S.cartao.faturas[mk];
+      S.gastos = (S.gastos || []).filter((g) => num(g.ts) < ini.getTime());
+      S.ultimaCompra = null;
+      S.chatResposta = null;
+      touch();
+      tab = "mes";
+      render();
+      window.scrollTo(0, 0);
     },
 
     "sair": async () => {
