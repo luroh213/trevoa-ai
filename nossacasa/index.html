@@ -376,6 +376,10 @@
         faturaEstimada: 0, // se ainda não lançou compras, chute opcional
         lazerMes: 200, // orçamento de lazer/iFood sem culpa
         metaGuardar: 0,
+        quemEu: "Die",
+        quemEla: "Esposa",
+        lembretesOn: false,
+        aiOn: false,
       },
       contas: [
         { id: uid(), nome: "Aluguel", valor: 450, dia: 7 },
@@ -420,6 +424,11 @@
     if (out.caixa && !out.inicio) out.inicio = out.caixa.em || Date.now();
     if (!(num(out.config.lazerMes) > 0)) out.config.lazerMes = 200;
     if (out.config.diaVencFatura == null) out.config.diaVencFatura = 19;
+    if (!out.config.quemEu) out.config.quemEu = "Die";
+    if (!out.config.quemEla) out.config.quemEla = "Esposa";
+    if (out.config.lembretesOn == null) out.config.lembretesOn = false;
+    if (out.config.aiOn == null) out.config.aiOn = false;
+    if (!out.config.aiProvider) out.config.aiProvider = "groq";
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
     return out;
   }
@@ -520,8 +529,9 @@
   }
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && logado && NCCloud.configured() && !saving) {
-      cloudLoad();
+    if (document.visibilityState === "visible" && logado) {
+      if (NCCloud.configured() && !saving) cloudLoad();
+      checarLembretes(false);
     }
   });
 
@@ -853,7 +863,112 @@
       .reduce((a, g) => a + num(g.valor), 0);
   }
 
-  // Resposta do chat "posso gastar..."
+  // Resposta do chat "posso gastar..." + discernimento (ex.: entrou 400)
+  function nomesQuem() {
+    return {
+      eu: (S.config.quemEu || "Die").trim() || "Die",
+      ela: (S.config.quemEla || "Esposa").trim() || "Esposa",
+    };
+  }
+
+  function aconselharCaixaVsContas(c) {
+    const proximas = (!rendaRecenteCaiu() ? contasProximas() : contasPagarAgora());
+    const totalP = proximas.reduce((a, x) => a + num(x.valor), 0);
+    const nomes = proximas.map((x) => x.nome).join(", ") || "contas da quinzena";
+    const fat = valorFaturaPendente();
+    const meta = metaEfetiva();
+    const lazerRest = Math.max(0, lazerOrcamento() - lazerGastoMes());
+    const diaProx = c.prox ? c.prox.d.getDate() : "?";
+    if (!(totalP > 0)) return null;
+    if (c.caixa >= totalP + fat && fat > 0) {
+      return {
+        t: "ok",
+        tit: "Discernimento da casa",
+        txt: `Com <b>${fmt(c.caixa)}</b> dá pra: pagar <b>${esc(nomes)}</b> (${fmt(totalP)}) <b>e</b> separar fatura (${fmt(fat)}). Sobra ~<b>${fmt(c.caixa - totalP - fat)}</b>.<br><b>Recomendação:</b> 1) separa fatura 2) paga as contas se já estiverem perto do vencimento 3) o resto = lazer ${fmt(lazerRest)} + juntar ${fmt(meta)}. <b>Não</b> gasta tudo em iFood.`,
+      };
+    }
+    if (c.caixa >= totalP) {
+      const sobra = c.caixa - totalP;
+      return {
+        t: "ok",
+        tit: "Discernimento da casa",
+        txt: `Vocês têm <b>${fmt(c.caixa)}</b> e as contas (<b>${esc(nomes)}</b>) somam <b>${fmt(totalP)}</b> — <b>já cobrem</b>.<br><b>Não é automático “paga agora”</b>. Opções:<ol><li><b>Pagar agora</b> — se alguma vence antes do dia ${diaProx}, fica limpo. Sobra ~${fmt(sobra)}.</li><li><b>Esperar o salário dia ${diaProx}</b> — salário cobre as contas; estes ${fmt(c.caixa)} servem pra fatura${fat ? ` (~${fmt(fat)})` : ""} / meta / emergência.</li></ol><b>Sugestão:</b> se nada vence urgente, <b>espera o salário</b> e <b>não queima</b> os ${fmt(c.caixa)} em bobagem. Se já venceu ou vence amanhã, paga.`,
+      };
+    }
+    return null;
+  }
+
+  function simularGasto(valor, c) {
+    const v = Math.max(0, num(valor));
+    const lazerRest = Math.max(0, lazerOrcamento() - lazerGastoMes());
+    const meta = metaEfetiva();
+    const caixa2 = c.caixa - v;
+    const porDia2 = c.diasAte > 0 ? Math.max(0, (c.livreViver - v) / c.diasAte) : 0;
+    const comeLazer = v > 0 && v <= lazerRest;
+    const comeMeta = v > lazerRest;
+    let t = "ok";
+    let txt = `Se gastar <b>${fmt(v)}</b> agora:<ul><li>Caixa fica ~<b>${fmt(caixa2)}</b></li><li>Pode/dia ~<b>${fmt(porDia2)}</b> (antes ${fmt(Math.max(0, c.porDia))})</li>`;
+    if (comeLazer) txt += `<li>Cabe no lazer (ainda ${fmt(lazerRest)})</li>`;
+    else if (comeMeta) txt += `<li>Passa do lazer — come meta de juntar (${fmt(meta)})</li>`;
+    if (caixa2 < 0) { t = "bad"; txt += `<li><b>Não tem saldo</b> pra isso</li>`; }
+    else if (porDia2 < 10 && c.esperandoSalario) { t = "warn"; txt += `<li>Fica apertado até o próximo salário</li>`; }
+    txt += `</ul>`;
+    return { t, tit: `E se gastar ${fmt(v)}?`, txt, v, caixa2, porDia2 };
+  }
+
+  function contextoCasaTexto(c) {
+    const nq = nomesQuem();
+    const prox = contasProximas();
+    const pagar = contasPagarAgora();
+    return [
+      `Hoje dia ${new Date().getDate()}. Mês ${mesNome()}.`,
+      `Caixa: ${c.caixa}. Pode/dia: ${c.porDia}. Lazer resto: ${c.lazerRest}. Meta auto: ${c.metaNum}.`,
+      `Esperando salário: ${c.esperandoSalario ? "sim" : "não"}. Próximo salário dia: ${c.prox ? c.prox.d.getDate() : "-"}.`,
+      `Contas pagar agora: ${pagar.map((x) => x.nome + " " + x.valor).join(", ") || "nenhuma"}.`,
+      `Contas da próxima quinzena: ${prox.map((x) => x.nome + " " + x.valor).join(", ") || "nenhuma"}.`,
+      `Fatura pendente: ${valorFaturaPendente()}. Vence dia ${diaFatura()}.`,
+      `Casal: ${nq.eu} / ${nq.ela}. Missão: juntar sem matar lazer. Respostas curtas em português, didáticas pra leigo.`,
+    ].join("\n");
+  }
+
+  function getAiKey() {
+    try { return localStorage.getItem("nc-ai-key") || ""; } catch (_) { return ""; }
+  }
+  function setAiKey(k) {
+    try {
+      if (k) localStorage.setItem("nc-ai-key", k);
+      else localStorage.removeItem("nc-ai-key");
+    } catch (_) {}
+  }
+
+  async function perguntarIA(pergunta, c) {
+    const key = getAiKey();
+    if (!S.config.aiOn || !key) return null;
+    const provider = S.config.aiProvider || "groq";
+    const url = provider === "openai"
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://api.groq.com/openai/v1/chat/completions";
+    const model = provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant";
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+      body: JSON.stringify({
+        model,
+        temperature: 0.3,
+        max_tokens: 400,
+        messages: [
+          { role: "system", content: "Você é a 'Nossa Casa', assistente financeira do casal. Responda em português do Brasil, curto, claro, sem jargão. Use só os dados do contexto. Se faltar dado, diga. Nunca invente saldo." },
+          { role: "user", content: `Contexto:\n${contextoCasaTexto(c)}\n\nPergunta: ${pergunta}` },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error("IA HTTP " + res.status);
+    const data = await res.json();
+    const txt = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!txt) throw new Error("IA vazia");
+    return String(txt).replace(/\n/g, "<br>");
+  }
+
   function responderPergunta(pergunta, c) {
     const q = String(pergunta || "").toLowerCase().trim();
     const hoje = new Date().getDate();
@@ -862,40 +977,66 @@
     const vf = diaFatura();
     const meta = metaEfetiva();
     const lazerRest = Math.max(0, lazerOrcamento() - lazerGastoMes());
+    const mSim = q.match(/(?:e se|simula(?:r)?|gastar|pedir|pagar)\s*(?:r\$\s*)?(\d+(?:[.,]\d+)?)/i) || q.match(/(\d+(?:[.,]\d+)?)\s*(?:reais|no ifood|de ifood)/i);
+
+    if (mSim) return simularGasto(mSim[1], c);
+
+    if (/entrar|entrou|caiu|aparec|receb|pix|extra|400|sobrou|dinheiro a mais|aument/.test(q) || /pagar (agora|já)|adiantar conta/.test(q)) {
+      const disc = aconselharCaixaVsContas(c);
+      if (disc) return disc;
+    }
 
     if (!q || /posso gastar|quanto (posso|gastar)|gastar hoje|quanto hoje/.test(q)) {
+      const disc = (!caiu && c.caixa > 100) ? aconselharCaixaVsContas(c) : null;
       if (c.caixa <= 0) {
-        return { t: "bad", tit: "Posso gastar quanto hoje?", txt: `<b>Não.</b> Conta zerada. Segura até o salário do dia ${c.prox ? c.prox.d.getDate() : "?"}. Motivo: não tem saldo.` };
+        return { t: "bad", tit: "Posso gastar quanto hoje?", txt: `<b>Não.</b> Conta zerada. Segura até o salário do dia ${c.prox ? c.prox.d.getDate() : "?"}.` };
       }
       if (!caiu && c.prox && hoje < c.prox.d.getDate()) {
         const teto = Math.min(pode, Math.max(0, Math.floor(c.caixa / Math.max(1, c.diasAte))));
-        return {
-          t: teto > 0 ? "warn" : "bad",
-          tit: "Posso gastar quanto hoje?",
-          txt: teto > 0
-            ? `<b>Só se for essencial:</b> no máximo <b>${fmt(teto)}</b> hoje. Motivo: ainda não caiu o salário do dia ${c.prox.d.getDate()}. Contas grandes esperam esse salário. Lazer livre: ${fmt(lazerRest)}.`
-            : `<b>Melhor não.</b> Vocês têm ${fmt(c.caixa)} e o salário do dia ${c.prox.d.getDate()} ainda não caiu. Guarda pra sobreviver até lá.`,
-        };
+        let txt = teto > 0
+          ? `<b>Só essencial:</b> no máx. <b>${fmt(teto)}</b> hoje. Salário dia ${c.prox.d.getDate()} ainda não. Lazer: ${fmt(lazerRest)}.`
+          : `<b>Melhor não.</b> Têm ${fmt(c.caixa)}; salário dia ${c.prox.d.getDate()} não caiu.`;
+        if (disc) txt += `<br><br>${disc.txt}`;
+        return { t: disc ? "ok" : (teto > 0 ? "warn" : "bad"), tit: "Posso gastar quanto hoje?", txt };
       }
       if (pode <= 0) {
-        return { t: "bad", tit: "Posso gastar quanto hoje?", txt: `<b>Não (além do lazer).</b> O que tem na conta já está reservado pra contas/fatura/meta (${fmt(meta)}). Lazer ainda: <b>${fmt(lazerRest)}</b> — só isso sem culpa.` };
+        return { t: "bad", tit: "Posso gastar quanto hoje?", txt: `<b>Não (além do lazer).</b> Reservado pra contas/fatura/meta. Lazer: <b>${fmt(lazerRest)}</b>.` };
       }
-      return {
-        t: "ok",
-        tit: "Posso gastar quanto hoje?",
-        txt: `<b>Sim, até ${fmt(pode)}</b> de viver do dia (já tirei contas, fatura e meta). Lazer separado: <b>${fmt(lazerRest)}</b>. Meta juntar: <b>${fmt(meta)}</b>.`,
-      };
+      return { t: "ok", tit: "Posso gastar quanto hoje?", txt: `<b>Sim, até ${fmt(pode)}</b>/dia. Lazer: <b>${fmt(lazerRest)}</b>. Meta: <b>${fmt(meta)}</b>.` };
     }
     if (/meta|juntar|guardar/.test(q)) {
-      return { t: "ok", tit: "Quanto juntar?", txt: `A casa calcula sozinha: <b>${fmt(meta)}</b> este mês (renda − contas − fatura − lazer, metade da sobra). ${num(S.config.metaGuardar) > 0 ? "Você forçou outro valor em Ajustes." : "Não precisa mexer em nada."} Imprevistos: <b>${fmt(imprevistosMes())}</b>.` };
+      return { t: "ok", tit: "Quanto juntar?", txt: `A casa calcula sozinha: <b>${fmt(meta)}</b>. ${num(S.config.metaGuardar) > 0 ? "Você forçou outro valor." : "Não precisa mexer."}` };
     }
     if (/ifood|lazer/.test(q)) {
-      return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer / iFood", txt: lazerRest > 0 ? `Pode, dentro de <b>${fmt(lazerRest)}</b> que ainda sobram do mês.` : `Lazer do mês acabou. Próximo iFood come a meta de juntar.` };
+      return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer / iFood", txt: lazerRest > 0 ? `Pode até <b>${fmt(lazerRest)}</b>.` : `Lazer acabou. Próximo iFood come a meta.` };
     }
     if (/fatura|cart[aã]o/.test(q)) {
-      return { t: faturaPagaEsteMes() ? "ok" : "warn", tit: "Fatura", txt: faturaPagaEsteMes() ? "Fatura já paga este mês." : `Vence dia <b>${vf}</b>. ${valorFaturaPendente() > 0 ? `Guarda <b>${fmt(valorFaturaPendente())}</b>.` : "Valor ainda não saiu — anota nas compras quando olhar."}` };
+      return { t: faturaPagaEsteMes() ? "ok" : "warn", tit: "Fatura", txt: faturaPagaEsteMes() ? "Fatura já paga." : `Vence dia <b>${vf}</b>. ${valorFaturaPendente() > 0 ? `Guarda <b>${fmt(valorFaturaPendente())}</b>.` : "Valor ainda não saiu."}` };
     }
-    return { t: "ok", tit: "Casa respondendo", txt: `Hoje dia ${hoje}. Em conta: ${fmt(c.caixa)}. Pode gastar/dia: ${fmt(pode)}. Lazer: ${fmt(lazerRest)}. Meta: ${fmt(meta)}. Pergunta tipo: "posso gastar quanto hoje?"` };
+    if (/quem (gastou|mais)|ranking|esposa|die/.test(q)) {
+      const nq = nomesQuem();
+      const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+      let eu = 0, ela = 0;
+      S.gastos.filter((g) => g.ts >= ini.getTime()).forEach((g) => {
+        if (g.quem === "ela") ela += num(g.valor);
+        else if (g.quem === "eu") eu += num(g.valor);
+      });
+      return { t: "ok", tit: "Quem gastou", txt: `<b>${esc(nq.eu)}</b>: ${fmt(eu)} · <b>${esc(nq.ela)}</b>: ${fmt(ela)} este mês (só o que marcou quem).` };
+    }
+    const disc = aconselharCaixaVsContas(c);
+    return {
+      t: "ok",
+      tit: "Casa respondendo",
+      txt: `Hoje ${hoje}. Conta ${fmt(c.caixa)}. Pode/dia ${fmt(pode)}. Lazer ${fmt(lazerRest)}. Meta ${fmt(meta)}.${disc ? "<br><br>" + disc.txt : ""} Pergunte: "posso gastar quanto hoje?" · "e se gastar 40?" · "entrou 400, o que faço?"`,
+    };
+  }
+
+  async function responderPerguntaSmart(pergunta, c) {
+    try {
+      const ia = await perguntarIA(pergunta, c);
+      if (ia) return { t: "ok", tit: "Casa (IA)", txt: ia };
+    } catch (_) {}
+    return responderPergunta(pergunta, c);
   }
 
   function diaFatura() {
@@ -980,11 +1121,16 @@
       const diaProx = prox.d.getDate();
       const totalP = proximas.reduce((a, x) => a + num(x.valor), 0);
       const nomes = proximas.length ? proximas.map((x) => esc(x.nome)).join(", ") : "as contas dessa quinzena";
-      out.push({
-        t: "warn",
-        tit: `Hoje é dia ${hojeDia} — espera o dia ${diaProx}`,
-        txt: `Vocês têm <b>${fmt(c.caixa)}</b>. <b>Não</b> paga conta grande agora. No dia <b>${diaProx}</b> o salário cai e aí sim paga: <b>${nomes}</b>${totalP ? ` (${fmt(totalP)})` : ""}. Até lá: só o essencial. Lazer livre agora: <b>${fmt(lazerRest)}</b>.`,
-      });
+      const disc = aconselharCaixaVsContas(c);
+      if (disc && c.caixa >= totalP && totalP > 0) {
+        out.push(disc);
+      } else {
+        out.push({
+          t: "warn",
+          tit: `Hoje é dia ${hojeDia} — espera o dia ${diaProx}`,
+          txt: `Vocês têm <b>${fmt(c.caixa)}</b>. <b>Não</b> paga conta grande agora. No dia <b>${diaProx}</b> o salário cai e aí sim paga: <b>${nomes}</b>${totalP ? ` (${fmt(totalP)})` : ""}. Até lá: só o essencial. Lazer livre agora: <b>${fmt(lazerRest)}</b>.`,
+        });
+      }
     }
 
     // 2) Só urgências (máx. mais 2)
@@ -1089,9 +1235,17 @@
 
       <form class="card mt" data-form="pergunte">
         <label style="margin-top:0;">Pergunta pra casa</label>
-        <input name="q" placeholder="Posso gastar quanto hoje?" value="" />
+        <input name="q" placeholder="Entrou 400, o que faço?" value="" />
         <button class="btn full" type="submit">Perguntar</button>
-        <div class="dica">Exemplos: posso gastar quanto hoje? · e a meta? · posso iFood? · e a fatura?</div>
+        <div class="dica">Exemplos: posso gastar quanto hoje? · e se gastar 40? · entrou 400, o que faço? · posso iFood?</div>
+      </form>
+
+      <form class="card mt" data-form="simular">
+        <label style="margin-top:0;">E se gastar quanto? (simulador)</label>
+        <div style="display:flex; gap:0.6rem; align-items:flex-end;">
+          <div style="flex:1;"><input name="valor" inputmode="decimal" placeholder="40,00" required /></div>
+          <button class="btn small" type="submit" style="min-height:3rem;">Simular</button>
+        </div>
       </form>`;
 
     // Balões inteligentes (sempre)
@@ -1173,6 +1327,7 @@
     }
 
     // Gasto rápido
+    const nq = nomesQuem();
     html += `
       <div class="sect">Gastei agora <span class="mini">dinheiro / pix / débito</span></div>
       <form class="card" data-form="gasto">
@@ -1188,6 +1343,12 @@
             <select name="cat">${CATS_GASTO.map((x) => `<option>${x}</option>`).join("")}</select>
           </div>
         </div>
+        <label>Quem gastou?</label>
+        <select name="quem">
+          <option value="eu">${esc(nq.eu)}</option>
+          <option value="ela">${esc(nq.ela)}</option>
+          <option value="casa">Casa (junto)</option>
+        </select>
         <button class="btn full" type="submit">Anotar gasto</button>
       </form>`;
 
@@ -1217,9 +1378,10 @@
     html += `<div class="sect">Gastos do mês <span class="mini">${fmt(c.gastosMes)} no dinheiro</span></div><div class="card">`;
     if (!recentes.length) html += `<div class="vazio">Nenhum gasto anotado. Bora manter assim 😄</div>`;
     recentes.forEach((g) => {
+      const quemLbl = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : (g.quem === "casa" ? "Casa" : "");
       html += `
         <div class="item">
-          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)} · ${dataBR(g.ts)}</div></div>
+          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)}${quemLbl ? " · " + esc(quemLbl) : ""} · ${dataBR(g.ts)}</div></div>
           <div class="val">${fmt(g.valor)}</div>
           <button class="statusbtn" data-action="gasto-del" data-id="${g.id}">✕</button>
         </div>`;
@@ -1316,9 +1478,10 @@
         <div class="dica">Sobra ≈ entrou − contas − gastos − fatura paga. Caixa real em Hoje é o que manda.</div>
       </div>
 
-      <div class="sect">Limpar</div>
+      <div class="sect">Limpar / exportar</div>
       <div class="card">
         <div class="s" style="margin-bottom:0.7rem;">Apaga só os lançamentos de <b>${esc(mesNome())}</b>: salários marcados, contas pagas, gastos no dinheiro e fatura paga do mês. Contas cadastradas, despensa, gatos e saldo do banco <b>ficam</b>.</div>
+        <button class="btn ghost full" data-action="exportar-mes">Baixar resumo do mês (.txt)</button>
         <button class="btn danger full" data-action="limpar-mes">Limpar lançamentos deste mês</button>
       </div>`;
     return html;
@@ -1637,6 +1800,29 @@
         <div class="dica">Meta automática agora: <b>${fmt(metaSugerida())}</b> — a casa calcula sozinha. Só preenche o campo se quiser forçar outro valor. Deixa vazio = automático.</div>
       </form>
 
+      <div class="sect">Casal, lembretes e IA</div>
+      <form class="card" data-form="cfg-casa">
+        <div class="row2">
+          <div><label>Seu nome</label><input name="quemEu" value="${esc(cfg.quemEu || "Die")}" /></div>
+          <div><label>Nome dela</label><input name="quemEla" value="${esc(cfg.quemEla || "Esposa")}" /></div>
+        </div>
+        <label style="font-weight:600; display:flex; align-items:center; gap:0.5rem; margin-top:0.8rem;">
+          <input name="lembretes" type="checkbox" ${cfg.lembretesOn ? "checked" : ""} /> Lembretes no celular (salário, fatura, vacina)
+        </label>
+        <label style="font-weight:600; display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+          <input name="aiOn" type="checkbox" ${cfg.aiOn ? "checked" : ""} /> Usar IA tipo ChatGPT nas perguntas (opcional)
+        </label>
+        <label>Provedor</label>
+        <select name="aiProvider">
+          <option value="groq" ${(cfg.aiProvider || "groq") === "groq" ? "selected" : ""}>Groq (grátis — llama)</option>
+          <option value="openai" ${cfg.aiProvider === "openai" ? "selected" : ""}>OpenAI (pago)</option>
+        </select>
+        <label>Chave da API (fica só neste aparelho)</label>
+        <input name="aiKey" type="password" autocomplete="off" placeholder="${getAiKey() ? "•••• já salva — cole pra trocar" : "cole a chave aqui"}" />
+        <button class="btn full" type="submit">Salvar casal / lembretes / IA</button>
+        <div class="dica">Sem chave: a casa já pensa sozinha (discernimento + simulador). Com Groq grátis: respostas mais “conversa”. Se o navegador bloquear a API, volta pro cérebro local.</div>
+      </form>
+
       <div class="sect">Conta da casa</div>
       <form class="card" data-form="perfil">
         <label>Nome da casa</label>
@@ -1804,6 +1990,44 @@
       URL.revokeObjectURL(a.href);
     },
 
+    "exportar-mes": () => {
+      const r = resumoMesDados();
+      const c = r.c;
+      const nq = nomesQuem();
+      const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+      const mk = mesKey();
+      const pag = S.pagamentos[mk] || {};
+      const lines = [];
+      lines.push(`Nossa Casa — ${mesNome()}`);
+      lines.push(`Entrou: ${fmt(c.entrouMes)} | Saiu: ${fmt(r.saiu)} | Saldo mês: ${fmt(r.saldo)}`);
+      lines.push(`Caixa agora: ${fmt(c.caixa)} | Meta: ${fmt(c.metaNum)} | Lazer resto: ${fmt(c.lazerRest)}`);
+      lines.push("");
+      lines.push("Contas pagas:");
+      for (const id in pag) {
+        const ct = S.contas.find((x) => x.id === id);
+        lines.push(`- ${ct ? ct.nome : "Conta"}: ${fmt(pag[id].valor)}`);
+      }
+      lines.push("");
+      lines.push("Gastos dinheiro:");
+      let eu = 0, ela = 0;
+      S.gastos.filter((g) => g.ts >= ini.getTime()).forEach((g) => {
+        const quem = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : "Casa";
+        if (g.quem === "ela") ela += num(g.valor);
+        if (g.quem === "eu") eu += num(g.valor);
+        lines.push(`- ${g.desc} (${g.cat}, ${quem}): ${fmt(g.valor)}`);
+      });
+      lines.push("");
+      lines.push(`Quem gastou: ${nq.eu} ${fmt(eu)} | ${nq.ela} ${fmt(ela)}`);
+      lines.push(`iFood ${fmt(r.ifood)} | Mercado ${fmt(r.mercado)} | Lazer ${fmt(r.lazer)} | Imprevisto ${fmt(r.imprevisto)}`);
+      lines.push(`Cartão aberto: ${fmt(c.comprasCiclo)} | Fatura paga: ${fmt(c.faturaPaga)}`);
+      const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `nossa-casa-${mk}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    },
+
     "limpar-mes": () => {
       const nome = mesNome();
       if (!confirm(`Limpar lançamentos de ${nome}?\n\nApaga: salários marcados, contas pagas, gastos no dinheiro e fatura paga deste mês.\n\nNÃO apaga: contas cadastradas, despensa, gatos, compras do cartão em aberto, saldo do banco.`)) return;
@@ -1839,7 +2063,14 @@
   /* ─── Forms ─── */
   const F = {
     "gasto": (f) => {
-      S.gastos.push({ id: uid(), desc: f.desc.value.trim(), cat: f.cat.value, valor: num(f.valor.value), ts: Date.now() });
+      S.gastos.push({
+        id: uid(),
+        desc: f.desc.value.trim(),
+        cat: f.cat.value,
+        valor: num(f.valor.value),
+        quem: f.quem ? f.quem.value : "casa",
+        ts: Date.now(),
+      });
       touch();
     },
     "conta-add": (f) => {
@@ -1859,9 +2090,18 @@
       S.caixa = { valor: num(f.valor.value), em: agora };
       touch();
     },
-    "pergunte": (f) => {
+    "pergunte": async (f) => {
       const c = calc();
-      S.chatResposta = responderPergunta(f.q.value, c);
+      const q = f.q.value;
+      S.chatResposta = { t: "ok", tit: "Casa pensando…", txt: "Só um segundo." };
+      render();
+      window.scrollTo(0, 0);
+      S.chatResposta = await responderPerguntaSmart(q, c);
+      touch();
+      window.scrollTo(0, 0);
+    },
+    "simular": (f) => {
+      S.chatResposta = simularGasto(f.valor.value, calc());
       touch();
       window.scrollTo(0, 0);
     },
@@ -1946,9 +2186,31 @@
       const rawMeta = String(f.meta.value || "").trim();
       const metaInput = rawMeta === "" ? 0 : num(rawMeta);
       const sug = metaSugerida();
-      // Vazio ou igual à automática → fica automática (0)
       S.config.metaGuardar = metaInput > 0 && Math.round(metaInput) !== Math.round(sug) ? metaInput : 0;
       touch();
+    },
+    "cfg-casa": async (f) => {
+      S.config.quemEu = f.quemEu.value.trim() || "Die";
+      S.config.quemEla = f.quemEla.value.trim() || "Esposa";
+      S.config.aiOn = !!(f.aiOn && f.aiOn.checked);
+      S.config.aiProvider = f.aiProvider.value || "groq";
+      const novaKey = f.aiKey.value.trim();
+      if (novaKey) setAiKey(novaKey);
+      const querLembrete = !!(f.lembretes && f.lembretes.checked);
+      if (querLembrete) {
+        if (!("Notification" in window)) {
+          alert("Este celular/navegador não tem notificação.");
+          S.config.lembretesOn = false;
+        } else {
+          const p = await Notification.requestPermission();
+          S.config.lembretesOn = p === "granted";
+          if (!S.config.lembretesOn) alert("Permissão de notificação negada.");
+        }
+      } else {
+        S.config.lembretesOn = false;
+      }
+      touch();
+      checarLembretes(true);
     },
     "perfil": async (f) => {
       const msg = $("#perfil-msg");
@@ -1973,8 +2235,39 @@
     if (!f) return;
     e.preventDefault();
     const fn = F[f.dataset.form];
-    if (fn) fn(f, e.submitter);
+    if (fn) Promise.resolve(fn(f, e.submitter)).catch((err) => console.error(err));
   });
+
+  function checarLembretes(force) {
+    if (!S.config.lembretesOn || !("Notification" in window) || Notification.permission !== "granted") return;
+    const diaKey = new Date().toISOString().slice(0, 10);
+    try {
+      if (!force && localStorage.getItem("nc-lembrete-dia") === diaKey) return;
+      localStorage.setItem("nc-lembrete-dia", diaKey);
+    } catch (_) {}
+    const hoje = new Date().getDate();
+    const vf = diaFatura();
+    S.config.rendas.forEach((r) => {
+      if (r.dia === hoje + 1) {
+        try { new Notification("Nossa Casa", { body: `Amanhã cai ${r.nome}. Marca no app quando entrar.` }); } catch (_) {}
+      }
+      if (r.dia === hoje) {
+        try { new Notification("Nossa Casa", { body: `Hoje é dia de ${r.nome}. Caiu? Marca no Hoje.` }); } catch (_) {}
+      }
+    });
+    if (vf === hoje + 1) {
+      try { new Notification("Nossa Casa", { body: "Amanhã vence a fatura — separa o dinheiro." }); } catch (_) {}
+    }
+    if (vf === hoje) {
+      try { new Notification("Nossa Casa", { body: "Hoje é dia da fatura. Olha o Cartão no app." }); } catch (_) {}
+    }
+    S.gatos.forEach((g) => (g.vacinas || []).forEach((va) => {
+      const d = diasPara(va.proxima);
+      if (d === 0 || d === 1 || d === 7) {
+        try { new Notification("Nossa Casa", { body: `Vacina ${va.nome} do ${g.nome}: ${d === 0 ? "hoje" : "em " + d + "d"}.` }); } catch (_) {}
+      }
+    }));
+  }
 
   /* ═══════════════════════ BOOT ═══════════════════════ */
   $("#form-login").addEventListener("submit", async (e) => {
@@ -2007,6 +2300,7 @@
     if (meta.nome) $("#h-nome").textContent = meta.nome;
     render();
     await cloudLoad();
+    checarLembretes(false);
   }
 
   (async function boot() {
@@ -2020,7 +2314,7 @@
       const meta = NCCloud.getMeta();
       if (meta.nome) $("#h-nome").textContent = meta.nome;
       render();
-      cloudLoad();
+      cloudLoad().then(() => checarLembretes(false));
     } else if (!NCCloud.configured()) {
       // Sem nuvem: modo local, sem login
       logado = true;
@@ -2028,6 +2322,7 @@
       $("#app").hidden = false;
       setSync("");
       render();
+      checarLembretes(false);
     } else {
       $("#gate").hidden = false;
     }
