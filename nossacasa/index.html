@@ -930,14 +930,55 @@
     const nq = nomesQuem();
     const prox = contasProximas();
     const pagar = contasPagarAgora();
+    const mk = mesKey();
+    const pag = S.pagamentos[mk] || {};
+    const rec = S.recebidos[mk] || {};
+    const r = resumoMesDados();
+    const rendaLinhas = S.config.rendas.map((x) => {
+      const tot = num(x.valor) * (num(x.pessoas) || 1);
+      return `${x.nome}: dia ${x.dia}, ${fmt(x.valor)}×${x.pessoas || 1}=${fmt(tot)}${rec[x.id] ? " (JÁ CAIU)" : " (ainda não)"}`;
+    }).join(" | ");
+    const contasLinhas = S.contas
+      .slice()
+      .sort((a, b) => a.dia - b.dia)
+      .map((x) => `${x.nome} dia ${x.dia}: ${fmt(x.valor)}${pag[x.id] ? " PAGA" : " aberta"}`)
+      .join(" | ");
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    const gastosTop = S.gastos
+      .filter((g) => g.ts >= ini.getTime())
+      .slice()
+      .sort((a, b) => num(b.valor) - num(a.valor))
+      .slice(0, 8)
+      .map((g) => `${g.desc} (${g.cat}${g.quem ? "/" + g.quem : ""}): ${fmt(g.valor)}`)
+      .join(" | ");
+    const despensaFalta = S.despensa.filter((d) => d.status !== "tem").map((d) => d.nome).join(", ");
+    const lista = S.lista.map((x) => x.nome).join(", ");
+    const rendaMes = rendaMesPrevista();
+    const contasMes = contasMesPrevistas();
+    const fat = valorFaturaPendente() || num(S.config.faturaEstimada);
+    const lazer = lazerOrcamento();
+    const meta = metaEfetiva();
+    const sobraBruta = rendaMes - contasMes - fat - lazer;
     return [
-      `Hoje dia ${new Date().getDate()}. Mês ${mesNome()}.`,
-      `Caixa: ${c.caixa}. Pode/dia: ${c.porDia}. Lazer resto: ${c.lazerRest}. Meta auto: ${c.metaNum}.`,
-      `Esperando salário: ${c.esperandoSalario ? "sim" : "não"}. Próximo salário dia: ${c.prox ? c.prox.d.getDate() : "-"}.`,
-      `Contas pagar agora: ${pagar.map((x) => x.nome + " " + x.valor).join(", ") || "nenhuma"}.`,
-      `Contas da próxima quinzena: ${prox.map((x) => x.nome + " " + x.valor).join(", ") || "nenhuma"}.`,
-      `Fatura pendente: ${valorFaturaPendente()}. Vence dia ${diaFatura()}.`,
-      `Casal: ${nq.eu} / ${nq.ela}. Missão: juntar sem matar lazer. Respostas curtas em português, didáticas pra leigo.`,
+      `APP: Nossa Casa (finanças do casal + despensa + gatos). Você TEM acesso a estes dados — use-os. Nunca diga que não conhece o projeto.`,
+      `Hoje: dia ${new Date().getDate()} de ${mesNome()}.`,
+      `Casal: ${nq.eu} e ${nq.ela}.`,
+      `CAIXA no banco agora: ${fmt(c.caixa)}.`,
+      `Pode gastar/dia até próximo salário: ${fmt(c.porDia)} (${c.diasAte} dias). Livre viver: ${fmt(c.livreViver)}. Reservado obrigatório: ${fmt(c.obrigAte)}.`,
+      `Lazer/iFood orçamento mês: ${fmt(lazer)}. Já gasto lazer: ${fmt(lazerGastoMes())}. Lazer que ainda pode: ${fmt(c.lazerRest)}.`,
+      `META juntar (calculada pelo app): ${fmt(meta)}. ${num(S.config.metaGuardar) > 0 ? "Meta foi forçada manualmente." : "Meta automática = ~50% da sobra (renda − contas − fatura − lazer)."}`,
+      `Contas do mês: renda prevista ${fmt(rendaMes)} − contas ${fmt(contasMes)} − fatura ${fmt(fat)} − lazer ${fmt(lazer)} = sobra bruta ${fmt(sobraBruta)} → meta sugerida ${fmt(metaSugerida())}.`,
+      `Rendas: ${rendaLinhas || "nenhuma"}.`,
+      `Esperando salário: ${c.esperandoSalario ? "SIM" : "não"}. Próximo salário: dia ${c.prox ? c.prox.d.getDate() : "-"} valor ~${c.prox ? fmt(c.prox.valor) : "-"}.`,
+      `Contas fixas: ${contasLinhas || "nenhuma"}.`,
+      `Pagar AGORA (quinzena ativa): ${pagar.map((x) => x.nome + " " + fmt(x.valor)).join(", ") || "nenhuma"}.`,
+      `Próxima quinzena (preview): ${prox.map((x) => x.nome + " " + fmt(x.valor)).join(", ") || "nenhuma"}.`,
+      `CARTÃO: limite ${fmt(S.config.limiteCartao)}, reserva ${fmt(S.config.reservaCartao)}, ciclo aberto ${fmt(c.comprasCiclo)}, fatura vence dia ${diaFatura()}, fatura pendente ${fmt(valorFaturaPendente())}, fatura já paga este mês ${fmt(c.faturaPaga)}.`,
+      `Mês até agora: entrou ${fmt(c.entrouMes)}, saiu ${fmt(r.saiu)}, gastos dinheiro ${fmt(c.gastosMes)} (iFood ${fmt(r.ifood)}, mercado ${fmt(r.mercado)}, lazer ${fmt(r.lazer)}, imprevisto ${fmt(r.imprevisto)}).`,
+      `Gastos recentes: ${gastosTop || "nenhum"}.`,
+      `Despensa faltando: ${despensaFalta || "ok"}. Lista compras: ${lista || "vazia"}.`,
+      `Gatos: ${(S.gatos || []).map((g) => g.nome).join(", ") || "nenhum"}.`,
+      `Missão: juntar o máximo sem matar lazer. Respostas curtas, com números em R$, didáticas.`,
     ].join("\n");
   }
 
@@ -973,7 +1014,7 @@
     const messages = [
       {
         role: "system",
-        content: `Você é a 'Nossa Casa', assistente financeira do casal. Fale com ${nq.eu} e ${nq.ela}. Responda em português do Brasil, curto, claro, sem jargão, didático pra leigo. Use só os dados do contexto. Se faltar dado, diga. Nunca invente saldo. Não cumprimente de novo se a conversa já começou — vá direto ao ponto.`,
+        content: `Você é a 'Nossa Casa', assistente financeira do app do casal ${nq.eu} e ${nq.ela}. Você TEM acesso completo aos dados do projeto no bloco de contexto (salários, contas, cartão, caixa, meta, gastos, despensa). NUNCA diga que não conhece o projeto ou que não tem acesso. Cite números em R$ do contexto. Se algo não estiver no contexto, diga só esse item. Português do Brasil, curto, claro, sem jargão, didático. Não cumprimente de novo se a conversa já começou.`,
       },
       { role: "user", content: `Contexto financeiro atual:\n${contextoCasaTexto(c)}` },
       ...hist,
@@ -1026,8 +1067,18 @@
       }
       return { t: "ok", tit: "Posso gastar quanto hoje?", txt: `<b>Sim, até ${fmt(pode)}</b>/dia. Lazer: <b>${fmt(lazerRest)}</b>. Meta: <b>${fmt(meta)}</b>.` };
     }
-    if (/meta|juntar|guardar/.test(q)) {
-      return { t: "ok", tit: "Quanto juntar?", txt: `A casa calcula sozinha: <b>${fmt(meta)}</b>. ${num(S.config.metaGuardar) > 0 ? "Você forçou outro valor." : "Não precisa mexer."}` };
+    if (/meta|juntar|guardar|economiz|poupar|sobrar/.test(q)) {
+      const renda = rendaMesPrevista();
+      const contas = contasMesPrevistas();
+      const fat = valorFaturaPendente() || num(S.config.faturaEstimada) || Math.min(num(S.config.limiteCartao) || 800, 900);
+      const lazer = lazerOrcamento();
+      const sobra = renda - contas - fat - lazer;
+      const sug = metaSugerida();
+      return {
+        t: "ok",
+        tit: "Quanto dá pra juntar?",
+        txt: `Com o que tá cadastrado no app:<br>Renda mês <b>${fmt(renda)}</b><br>− Contas <b>${fmt(contas)}</b><br>− Fatura (ciclo/estimativa) <b>${fmt(fat)}</b><br>− Lazer <b>${fmt(lazer)}</b><br>= Sobra <b>${fmt(sobra)}</b><br>Meta da casa (~metade da sobra): <b>${fmt(sug)}</b>${num(S.config.metaGuardar) > 0 ? ` · você forçou ${fmt(meta)}` : ""}.<br>Cartão aberto agora: <b>${fmt(c.comprasCiclo)}</b>. Caixa: <b>${fmt(c.caixa)}</b>.`,
+      };
     }
     if (/ifood|lazer/.test(q)) {
       return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer / iFood", txt: lazerRest > 0 ? `Pode até <b>${fmt(lazerRest)}</b>.` : `Lazer acabou. Próximo iFood come a meta.` };
