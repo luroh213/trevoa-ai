@@ -395,6 +395,7 @@
       ],
       pagamentos: {},
       recebidos: {},
+      entradas: [], // dinheiro que entrou fora do salário (PIX, bônus, devolução…)
       gastos: [],
       cartao: { compras: [], faturas: {}, parcelas: [] }, // parcelas futuras após pagar fatura
       despensa: [],
@@ -423,6 +424,7 @@
     if (!Array.isArray(out.config.rendas) || !out.config.rendas.length) out.config.rendas = base.config.rendas;
     out.contas = Array.isArray(doc.contas) ? doc.contas : [];
     out.gastos = Array.isArray(doc.gastos) ? doc.gastos : [];
+    out.entradas = Array.isArray(doc.entradas) ? doc.entradas : [];
     out.despensa = Array.isArray(doc.despensa) ? doc.despensa : [];
     out.lista = Array.isArray(doc.lista) ? doc.lista : [];
     out.gatos = Array.isArray(doc.gatos) ? doc.gatos : [];
@@ -578,6 +580,9 @@
       const r = S.recebidos[k][id];
       if (num(r.ts) > emBase) entrou += num(r.valor);
     }
+    (S.entradas || []).forEach((e) => {
+      if (num(e.ts) > emBase) entrou += num(e.valor);
+    });
     for (const k in S.pagamentos) for (const id in S.pagamentos[k]) {
       const p = S.pagamentos[k][id];
       if (num(p.ts) > emBase) pagou += num(p.valor);
@@ -590,7 +595,9 @@
     const caixa = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas;
 
     // Visão do mês (telas de controle)
-    const entrouMes = Object.values(rec).reduce((a, r) => a + num(r.valor), 0);
+    const iniMesCalc = new Date(); iniMesCalc.setDate(1); iniMesCalc.setHours(0, 0, 0, 0);
+    const entradasMes = (S.entradas || []).filter((e) => num(e.ts) >= iniMesCalc.getTime()).reduce((a, e) => a + num(e.valor), 0);
+    const entrouMes = Object.values(rec).reduce((a, r) => a + num(r.valor), 0) + entradasMes;
     const previstoMes = cfg.rendas.reduce((a, r) => a + num(r.valor) * (num(r.pessoas) || 1), 0);
     let contasPagas = 0;
     for (const k in pag) contasPagas += num(pag[k].valor);
@@ -1034,6 +1041,7 @@
       `Pagar AGORA (quinzena ativa): ${pagar.map((x) => x.nome + " " + fmt(x.valor)).join(", ") || "nenhuma"}.`,
       `Próxima quinzena (preview): ${prox.map((x) => x.nome + " " + fmt(x.valor)).join(", ") || "nenhuma"}.`,
       `CARTÃO: limite ${fmt(S.config.limiteCartao)}, reserva ${fmt(S.config.reservaCartao)}, ciclo aberto ${fmt(c.comprasCiclo)}, fatura vence dia ${diaFatura()}, fatura pendente ${fmt(valorFaturaPendente())}, fatura já paga este mês ${fmt(c.faturaPaga)}.`,
+      `Entradas por fora (não salário): ${(S.entradas || []).filter((e) => { const i = new Date(); i.setDate(1); i.setHours(0,0,0,0); return num(e.ts) >= i.getTime(); }).map((e) => `${e.desc} ${fmt(e.valor)}`).join(" | ") || "nenhuma"}.`,
       `Mês até agora: entrou ${fmt(c.entrouMes)}, saiu ${fmt(r.saiu)}, gastos dinheiro ${fmt(c.gastosMes)} (iFood ${fmt(r.ifood)}, mercado ${fmt(r.mercado)}, lazer ${fmt(r.lazer)}, imprevisto ${fmt(r.imprevisto)}).`,
       `Gastos recentes: ${gastosTop || "nenhum"}.`,
       `Despensa faltando: ${despensaFalta || "ok"}. Lista compras: ${lista || "vazia"}.`,
@@ -1410,7 +1418,37 @@
           <input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required />
         </div>
         <button class="btn small" type="submit" style="min-height:3rem;">Atualizar</button>
+      </form>
+      <form class="card mt" data-form="entrada-add">
+        <label style="margin-top:0;">Entrou dinheiro por fora?</label>
+        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, devolução, presente — <b>não</b> é salário (salário = botão Caiu).</div>
+        <div class="row2">
+          <div><label>Quanto (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required /></div>
+          <div><label>De onde</label><input name="desc" placeholder="PIX da mãe, bônus…" required /></div>
+        </div>
+        <button class="btn full" type="submit">Somar na conta</button>
       </form>`;
+
+    const entradasMesLista = (S.entradas || [])
+      .filter((e) => {
+        const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+        return num(e.ts) >= ini.getTime();
+      })
+      .slice()
+      .sort((a, b) => num(b.ts) - num(a.ts));
+    if (entradasMesLista.length) {
+      html += `<div class="sect">Entradas por fora <span class="mini">este mês</span></div><div class="card">`;
+      entradasMesLista.forEach((e) => {
+        html += `<div class="chkstep">
+          <div class="grow">
+            <div class="t">${esc(e.desc || "Entrada")}</div>
+            <div class="s">${fmt(e.valor)}</div>
+          </div>
+          <button class="btn small ghost" data-action="entrada-del" data-id="${esc(e.id)}">Apagar</button>
+        </div>`;
+      });
+      html += `</div>`;
+    }
 
     html += renderChatConversa();
 
@@ -2158,6 +2196,10 @@
       S.gastos = S.gastos.filter((g) => g.id !== el.dataset.id);
       touch();
     },
+    "entrada-del": (el) => {
+      S.entradas = (S.entradas || []).filter((e) => e.id !== el.dataset.id);
+      touch();
+    },
 
     "conta-pagar": (el) => {
       pagandoId = pagandoId === el.dataset.id ? null : el.dataset.id;
@@ -2305,7 +2347,7 @@
 
     "limpar-mes": () => {
       const nome = mesNome();
-      if (!confirm(`Limpar lançamentos de ${nome}?\n\nApaga: salários marcados, contas pagas, gastos no dinheiro e fatura paga deste mês.\n\nNÃO apaga: contas cadastradas, despensa, gatos, compras do cartão em aberto, saldo do banco.`)) return;
+      if (!confirm(`Limpar lançamentos de ${nome}?\n\nApaga: salários marcados, entradas por fora, contas pagas, gastos no dinheiro e fatura paga deste mês.\n\nNÃO apaga: contas cadastradas, despensa, gatos, compras do cartão em aberto, saldo do banco.`)) return;
       const mk = mesKey();
       const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
       if (S.pagamentos) delete S.pagamentos[mk];
@@ -2313,6 +2355,7 @@
       if (S.checklist) delete S.checklist[mk];
       if (S.cartao && S.cartao.faturas) delete S.cartao.faturas[mk];
       S.gastos = (S.gastos || []).filter((g) => num(g.ts) < ini.getTime());
+      S.entradas = (S.entradas || []).filter((e) => num(e.ts) < ini.getTime());
       S.ultimaCompra = null;
       S.chatResposta = null;
       // chat conversa fica (histórico); se quiser limpar: botão no chat
@@ -2365,6 +2408,17 @@
       if (!S.inicio) S.inicio = agora;
       S.caixa = { valor: num(f.valor.value), em: agora };
       touch();
+    },
+    "entrada-add": (f) => {
+      const valor = num(f.valor.value);
+      const desc = String(f.desc.value || "").trim() || "Entrada";
+      if (valor <= 0) return;
+      if (!S.entradas) S.entradas = [];
+      S.entradas.push({ id: uid(), desc, valor, ts: Date.now() });
+      touch();
+      tab = "hoje";
+      render();
+      window.scrollTo(0, 0);
     },
     "pergunte": async (f) => {
       const q = String(f.q.value || "").trim();
