@@ -603,21 +603,11 @@
         obrigAte += ciclo > 0 ? ciclo : num(S.config.faturaEstimada);
       }
     }
-    // Meta: definida ou sugerida
-    const metaNum = (() => {
-      const m = num(S.config.metaGuardar);
-      if (m > 0) return m;
-      const renda = S.config.rendas.reduce((a, r) => a + num(r.valor) * (num(r.pessoas) || 1), 0);
-      const contasT = S.contas.reduce((a, ct) => a + num(ct.valor), 0);
-      const fat = (!S.cartao.faturas[mk] && S.cartao.compras.reduce((a, x) => a + num(x.valor), 0)) || num(S.config.faturaEstimada) || Math.min(num(S.config.limiteCartao) || 800, 900);
-      const laz = num(S.config.lazerMes) > 0 ? num(S.config.lazerMes) : 200;
-      const sobra = renda - contasT - fat - laz;
-      if (sobra <= 0) return 0;
-      // Enquanto espera salário, só reserva meta proporcional aos dias / caixa pequeno
-      const sug = Math.max(50, Math.round((sobra * 0.5) / 50) * 50);
-      return bestCaiu ? sug : Math.min(sug, Math.max(0, Math.floor(caixa * 0.1)));
-    })();
-    obrigAte += metaNum;
+    // Meta: automática (metaSugerida) ou forçada em Ajustes
+    const metaNum = metaEfetiva();
+    // Enquanto espera salário, não reserva meta cheia no caixa pequeno
+    const metaReserva = bestCaiu ? metaNum : Math.min(metaNum, Math.max(0, Math.floor(caixa * 0.1)));
+    obrigAte += metaReserva;
 
     const lazerOrc = num(S.config.lazerMes) > 0 ? num(S.config.lazerMes) : 200;
     const livreAte = caixa - obrigAte;
@@ -666,22 +656,53 @@
     const pag = S.pagamentos[mk] || {};
     const rendas = S.config.rendas.slice().sort((a, b) => a.dia - b.dia);
     if (!rendas.length) return null;
-    let alvo = rendas.find((r) => !rec[r.id] && r.dia <= hoje + 2)
-      || rendas.find((r) => !rec[r.id])
-      || [...rendas].filter((r) => rec[r.id]).sort((a, b) => b.dia - a.dia)[0]
-      || rendas[0];
+
+    // Mira o salário que importa AGORA — nunca um dia passado (ex.: dia 7 no dia 12)
+    let alvo = null;
+    let modo = "espera"; // espera | ativo
+    const caiuObj = rendaRecenteCaiu();
+    if (caiuObj) {
+      const proxNaoCaiu = rendas.find((r) => r.dia > caiuObj.dia && !rec[r.id]);
+      if (proxNaoCaiu && hoje >= proxNaoCaiu.dia) {
+        alvo = proxNaoCaiu;
+        modo = "ativo";
+      } else {
+        alvo = rendas.find((r) => r.id === caiuObj.id) || rendas[0];
+        modo = "ativo";
+      }
+    } else {
+      alvo = rendas.find((r) => r.dia >= hoje) || rendas[0];
+      modo = hoje >= alvo.dia ? "ativo" : "espera";
+    }
+
     const total = num(alvo.valor) * (num(alvo.pessoas) || 1);
     const caiu = !!rec[alvo.id];
-    const contas = contasDaQuinzena(alvo.dia);
+    const contas = contasDaQuinzenaDia(alvo.dia);
     const faltam = contas.filter((c) => !pag[c.id]);
     const totalContas = faltam.reduce((a, c) => a + num(c.valor), 0);
+    const todasQuinzena = S.contas.filter((ct) => {
+      const dias = rendas.map((r) => r.dia);
+      const idx = dias.indexOf(alvo.dia);
+      const proxDia = dias.length && idx >= 0 ? dias[(idx + 1) % dias.length] : 32;
+      const viraMes = idx < 0 || !dias.length || proxDia <= alvo.dia;
+      return viraMes ? ct.dia >= alvo.dia : (ct.dia >= alvo.dia && ct.dia < proxDia);
+    });
+    const faltamPrev = todasQuinzena.filter((c) => !pag[c.id]);
+    const totalContasPrev = faltamPrev.reduce((a, c) => a + num(c.valor), 0);
     const faturaPaga = !!S.cartao.faturas[mk];
     const faturaVal = faturaPaga ? 0 : (S.cartao.compras.reduce((a, x) => a + num(x.valor), 0) || num(S.config.faturaEstimada));
     const faturaGuardada = faturaPaga || !!(S.checklist && S.checklist[mk] && S.checklist[mk].faturaGuardada);
     const c = calc();
-    const reservar = (caiu ? totalContas : 0) + (faturaGuardada ? 0 : faturaVal) + (caiu ? c.metaNum : 0);
+    const usarContas = modo === "ativo" && caiu ? faltam : faltamPrev;
+    const usarTotal = modo === "ativo" && caiu ? totalContas : totalContasPrev;
+    const reservar = (caiu ? usarTotal : 0) + (faturaGuardada ? 0 : faturaVal) + (caiu ? c.metaNum : 0);
     const sobra = Math.max(0, c.caixa - reservar);
-    return { mk, alvo, total, caiu, contas, faltam, totalContas, faturaVal, faturaPaga, faturaGuardada, sobra, meta: c.metaNum, lazer: c.lazerRest };
+    return {
+      mk, alvo, total, caiu, modo,
+      faltam: usarContas, totalContas: usarTotal,
+      faturaVal, faturaPaga, faturaGuardada, sobra,
+      meta: c.metaNum, lazer: c.lazerRest,
+    };
   }
 
   function barraPct(val, max) {
@@ -866,7 +887,7 @@
       };
     }
     if (/meta|juntar|guardar/.test(q)) {
-      return { t: "ok", tit: "Meta de juntar", txt: `Meta efetiva: <b>${fmt(meta)}</b>${num(S.config.metaGuardar) > 0 ? " (você definiu)" : " (sugerida com base na renda − contas − fatura − lazer)"}. Imprevistos este mês: <b>${fmt(imprevistosMes())}</b>.` };
+      return { t: "ok", tit: "Quanto juntar?", txt: `A casa calcula sozinha: <b>${fmt(meta)}</b> este mês (renda − contas − fatura − lazer, metade da sobra). ${num(S.config.metaGuardar) > 0 ? "Você forçou outro valor em Ajustes." : "Não precisa mexer em nada."} Imprevistos: <b>${fmt(imprevistosMes())}</b>.` };
     }
     if (/ifood|lazer/.test(q)) {
       return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer / iFood", txt: lazerRest > 0 ? `Pode, dentro de <b>${fmt(lazerRest)}</b> que ainda sobram do mês.` : `Lazer do mês acabou. Próximo iFood come a meta de juntar.` };
@@ -918,7 +939,7 @@
     return html;
   }
 
-  /* ─── Motor de dicas (missão: juntar sem matar lazer) ─── */
+  /* ─── Motor de dicas (poucas, claras, pra quem é leigo) ─── */
   function dicas(c) {
     const out = [];
     if (!S.caixa) return out;
@@ -932,146 +953,69 @@
     const rendaCaiu = rendaRecenteCaiu();
     const pagarAgora = contasPagarAgora();
     const proximas = contasProximas();
-    const atrasadas = contasAtrasadasVisiveis();
     const fatPaga = faturaPagaEsteMes();
     const fatValor = valorFaturaPendente();
     const lazerOrc = lazerOrcamento();
-    const lazerJa = lazerGastoMes();
-    const lazerRest = c.lazerRest != null ? c.lazerRest : Math.max(0, lazerOrc - lazerJa);
+    const lazerRest = c.lazerRest != null ? c.lazerRest : Math.max(0, lazerOrcamento() - lazerGastoMes());
     const meta = c.metaNum != null ? c.metaNum : metaEfetiva();
-    const metaManual = num(S.config.metaGuardar) > 0;
 
     if (S.chatResposta) out.push(S.chatResposta);
 
-    out.push({
-      t: "ok",
-      tit: "Missão da casa",
-      txt: `Juntar o máximo <b>sem perder o lazer</b>. Hoje dia <b>${hojeDia}</b>. Lazer: <b>${fmt(lazerRest)}</b>/${fmt(lazerOrc)}. Meta juntar: <b>${fmt(meta)}</b>${metaManual ? "" : " (sugerida — ajusta em Ajustes)"}.`,
-    });
-
-    if (S.ultimaCompra && Date.now() - S.ultimaCompra.ts < 15 * 60 * 1000) {
-      out.push({
-        t: "ok",
-        tit: "Relatório pós-compra",
-        txt: `Anotei <b>${esc(S.ultimaCompra.desc)}</b> ${fmt(S.ultimaCompra.valor)} (${S.ultimaCompra.pago}). Fatura: <b>${fmt(fatValor)}</b>. Lazer: <b>${fmt(lazerRest)}</b>. Pode/dia: <b>${fmt(Math.max(0, c.porDia))}</b>.`,
-      });
-    }
-
+    // 1) UMA dica principal do momento (só essa fala de quinzena)
     if (rendaCaiu && pagarAgora.length) {
       const totalQ = pagarAgora.reduce((a, x) => a + num(x.valor), 0);
-      const itens = pagarAgora.map((x) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} (dia ${x.dia})</li>`).join("");
+      const nomes = pagarAgora.map((x) => esc(x.nome)).join(", ");
       out.push({
         t: "warn",
-        tit: `${esc(rendaCaiu.nome)} caiu — paga agora (dia ${rendaCaiu.dia})`,
-        txt: `Ordem:<ol>${itens}</ol>Total: <b>${fmt(totalQ)}</b>. Depois guarda a fatura até dia ${vf}.`,
+        tit: "O que fazer agora",
+        txt: `Salário do dia <b>${rendaCaiu.dia}</b> já caiu. Paga: <b>${nomes}</b> (total ${fmt(totalQ)}). Depois guarda a fatura até dia <b>${vf}</b>. Lazer sem culpa: <b>${fmt(lazerRest)}</b>. Meta pra juntar (a casa calculou): <b>${fmt(meta)}</b>.`,
       });
     } else if (rendaCaiu && !pagarAgora.length) {
       out.push({
         t: "ok",
-        tit: `${esc(rendaCaiu.nome)} — contas da quinzena ok`,
-        txt: `Nada pendente do dia ${rendaCaiu.dia}. Próximo: fatura dia ${vf} + lazer com cabeça.`,
-      });
-    } else if (prox && proximas.length) {
-      const totalP = proximas.reduce((a, x) => a + num(x.valor), 0);
-      const itens = proximas.map((x) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} (dia ${x.dia})</li>`).join("");
-      out.push({
-        t: "warn",
-        tit: `Hoje dia ${hojeDia} — esperando salário dia ${prox.d.getDate()}`,
-        txt: `Com <b>${fmt(c.caixa)}</b> na conta, <b>não</b> é pra pagar contas do dia 7 agora. Quando cair o salário do dia ${prox.d.getDate()}, prioridade:<ol>${itens}</ol>Total: <b>${fmt(totalP)}</b> + fatura (dia ${vf}).`,
+        tit: "Tudo certo nesta quinzena",
+        txt: `Contas do salário dia <b>${rendaCaiu.dia}</b> ok. Agora: vive com calma, fatura dia <b>${vf}</b>, lazer <b>${fmt(lazerRest)}</b>, juntar <b>${fmt(meta)}</b> (automático).`,
       });
     } else if (prox) {
+      const diaProx = prox.d.getDate();
+      const totalP = proximas.reduce((a, x) => a + num(x.valor), 0);
+      const nomes = proximas.length ? proximas.map((x) => esc(x.nome)).join(", ") : "as contas dessa quinzena";
       out.push({
         t: "warn",
-        tit: `Esperando salário dia ${prox.d.getDate()}`,
-        txt: `Segura o caixa (${fmt(c.caixa)}) até lá. Contas grandes saem desse salário.`,
+        tit: `Hoje é dia ${hojeDia} — espera o dia ${diaProx}`,
+        txt: `Vocês têm <b>${fmt(c.caixa)}</b>. <b>Não</b> paga conta grande agora. No dia <b>${diaProx}</b> o salário cai e aí sim paga: <b>${nomes}</b>${totalP ? ` (${fmt(totalP)})` : ""}. Até lá: só o essencial. Lazer livre agora: <b>${fmt(lazerRest)}</b>.`,
       });
     }
 
-    if (atrasadas.length) {
+    // 2) Só urgências (máx. mais 2)
+    if (c.caixa <= 0 && prox) {
       out.push({
         t: "bad",
-        tit: "Atrasadas (depois que o app começou)",
-        txt: atrasadas.map((x) => `<b>${esc(x.nome)}</b> ${fmt(x.valor)} dia ${x.dia}`).join(" · ") + ".",
+        tit: "Conta quase/zerada",
+        txt: `Até dia <b>${prox.d.getDate()}</b>, sem iFood. ${tem.length ? `Come o que tem: ${tem.slice(0, 4).map((x) => esc(x.nome)).join(", ")}.` : "Olha a despensa."}`,
       });
-    }
-
-    const fora = contasPendentes().filter((c) => {
-      if (pagarAgora.some((x) => x.id === c.id)) return false;
-      if (proximas.some((x) => x.id === c.id)) return false;
-      if (atrasadas.some((x) => x.id === c.id)) return false;
-      return true;
-    });
-    if (fora.length) {
+    } else if (!fatPaga && hojeDia >= vf && hojeDia <= vf + 2) {
       out.push({
-        t: "ok",
-        tit: "Fora da prioridade de hoje",
-        txt: `${fora.map((x) => `<b>${esc(x.nome)}</b> dia ${x.dia}`).join(" · ")}. Não usa o dinheiro de agora nisso.`,
+        t: "bad",
+        tit: `Hora da fatura (dia ${vf})`,
+        txt: fatValor > 0 ? `Paga <b>${fmt(fatValor)}</b> na aba Cartão.` : `Olha o valor no app do banco/cartão e anota em Cartão.`,
       });
-    }
-
-    if (!fatPaga) {
-      if (hojeDia < vf) {
-        out.push({
-          t: "warn",
-          tit: `Guarda pra fatura (vence dia ${vf})`,
-          txt: fatValor > 0 ? `Separa <b>${fmt(fatValor)}</b> até dia ${vf}.` : `Valor ainda não saiu. Dia ${vf}–${vf + 1} anota as compras e eu monto o relatório.`,
-        });
-      } else {
-        out.push({
-          t: "bad",
-          tit: `Fatura — dia ${vf}`,
-          txt: fatValor > 0 ? `Paga <b>${fmt(fatValor)}</b> no Cartão.` : `Olha o valor no cartão, lança e toca Pagar fatura.`,
-        });
-      }
-    }
-
-    if (hojeDia >= vf && hojeDia <= vf + 2) {
-      const listaTxt = faltando.length ? `Comprar: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.` : "Despensa ok.";
-      out.push({
-        t: "ok",
-        tit: "Relatório das compras",
-        txt: `<ol><li>Contas da quinzena se ainda tiver</li><li>Paga fatura</li><li>${listaTxt}</li><li>Lazer: ${fmt(lazerRest)} — resto junta (meta ${fmt(meta)})</li></ol>`,
-      });
-    }
-
-    const imp = imprevistosMes();
-    if (imp > 0) {
-      out.push({
-        t: "warn",
-        tit: "Imprevistos este mês",
-        txt: `Já saíram <b>${fmt(imp)}</b> de imprevisto. Quanto mais imprevisto, mais aperta bobagem pra proteger a meta.`,
-      });
-    }
-
-    if (c.caixa <= 0 && prox) {
-      out.push({ t: "bad", tit: "Zerados", txt: `Até dia ${prox.d.getDate()} iFood ZERO. ${tem.length ? `Usa: ${tem.slice(0, 5).map((x) => esc(x.nome)).join(", ")}.` : "Cadastra a despensa."}` });
+    } else if (c.comprasCiclo > limite) {
+      out.push({ t: "bad", tit: "Cartão passou do limite", txt: `Fatura em ${fmt(c.comprasCiclo)}. Até pagar, só dinheiro.` });
     } else if (lazerRest <= 0 && lazerOrc > 0 && rendaCaiu) {
-      out.push({ t: "warn", tit: "Lazer do mês acabou", txt: `Os ${fmt(lazerOrc)} acabaram. Próximo iFood come a meta.` });
-    } else if (c.porDia < 20 && c.caixa > 0) {
-      out.push({
-        t: "warn",
-        tit: "Vai com calma",
-        txt: c.esperandoSalario
-          ? `Até o salário: no máximo <b>${fmt(Math.max(0, c.porDia))}</b>/dia se for essencial.`
-          : `Pra juntar: <b>${fmt(Math.max(0, c.porDia))}</b>/dia.`,
-      });
+      out.push({ t: "warn", tit: "Lazer do mês acabou", txt: `Os ${fmt(lazerOrc)} de lazer/iFood acabaram. Próximo pedido come o que ia juntar.` });
+    } else if (faltando.length && hojeDia >= vf - 2 && hojeDia <= vf + 1) {
+      out.push({ t: "ok", tit: "Lista de compras", txt: `Falta em casa: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.` });
     }
 
-    if (faltando.length && hojeDia < vf) {
-      out.push({ t: "warn", tit: "Lista pro dia da compra", txt: `Dia ${vf}–${vf + 1}: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.` });
-    }
-    S.despensa.forEach((d) => {
-      const dm = duracaoMedia(d);
-      if (!dm) return;
-      out.push({ t: "ok", tit: `Dica do ${esc(d.nome)}`, txt: `Dura ~<b>${Math.round(dm)}d</b>/un. Pro mês: <b>${Math.max(1, Math.ceil(30 / dm))} un</b>.` });
-    });
-    if (c.comprasCiclo > limite) out.push({ t: "bad", tit: "Cartão no limite", txt: `Passou de ${fmt(limite)}. Até pagar fatura, só dinheiro.` });
     S.gatos.forEach((g) => (g.vacinas || []).forEach((va) => {
       const d = diasPara(va.proxima);
-      if (d !== null && d >= 0 && d <= 30) out.push({ t: "warn", tit: `Vacina do ${esc(g.nome)}`, txt: `${esc(va.nome)} em ${d === 0 ? "hoje" : d + "d"}.` });
       if (d !== null && d < 0) out.push({ t: "bad", tit: `Vacina atrasada — ${esc(g.nome)}`, txt: `${esc(va.nome)} atrasada.` });
+      else if (d !== null && d <= 14 && out.length < 3) out.push({ t: "warn", tit: `Vacina do ${esc(g.nome)}`, txt: `${esc(va.nome)} em ${d === 0 ? "hoje" : d + " dias"}.` });
     }));
-    return out;
+
+    // Máximo 3 balões — menos confusão
+    return out.slice(0, 3);
   }
 
 
@@ -1153,56 +1097,70 @@
     // Balões inteligentes (sempre)
     html += renderBaloes(dicas(c));
 
-    // Checklist quinzena (salário → contas → fatura → sobra)
+    // Checklist quinzena (mira o salário que importa AGORA)
     const ck = checklistEstado();
     if (ck) {
-      const n1 = ck.caiu ? "done" : "wait";
+      const espera = ck.modo === "espera" && !ck.caiu;
+      const n1 = ck.caiu ? "done" : (espera ? "wait" : "wait");
       const n2 = !ck.faltam.length ? "done" : (ck.caiu ? "wait" : "");
       const n3 = ck.faturaGuardada ? "done" : (ck.caiu ? "wait" : "");
+      const titMini = espera
+        ? `próximo: dia ${ck.alvo.dia}`
+        : `dia ${ck.alvo.dia}`;
       html += `
-      <div class="sect">Checklist quinzena <span class="mini">dia ${ck.alvo.dia}</span></div>
+      <div class="sect">Passo a passo <span class="mini">${titMini}</span></div>
       <div class="card">
+        ${espera ? `<div class="dica" style="margin-top:0;">Hoje ainda <b>não</b> é dia de salário. Próximo cai dia <b>${ck.alvo.dia}</b>. Até lá: não paga conta grande.</div>` : ""}
         <div class="chkstep">
           <div class="chknum ${n1}">1</div>
           <div class="grow">
             <div class="t">${esc(ck.alvo.nome)} — ${fmt(ck.total)}</div>
-            <div class="s">${ck.caiu ? "Salário marcado" : "Marca quando cair na conta"}</div>
+            <div class="s">${ck.caiu ? "Já caiu na conta ✓" : (espera ? `Espera o dia ${ck.alvo.dia}. Quando cair, toca Caiu.` : "Toca Caiu quando o dinheiro aparecer no banco")}</div>
           </div>
           ${ck.caiu
             ? `<span class="statusbtn tem">Caiu ✓</span>`
-            : `<button class="btn small" data-action="checklist-salario">Caiu</button>`}
+            : (espera
+              ? `<button class="btn small ghost" data-action="checklist-salario">Já caiu?</button>`
+              : `<button class="btn small" data-action="checklist-salario">Caiu</button>`)}
         </div>
         <div class="chkstep">
           <div class="chknum ${n2}">2</div>
           <div class="grow">
-            <div class="t">Pagar contas da quinzena</div>
-            <div class="s">${ck.faltam.length ? `${ck.faltam.length} falta · ${fmt(ck.totalContas)}` : "Tudo pago"}</div>
+            <div class="t">${espera ? "Depois: pagar contas" : "Pagar contas desta quinzena"}</div>
+            <div class="s">${ck.faltam.length
+              ? (espera
+                ? `Quando cair: ${ck.faltam.map((x) => esc(x.nome)).join(", ")} · ${fmt(ck.totalContas)}`
+                : `${ck.faltam.length} falta · ${fmt(ck.totalContas)}`)
+              : "Nada pendente"}</div>
           </div>
           ${ck.faltam.length
-            ? `<button class="btn small ${ck.caiu ? "" : "ghost"}" data-action="checklist-pagar-quinzena" ${ck.caiu ? "" : "disabled"}>Pagar todas</button>`
+            ? (ck.caiu
+              ? `<button class="btn small" data-action="checklist-pagar-quinzena">Pagar todas</button>`
+              : `<span class="statusbtn">Depois</span>`)
             : `<span class="statusbtn tem">OK ✓</span>`}
         </div>
         <div class="chkstep">
           <div class="chknum ${n3}">3</div>
           <div class="grow">
-            <div class="t">${ck.faturaPaga ? "Fatura paga" : "Guardar fatura até dia " + (S.config.diaVencFatura || 19)}</div>
-            <div class="s">${ck.faturaVal > 0 ? fmt(ck.faturaVal) : "Sem valor ainda — use estimativa em Ajustes"}</div>
+            <div class="t">${ck.faturaPaga ? "Fatura paga" : `Reservar fatura (dia ${S.config.diaVencFatura || 19})`}</div>
+            <div class="s">${ck.faturaVal > 0 ? fmt(ck.faturaVal) : (espera ? "Valor sai perto do dia 19" : "Anota nas compras do cartão")}</div>
           </div>
           ${ck.faturaPaga
             ? `<span class="statusbtn tem">Paga ✓</span>`
             : ck.faturaGuardada
-              ? `<span class="statusbtn tem">Guardada ✓</span>`
-              : `<button class="btn small ghost" data-action="checklist-fatura-guardar">Já separei</button>`}
+              ? `<span class="statusbtn tem">Separada ✓</span>`
+              : (ck.caiu
+                ? `<button class="btn small ghost" data-action="checklist-fatura-guardar">Já separei</button>`
+                : `<span class="statusbtn">Depois</span>`)}
         </div>
         <div class="chkstep">
           <div class="chknum ${ck.caiu && !ck.faltam.length ? "done" : ""}">4</div>
           <div class="grow">
-            <div class="t">Sobra depois de reservar</div>
-            <div class="s">Lazer ~${fmt(ck.lazer)} · meta ${fmt(ck.meta)}</div>
+            <div class="t">${espera ? "Depois do salário, sobra pra" : "Sobra pra viver / juntar"}</div>
+            <div class="s">Lazer ~${fmt(ck.lazer)} · juntar (auto) ${fmt(ck.meta)}</div>
           </div>
-          <div class="val">${fmt(ck.sobra)}</div>
+          <div class="val">${espera ? "—" : fmt(ck.sobra)}</div>
         </div>
-        <div class="dica">1 toque em <b>Caiu</b> → paga contas previstas → marca fatura guardada. Energia/internet: ajusta valor em Contas se mudou.</div>
       </div>`;
     }
 
@@ -1633,10 +1591,10 @@
         </div>
         <div class="row2">
           <div><label>Lazer/iFood do mês (R$)</label><input name="lazer" inputmode="decimal" value="${String(lazerOrcamento()).replace(".", ",")}" /></div>
-          <div><label>Meta juntar (R$)</label><input name="meta" inputmode="decimal" value="${String(num(cfg.metaGuardar) > 0 ? num(cfg.metaGuardar) : metaSugerida()).replace(".", ",")}" /></div>
+          <div><label>Meta juntar (opcional)</label><input name="meta" inputmode="decimal" value="${num(cfg.metaGuardar) > 0 ? String(num(cfg.metaGuardar)).replace(".", ",") : ""}" placeholder="vazio = automática" /></div>
         </div>
-        <button class="btn full" type="submit">Salvar cartão e metas</button>
-        <div class="dica">Meta sugerida agora: <b>${fmt(metaSugerida())}</b> (renda − contas − fatura − lazer, ~50%). Pode mudar. Imprevisto: anota gasto com categoria Imprevisto.</div>
+        <button class="btn full" type="submit">Salvar cartão e lazer</button>
+        <div class="dica">Meta automática agora: <b>${fmt(metaSugerida())}</b> — a casa calcula sozinha. Só preenche o campo se quiser forçar outro valor. Deixa vazio = automático.</div>
       </form>
 
       <div class="sect">Conta da casa</div>
@@ -1693,6 +1651,9 @@
     "checklist-salario": () => {
       const ck = checklistEstado();
       if (!ck || ck.caiu) return;
+      if (ck.modo === "espera") {
+        if (!confirm(`Hoje ainda não é dia ${ck.alvo.dia}. O salário já caiu no banco mesmo?`)) return;
+      }
       if (!S.recebidos[ck.mk]) S.recebidos[ck.mk] = {};
       S.recebidos[ck.mk][ck.alvo.id] = { valor: ck.total, ts: Date.now() };
       touch();
@@ -1923,7 +1884,11 @@
       S.config.diaVencFatura = Math.min(31, Math.max(1, parseInt(f.diaFatura.value, 10) || 19));
       S.config.faturaEstimada = num(f.faturaEst.value);
       S.config.lazerMes = num(f.lazer.value);
-      S.config.metaGuardar = num(f.meta.value);
+      const rawMeta = String(f.meta.value || "").trim();
+      const metaInput = rawMeta === "" ? 0 : num(rawMeta);
+      const sug = metaSugerida();
+      // Vazio ou igual à automática → fica automática (0)
+      S.config.metaGuardar = metaInput > 0 && Math.round(metaInput) !== Math.round(sug) ? metaInput : 0;
       touch();
     },
     "perfil": async (f) => {
