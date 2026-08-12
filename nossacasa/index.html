@@ -353,6 +353,9 @@
         ],
         limiteCartao: 800,
         reservaCartao: 400,
+        diaVencFatura: 19, // dia que a fatura vence / vocês pagam
+        faturaEstimada: 0, // se ainda não lançou compras, chute opcional
+        lazerMes: 200, // orçamento de lazer/iFood sem culpa
         metaGuardar: 0,
       },
       contas: [
@@ -548,43 +551,53 @@
     const comprasCiclo = S.cartao.compras.reduce((a, c) => a + num(c.valor), 0);
     const faturaPaga = S.cartao.faturas[mk] ? num(S.cartao.faturas[mk].valor) : 0;
 
-    // Janela até o próximo salário: reserva só o que é da quinzena atual
+    // Reserva: contas da quinzena atual (pela data) + fatura se ainda não paga + meta guardar
     const prox = proxRenda();
     const diasAte = prox ? Math.max(1, Math.round((prox.d - hoje0) / 86400000)) : diasAteFimDoMes();
-    let obrigAte = 0;
-    const rendaCaiuCalc = (() => {
+    const qDia = (() => {
       let best = null;
       for (const id in rec) {
         const r = S.config.rendas.find((x) => x.id === id);
         if (!r) continue;
         const ts = num(rec[id].ts);
-        if (!best || ts > best.ts) best = { dia: r.dia, ts };
+        if (!best || ts > best.ts) best = r.dia;
       }
-      return best;
+      if (best != null) return best;
+      const hoje = hoje0.getDate();
+      const dias = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
+      if (!dias.length) return hoje;
+      if (hoje < dias[0]) return dias[0];
+      let ref = dias[0];
+      dias.forEach((d) => { if (d <= hoje) ref = d; });
+      return ref;
     })();
     const diasRenda = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
+    let obrigAte = 0;
     S.contas.forEach((ct) => {
       if (pag[ct.id]) return;
-      if (rendaCaiuCalc) {
-        // Com salário marcado: só reserva contas daquela quinzena
-        const proxDia = diasRenda.length ? diasRenda[(diasRenda.indexOf(rendaCaiuCalc.dia) + 1) % diasRenda.length] : 32;
-        const viraMes = !diasRenda.length || proxDia <= rendaCaiuCalc.dia;
-        const naQuinzena = viraMes ? ct.dia >= rendaCaiuCalc.dia : (ct.dia >= rendaCaiuCalc.dia && ct.dia < proxDia);
-        if (naQuinzena) obrigAte += num(ct.valor);
-        return;
-      }
-      // Sem salário marcado ainda: não reserva contas de ANTES do app começar
-      if (S.inicio) {
-        const start = new Date(S.inicio);
-        if (mesKey(S.inicio) === mk && ct.dia < start.getDate()) return;
-      }
-      const venc = new Date(hoje0.getFullYear(), hoje0.getMonth(), ct.dia);
-      if (venc <= hoje0 || (prox && venc <= prox.d)) obrigAte += num(ct.valor);
+      const idx = diasRenda.indexOf(qDia);
+      const proxDia = diasRenda.length && idx >= 0 ? diasRenda[(idx + 1) % diasRenda.length] : 32;
+      const viraMes = idx < 0 || !diasRenda.length || proxDia <= qDia;
+      const naQuinzena = viraMes ? ct.dia >= qDia : (ct.dia >= qDia && ct.dia < proxDia);
+      if (naQuinzena) obrigAte += num(ct.valor);
     });
+    // Fatura: guarda até pagar (não gasta esse dinheiro em bobagem)
+    if (!S.cartao.faturas[mk]) {
+      const ciclo = S.cartao.compras.reduce((a, x) => a + num(x.valor), 0);
+      obrigAte += ciclo > 0 ? ciclo : num(S.config.faturaEstimada);
+    }
+    obrigAte += num(S.config.metaGuardar);
+    const lazerOrc = num(S.config.lazerMes);
     const livreAte = caixa - obrigAte;
-    const porDia = livreAte / diasAte;
+    // Pode gastar/dia = o que sobra depois de contas+fatura+meta, sem comer o lazer reservado
+    const lazerRest = Math.max(0, lazerOrc - (() => {
+      const iniM = new Date(); iniM.setDate(1); iniM.setHours(0, 0, 0, 0);
+      return S.gastos.filter((g) => g.ts >= iniM.getTime() && (g.cat === "iFood" || g.cat === "Lazer")).reduce((a, g) => a + num(g.valor), 0);
+    })());
+    const livreViver = Math.max(0, livreAte - lazerRest);
+    const porDia = livreViver / diasAte;
 
-    return { mk, caixa, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, porDia };
+    return { mk, caixa, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, livreViver, lazerRest, porDia, qDia };
   }
 
   // Duração média por unidade (dias) de um item da despensa, pelo histórico de compras
@@ -644,18 +657,57 @@
     return best;
   }
 
-  // Contas da quinzena DESTA renda: do dia do salário até o dia do próximo (exclusive)
-  // Ex.: salário dia 15 → só contas dia 15–31. Salário dia 7 → só contas dia 7–14.
-  function contasDaQuinzena(renda) {
-    if (!renda) return [];
+  // Contas da quinzena a partir de um dia de salário
+  function contasDaQuinzenaDia(diaSalario) {
+    if (diaSalario == null) return [];
     const dias = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
-    const idx = dias.indexOf(renda.dia);
-    const proxDia = dias.length ? dias[(idx + 1) % dias.length] : 32;
-    const viraMes = !dias.length || proxDia <= renda.dia;
+    const idx = dias.indexOf(diaSalario);
+    const proxDia = dias.length && idx >= 0 ? dias[(idx + 1) % dias.length] : 32;
+    const viraMes = idx < 0 || !dias.length || proxDia <= diaSalario;
     return contasPendentes().filter((c) => {
-      if (viraMes) return c.dia >= renda.dia;
-      return c.dia >= renda.dia && c.dia < proxDia;
+      if (viraMes) return c.dia >= diaSalario;
+      return c.dia >= diaSalario && c.dia < proxDia;
     });
+  }
+
+  function contasDaQuinzena(renda) {
+    return contasDaQuinzenaDia(renda && renda.dia);
+  }
+
+  // Quinzena "de agora": salário marcado mais recente, senão a que a data de hoje cai
+  function diaQuinzenaAtual() {
+    const caiu = rendaRecenteCaiu();
+    if (caiu) return caiu.dia;
+    const hoje = new Date().getDate();
+    const dias = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
+    if (!dias.length) return hoje;
+    if (hoje < dias[0]) return dias[0]; // ainda esperando 1º salário do mês
+    let ref = dias[0];
+    dias.forEach((d) => { if (d <= hoje) ref = d; });
+    return ref;
+  }
+
+  function diaFatura() {
+    return Math.min(31, Math.max(1, parseInt(S.config.diaVencFatura, 10) || 19));
+  }
+
+  function faturaPagaEsteMes() {
+    return !!S.cartao.faturas[mesKey()];
+  }
+
+  // Valor a guardar/pagar da fatura: compras do ciclo, senão estimativa manual
+  function valorFaturaPendente() {
+    if (faturaPagaEsteMes()) return 0;
+    const ciclo = S.cartao.compras.reduce((a, x) => a + num(x.valor), 0);
+    if (ciclo > 0) return ciclo;
+    return num(S.config.faturaEstimada);
+  }
+
+  function lazerGastoMes() {
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    return S.gastos
+      .filter((g) => g.ts >= ini.getTime() && (g.cat === "iFood" || g.cat === "Lazer"))
+      .reduce((a, g) => a + num(g.valor), 0);
   }
 
   function renderBaloes(lista) {
@@ -676,7 +728,7 @@
     return html;
   }
 
-  /* ─── Motor de dicas (sempre em balão) ─── */
+  /* ─── Motor de dicas (missão: juntar sem matar lazer) ─── */
   function dicas(c) {
     const out = [];
     if (!S.caixa) return out;
@@ -686,128 +738,154 @@
     const limite = num(S.config.limiteCartao);
     const prox = c.prox;
     const hojeDia = new Date().getDate();
+    const vf = diaFatura();
+    const qDia = diaQuinzenaAtual();
+    const daQuinzena = contasDaQuinzenaDia(qDia);
     const pend = contasPendentes();
+    const outrasPend = pend.filter((x) => !daQuinzena.some((y) => y.id === x.id));
     const rendaCaiu = rendaRecenteCaiu();
-    const daQuinzena = contasDaQuinzena(rendaCaiu);
-    const outrasPend = rendaCaiu ? pend.filter((c) => !daQuinzena.some((x) => x.id === c.id)) : [];
+    const fatPaga = faturaPagaEsteMes();
+    const fatValor = valorFaturaPendente();
+    const lazerOrc = num(S.config.lazerMes);
+    const lazerJa = lazerGastoMes();
+    const lazerRest = Math.max(0, lazerOrc - lazerJa);
 
-    // 1) Salário caiu → só contas DESTA quinzena (+ fatura se houver)
-    if (rendaCaiu) {
-      const totalQ = daQuinzena.reduce((a, x) => a + num(x.valor), 0);
-      const fatura = c.comprasCiclo;
-      const totalPagar = totalQ + fatura;
-      const sobra = c.caixa - totalPagar;
-      let itens = daQuinzena.map((x) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} <span style="color:var(--ink-soft)">(dia ${x.dia})</span></li>`).join("");
-      if (fatura > 0) itens += `<li><b>Fatura do cartão</b> ${fmt(fatura)}</li>`;
-      if (!itens) {
+    out.push({
+      t: "ok",
+      tit: "Missão da casa",
+      txt: `Juntar o máximo possível <b>sem perder o lazer</b>. Hoje é dia <b>${hojeDia}</b>. Lazer do mês: <b>${fmt(lazerRest)}</b> de ${fmt(lazerOrc)} ainda livres.`,
+    });
+
+    if (S.ultimaCompra && Date.now() - S.ultimaCompra.ts < 15 * 60 * 1000) {
+      out.push({
+        t: "ok",
+        tit: "Relatório pós-compra",
+        txt: `Anotei <b>${esc(S.ultimaCompra.desc)}</b> ${fmt(S.ultimaCompra.valor)} (${S.ultimaCompra.pago}). Fatura em aberto: <b>${fmt(fatValor)}</b>${fatPaga ? " (já paga ✓)" : ""}. Lazer: <b>${fmt(lazerRest)}</b>. Pode gastar/dia agora: <b>${fmt(Math.max(0, c.porDia))}</b>.`,
+      });
+    }
+
+    const totalQ = daQuinzena.reduce((a, x) => a + num(x.valor), 0);
+    if (daQuinzena.length) {
+      const itens = daQuinzena.map((x) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} <span style="color:var(--ink-soft)">(dia ${x.dia})</span></li>`).join("");
+      out.push({
+        t: "warn",
+        tit: rendaCaiu && rendaCaiu.dia === qDia
+          ? `${esc(rendaCaiu.nome)} caiu — prioridade dia ${qDia}`
+          : `Prioridade agora (quinzena dia ${qDia})`,
+        txt: `Paga <b>só</b> estas contas agora:<ol>${itens}</ol>Total: <b>${fmt(totalQ)}</b>.`,
+      });
+    } else if (rendaCaiu && rendaCaiu.dia === qDia) {
+      out.push({
+        t: "ok",
+        tit: `${esc(rendaCaiu.nome)} — contas da quinzena ok`,
+        txt: `Nada pendente do dia ${qDia}. Próximo passo: fatura e lazer com cabeça.`,
+      });
+    }
+
+    if (!fatPaga) {
+      if (hojeDia < vf) {
         out.push({
-          t: "ok",
-          tit: `${esc(rendaCaiu.nome)} caiu!`,
-          txt: `Nenhuma conta da quinzena do dia ${rendaCaiu.dia} em aberto. Pode respirar — sobra <b>${fmt(c.caixa)}</b> até o próximo.`,
+          t: "warn",
+          tit: `Guarda pra fatura (vence dia ${vf})`,
+          txt: fatValor > 0
+            ? `Separa <b>${fmt(fatValor)}</b> e <b>não gasta</b> até dia ${vf}. Agora foca nas contas do dia ${qDia}.`
+            : `Valor da fatura ainda não saiu. Dia ${vf}–${vf + 1} você olha no banco/cartão, anota as compras aqui, e eu monto o relatório do que fazer.`,
         });
       } else {
         out.push({
-          t: sobra >= 0 ? "ok" : "warn",
-          tit: `${esc(rendaCaiu.nome)} caiu — quinzena do dia ${rendaCaiu.dia}`,
-          txt: `Paga nesta ordem (só o que é desta quinzena):<ol>${itens}</ol>Total desta rodada: <b>${fmt(totalPagar)}</b>. ${sobra >= 0 ? `Depois sobra <b>${fmt(sobra)}</b> pra viver.` : `Falta <b>${fmt(Math.abs(sobra))}</b> — segura gasto.`}`,
+          t: "bad",
+          tit: `Fatura — dia ${vf} chegou`,
+          txt: fatValor > 0
+            ? `Hora de pagar <b>${fmt(fatValor)}</b> (aba Cartão → Pagar fatura). Depois o que sobrar é viver + lazer + juntar.`
+            : `Abre o app do cartão, vê o valor, lança as compras em Cartão (ou Despensa) e toca <b>Pagar fatura</b>. Eu monto o plano na hora.`,
         });
       }
-      if (outrasPend.length) {
-        out.push({
-          t: "warn",
-          tit: "Fora desta quinzena",
-          txt: `Ainda tem em aberto de outra data (não é prioridade de agora): ${outrasPend.map((x) => `<b>${esc(x.nome)}</b> ${fmt(x.valor)} dia ${x.dia}`).join(" · ")}. Resolve quando sobrar.`,
-        });
-      }
-    } else if (pend.length && prox) {
+    } else {
       out.push({
-        t: "warn",
-        tit: "Contas na fila",
-        txt: `Tem <b>${pend.length}</b> conta${pend.length > 1 ? "s" : ""} pra pagar (${fmt(pend.reduce((a, x) => a + num(x.valor), 0))}). Quando o salário do dia ${prox.d.getDate()} cair, mostro só a prioridade daquela quinzena.`,
+        t: "ok",
+        tit: "Fatura ok este mês",
+        txt: `Cartão já pago. Missão agora: segurar bobagem e proteger o lazer (${fmt(lazerRest)}).`,
       });
     }
 
-    // 2) Contas realmente vencidas DEPOIS que o app começou
-    const vencidas = pend.filter((x) => contaVencida(x, hojeDia));
+    if (hojeDia >= vf && hojeDia <= vf + 2) {
+      const listaTxt = faltando.length
+        ? `Lista pra comprar no cartão: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.`
+        : "Despensa ok — compra só o que faltar de verdade.";
+      out.push({
+        t: "ok",
+        tit: "Relatório das compras",
+        txt: `Plano do dia:<ol><li>Paga contas da quinzena ${qDia} se ainda tiver</li><li>Confere fatura e paga no Cartão</li><li>${listaTxt}</li><li>Lazer livre: <b>${fmt(lazerRest)}</b> — o resto junta</li></ol>Depois das compras, volta aqui: eu atualizo quanto sobrou pra guardar.`,
+      });
+    }
+
+    if (outrasPend.length) {
+      out.push({
+        t: "ok",
+        tit: "Fora da prioridade de hoje",
+        txt: `Não misturo com a quinzena ${qDia}: ${outrasPend.map((x) => `<b>${esc(x.nome)}</b> dia ${x.dia}`).join(" · ")}. Só resolve se sobrar depois da fatura.`,
+      });
+    }
+
+    const vencidas = daQuinzena.filter((x) => contaVencida(x, hojeDia));
     if (vencidas.length) {
       out.push({
         t: "bad",
-        tit: "Atenção — passou do dia",
-        txt: vencidas.map((x) => `<b>${esc(x.nome)}</b> (${fmt(x.valor)}) venceu dia ${x.dia}`).join(" · ") + ". Paga assim que der.",
+        tit: "Passou do dia (desta quinzena)",
+        txt: vencidas.map((x) => `<b>${esc(x.nome)}</b> ${fmt(x.valor)}`).join(" · ") + ".",
       });
     }
 
-    // 3) Zerado / curto
     if (c.caixa <= 0 && prox) {
       out.push({
         t: "bad",
-        tit: "Zerados até o próximo salário",
-        txt: `Até dia ${prox.d.getDate()} é iFood ZERO. ${tem.length ? `Cozinha o que tem: ${tem.slice(0, 5).map((x) => esc(x.nome)).join(", ")}.` : "Cadastra o que tem na Despensa pra eu te ajudar."}`,
+        tit: "Zerados",
+        txt: `Até dia ${prox.d.getDate()} iFood ZERO. ${tem.length ? `Usa o que tem: ${tem.slice(0, 5).map((x) => esc(x.nome)).join(", ")}.` : "Cadastra a despensa."}`,
+      });
+    } else if (lazerRest <= 0 && lazerOrc > 0) {
+      out.push({
+        t: "warn",
+        tit: "Lazer do mês acabou",
+        txt: `Já usaram os ${fmt(lazerOrc)} de lazer/iFood. Próximo pedido come a meta de juntar.`,
       });
     } else if (c.porDia < 20 && c.caixa > 0) {
       out.push({
         t: "warn",
         tit: "Vai com calma",
-        txt: `Sobram só <b>${fmt(Math.max(0, c.porDia))}</b> por dia até dia ${prox ? prox.d.getDate() : "?"}. ${tem.length ? `Olha o que tem em casa: ${tem.slice(0, 4).map((x) => esc(x.nome)).join(", ")}.` : "Antes de pedir comida, cadastra a despensa."}`,
+        txt: `Pra juntar de verdade: <b>${fmt(Math.max(0, c.porDia))}</b>/dia até o próximo salário (já tirei contas, fatura e lazer).`,
       });
     }
 
-    // 4) Despensa / lista
-    if (faltando.length && prox) {
+    if (faltando.length && hojeDia < vf) {
       out.push({
         t: "warn",
-        tit: "Lista pro cartão",
-        txt: `Quando chegar o dia ${prox.d.getDate()}, compra no cartão: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.`,
+        tit: "Lista pro dia da compra",
+        txt: `No dia ${vf}–${vf + 1}, no cartão: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.`,
       });
     }
-
     S.despensa.forEach((d) => {
       const dm = duracaoMedia(d);
-      if (dm) {
-        const sugestao = Math.max(1, Math.ceil(30 / dm));
-        out.push({
-          t: "ok",
-          tit: `Dica do ${esc(d.nome)}`,
-          txt: `Olhando o histórico de vocês: dura ~<b>${Math.round(dm)} dia${Math.round(dm) > 1 ? "s" : ""}</b> por unidade. Pro mês fechar, leva <b>${sugestao} un</b>.`,
-        });
-      }
+      if (!dm) return;
+      const sugestao = Math.max(1, Math.ceil(30 / dm));
+      out.push({
+        t: "ok",
+        tit: `Dica do ${esc(d.nome)}`,
+        txt: `Dura ~<b>${Math.round(dm)}d</b>/un com vocês. Pro mês: leva <b>${sugestao} un</b>.`,
+      });
     });
 
-    // 5) iFood
-    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
-    const ifood = S.gastos.filter((g) => g.cat === "iFood" && g.ts >= ini.getTime()).reduce((a, g) => a + num(g.valor), 0);
-    if (ifood > 0) {
-      out.push({
-        t: "warn",
-        tit: "iFood este mês",
-        txt: `Já foram <b>${fmt(ifood)}</b> de iFood — dava ${Math.max(1, Math.floor(ifood / 50))} compra${ifood >= 100 ? "s" : ""} de mercado de R$ 50.`,
-      });
-    }
-
-    // 6) Cartão
     if (c.comprasCiclo > limite) {
       out.push({
         t: "bad",
         tit: "Cartão no limite",
-        txt: `Passou dos ${fmt(limite)}. Até pagar a fatura, compra só no dinheiro.`,
+        txt: `Passou de ${fmt(limite)}. Até pagar a fatura, só dinheiro.`,
       });
     }
 
-    // 7) Projeção próximo salário
-    if (prox && !rendaCaiu) {
-      const sobra = prox.valor - c.comprasCiclo;
-      out.push({
-        t: sobra >= 0 ? "ok" : "bad",
-        tit: `Dia ${prox.d.getDate()} chega`,
-        txt: `Entra <b>${fmt(prox.valor)}</b> − fatura <b>${fmt(c.comprasCiclo)}</b> = sobra <b>${fmt(sobra)}</b>.`,
-      });
-    }
-
-    // Vacinas dos gatos
     S.gatos.forEach((g) => (g.vacinas || []).forEach((va) => {
       const d = diasPara(va.proxima);
       if (d !== null && d >= 0 && d <= 30) {
-        out.push({ t: "warn", tit: `Vacina do ${esc(g.nome)}`, txt: `${esc(va.nome)} em ${d === 0 ? "hoje" : d + " dia" + (d > 1 ? "s" : "")} (${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}).` });
+        out.push({ t: "warn", tit: `Vacina do ${esc(g.nome)}`, txt: `${esc(va.nome)} em ${d === 0 ? "hoje" : d + "d"} (${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}).` });
       }
       if (d !== null && d < 0) {
         out.push({ t: "bad", tit: `Vacina atrasada — ${esc(g.nome)}`, txt: `${esc(va.nome)} desde ${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}.` });
@@ -816,6 +894,7 @@
 
     return out;
   }
+
 
   /* ═══════════════════════ RENDER ═══════════════════════ */
   function render() {
@@ -872,7 +951,8 @@
         <div class="sub">${sem.sub}</div>
         <div class="sub" style="margin-top:0.5rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.5rem;">
           Pode gastar <b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${c.prox ? c.prox.d.getDate() : "?"}
-          ${c.obrigAte > 0 ? ` · reservado p/ contas: <b>${fmt(c.obrigAte)}</b>` : ""}
+          · lazer: <b>${fmt(c.lazerRest || 0)}</b>
+          ${c.obrigAte > 0 ? ` · reservado (contas+fatura+meta): <b>${fmt(c.obrigAte)}</b>` : ""}
         </div>
       </div>
       <form class="card mt" data-form="caixa-set" style="display:flex; gap:0.6rem; align-items:flex-end;">
@@ -1020,12 +1100,12 @@
     const pctOver = Math.max(0, total - teto) / teto * 100;
 
     let html = `
-      <div class="sect">Fatura atual <span class="mini">paga dia ~15–20</span></div>
+      <div class="sect">Fatura atual <span class="mini">vence dia ${S.config.diaVencFatura || 19}</span></div>
       <div class="card">
         <div class="item" style="border:none; padding-top:0;">
           <div class="grow"><div class="t" style="font-size:1.35rem;">${fmt(total)}</div>
-          <div class="s">de ${fmt(limite)} de limite + ${fmt(reserva)} de reserva</div></div>
-          ${total > teto ? `<span class="pill bad">Estourou!</span>` : total > limite ? `<span class="pill warn">Na reserva</span>` : `<span class="pill ok">No limite</span>`}
+          <div class="s">de ${fmt(limite)} de limite + ${fmt(reserva)} de reserva${fatura ? " · já paga ✓" : " · ainda não paga"}</div></div>
+          ${fatura ? `<span class="pill ok">Paga</span>` : total > teto ? `<span class="pill bad">Estourou!</span>` : total > limite ? `<span class="pill warn">Na reserva</span>` : `<span class="pill neu">Aberta</span>`}
         </div>
         <div class="bar">
           <div class="fill lim" style="width:${pctLim}%"></div>
@@ -1033,8 +1113,13 @@
           <div class="fill over" style="width:${Math.min(pctOver, 100 - pctLim - pctRes)}%"></div>
         </div>
         <div class="bar-legend"><span>Limite ${fmt(limite)}</span><span>Reserva ${fmt(reserva)}</span></div>
-        ${total > 0 ? `<button class="btn full" data-action="fatura-pagar" ${fatura ? "disabled style='opacity:.5'" : ""}>${fatura ? "Fatura paga ✓" : "Pagar fatura " + fmt(total)}</button>` : ""}
-        ${fatura ? `<div class="dica">Fatura de ${esc(mesNome())} paga (${fmt(fatura.valor)}). Compras novas entram na próxima fatura.</div>` : ""}
+        ${!fatura ? `
+        <form data-form="fatura-paga-valor" class="mt">
+          <label>Valor real da fatura (se ainda não lançou tudo)</label>
+          <input name="valor" inputmode="decimal" value="${total > 0 ? String(total).replace(".", ",") : String(num(S.config.faturaEstimada)).replace(".", ",")}" placeholder="ex.: 980,00" required />
+          <button class="btn full" type="submit">Pagar fatura e zerar ciclo</button>
+        </form>
+        <div class="dica">Até o dia ${S.config.diaVencFatura || 19}: guarda o dinheiro. No dia, confirma o valor e paga.</div>` : `<div class="dica">Fatura de ${esc(mesNome())} paga (${fmt(fatura.valor)}). Compras novas entram na próxima.</div>`}
       </div>
 
       <div class="sect">Comprei no cartão</div>
@@ -1246,9 +1331,16 @@
           <div><label>Limite (R$)</label><input name="limite" inputmode="decimal" value="${String(num(cfg.limiteCartao)).replace(".", ",")}" /></div>
           <div><label>Reserva (R$)</label><input name="reserva" inputmode="decimal" value="${String(num(cfg.reservaCartao)).replace(".", ",")}" /></div>
         </div>
-        <label>Meta de sobra no fim do mês (R$)</label>
-        <input name="meta" inputmode="decimal" value="${String(num(cfg.metaGuardar)).replace(".", ",")}" />
-        <button class="btn full" type="submit">Salvar limites</button>
+        <div class="row2">
+          <div><label>Fatura vence dia</label><input name="diaFatura" type="number" min="1" max="31" value="${cfg.diaVencFatura || 19}" /></div>
+          <div><label>Estimativa fatura (R$)</label><input name="faturaEst" inputmode="decimal" value="${String(num(cfg.faturaEstimada)).replace(".", ",")}" placeholder="se ainda não souber" /></div>
+        </div>
+        <div class="row2">
+          <div><label>Lazer/iFood do mês (R$)</label><input name="lazer" inputmode="decimal" value="${String(num(cfg.lazerMes)).replace(".", ",")}" /></div>
+          <div><label>Meta juntar (R$)</label><input name="meta" inputmode="decimal" value="${String(num(cfg.metaGuardar)).replace(".", ",")}" /></div>
+        </div>
+        <button class="btn full" type="submit">Salvar cartão e metas</button>
+        <div class="dica">Missão: pagar contas da quinzena → guardar fatura até o dia ${cfg.diaVencFatura || 19} → lazer com limite → o resto junta.</div>
       </form>
 
       <div class="sect">Conta da casa</div>
@@ -1316,9 +1408,10 @@
 
     "fatura-pagar": () => {
       const c = calc();
-      if (c.comprasCiclo <= 0) return;
-      if (!confirm(`Pagar fatura de ${fmt(c.comprasCiclo)}? As compras saem do ciclo e viram fatura paga.`)) return;
-      S.cartao.faturas[c.mk] = { valor: c.comprasCiclo, ts: Date.now() };
+      const valor = c.comprasCiclo > 0 ? c.comprasCiclo : num(S.config.faturaEstimada);
+      if (valor <= 0) return;
+      if (!confirm(`Pagar fatura de ${fmt(valor)}?`)) return;
+      S.cartao.faturas[c.mk] = { valor, ts: Date.now() };
       S.cartao.compras = [];
       touch();
     },
@@ -1443,6 +1536,19 @@
         if (!dep.hist) dep.hist = [];
         dep.hist.push({ ts: Date.now(), qtd, valor });
       }
+      S.ultimaCompra = { ts: Date.now(), desc, valor, pago };
+      touch();
+      tab = "hoje";
+      render();
+      window.scrollTo(0, 0);
+    },
+    "fatura-paga-valor": (f) => {
+      const valor = num(f.valor.value);
+      if (valor <= 0) return;
+      if (!confirm(`Pagar fatura de ${fmt(valor)} e zerar compras do ciclo?`)) return;
+      S.cartao.faturas[mesKey()] = { valor, ts: Date.now() };
+      S.cartao.compras = [];
+      S.config.faturaEstimada = 0;
       touch();
     },
     "gato-add": (f) => {
@@ -1476,6 +1582,9 @@
     "cfg-cartao": (f) => {
       S.config.limiteCartao = num(f.limite.value);
       S.config.reservaCartao = num(f.reserva.value);
+      S.config.diaVencFatura = Math.min(31, Math.max(1, parseInt(f.diaFatura.value, 10) || 19));
+      S.config.faturaEstimada = num(f.faturaEst.value);
+      S.config.lazerMes = num(f.lazer.value);
       S.config.metaGuardar = num(f.meta.value);
       touch();
     },
