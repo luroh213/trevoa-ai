@@ -181,6 +181,31 @@
     .alerta.bad { background: var(--bad-soft); color: var(--bad); }
     .alerta.ok { background: var(--ok-soft); color: var(--ok); }
 
+    /* balãozinho amigável (assistente da casa) */
+    .chat { margin-top: 0.85rem; }
+    .balao { display: flex; gap: 0.65rem; margin-top: 0.7rem; animation: rise 0.35s ease-out both; }
+    .balao .ava {
+      width: 2.5rem; height: 2.5rem; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(160deg, var(--brand) 0%, var(--brand-deep) 100%);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.78rem; box-shadow: 0 6px 12px rgba(46, 125, 82, 0.25);
+    }
+    .balao .msg {
+      flex: 1; background: #fff; border: 1px solid var(--line);
+      border-radius: 0.25rem 1.15rem 1.15rem 1.15rem;
+      padding: 0.8rem 0.95rem; box-shadow: 0 8px 18px rgba(46, 125, 82, 0.07);
+    }
+    .balao .who { font-size: 0.72rem; font-weight: 800; color: var(--brand); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.2rem; }
+    .balao .tit { font-family: "Fraunces", serif; font-weight: 700; font-size: 1.05rem; color: var(--ink); margin-bottom: 0.25rem; }
+    .balao .txt { font-weight: 600; font-size: 0.94rem; line-height: 1.4; color: var(--ink); }
+    .balao .txt ol { margin: 0.35rem 0 0.2rem 1.1rem; padding: 0; }
+    .balao .txt li { margin: 0.15rem 0; }
+    .balao.warn .msg { background: #fffbf0; border-color: #e8c98a; }
+    .balao.warn .who { color: var(--warn); }
+    .balao.bad .msg { background: #fff5f5; border-color: #e8b0b0; }
+    .balao.bad .who { color: var(--bad); }
+    .balao.ok .msg { background: #f3faf5; border-color: #b5d9c0; }
+
     /* barra do cartão */
     .bar { height: 1.05rem; border-radius: 999px; background: #e7ede8; overflow: hidden; display: flex; margin: 0.55rem 0 0.3rem; }
     .bar .fill { height: 100%; transition: width 0.3s; }
@@ -318,7 +343,8 @@
 
   function defaultState() {
     return {
-      v: 2,
+      v: 3,
+      inicio: null, // timestamp do 1º uso (saldo informado) — não julga contas de antes disso
       caixa: null, // {valor, em} — quanto tem no banco e quando informou; eventos com ts > em entram na conta
       config: {
         rendas: [
@@ -349,6 +375,8 @@
     const raw = localStorage.getItem(LS);
     if (raw) S = Object.assign(defaultState(), JSON.parse(raw));
   } catch (_) {}
+  // Migração: quem já informou saldo antes da v3 ganha "início" naquele momento
+  if (S.caixa && !S.inicio) S.inicio = S.caixa.em || Date.now();
 
   let tab = "hoje";
   let pagandoId = null;
@@ -533,47 +561,170 @@
     return { cls: "vermelho", msg: "Segura o iFood ✋", sub: "Foca no que tem na despensa." };
   }
 
-  /* ─── Motor de dicas ─── */
+  // Marca início do app (1ª vez que informa saldo). Contas anteriores a isso NÃO entram como "vencidas".
+  function garantirInicio() {
+    if (!S.inicio && S.caixa && S.caixa.em) S.inicio = S.caixa.em;
+  }
+
+  // Conta só é "vencida" se o vencimento caiu DEPOIS do app começar (mesmo mês) ou em mês seguinte
+  function contaVencida(conta, hojeDia) {
+    garantirInicio();
+    if (!S.inicio) return false;
+    const start = new Date(S.inicio);
+    const startDia = start.getDate();
+    const startMk = mesKey(S.inicio);
+    const mk = mesKey();
+    if (mk === startMk) {
+      // App começou dia 12: dia 7 NÃO é "vencido" no app — era antes
+      return conta.dia >= startDia && conta.dia < hojeDia;
+    }
+    return conta.dia < hojeDia;
+  }
+
+  function contasPendentes() {
+    const mk = mesKey();
+    const pag = S.pagamentos[mk] || {};
+    return S.contas.filter((c) => !pag[c.id]).slice().sort((a, b) => a.dia - b.dia || a.nome.localeCompare(b.nome));
+  }
+
+  function renderBaloes(lista) {
+    if (!lista.length) return "";
+    let html = `<div class="sect">Casa falando <span class="mini">dicas pra vocês</span></div><div class="chat">`;
+    lista.forEach((d, i) => {
+      html += `
+        <div class="balao ${d.t || "ok"}" style="animation-delay:${i * 0.05}s">
+          <div class="ava">🏠</div>
+          <div class="msg">
+            <div class="who">Nossa Casa</div>
+            ${d.tit ? `<div class="tit">${d.tit}</div>` : ""}
+            <div class="txt">${d.txt}</div>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+
+  /* ─── Motor de dicas (sempre em balão) ─── */
   function dicas(c) {
     const out = [];
     if (!S.caixa) return out;
+    garantirInicio();
+    const mk = c.mk;
+    const rec = S.recebidos[mk] || {};
     const tem = S.despensa.filter((d) => d.status === "tem");
     const faltando = S.despensa.filter((d) => d.status !== "tem");
     const limite = num(S.config.limiteCartao);
     const prox = c.prox;
+    const hojeDia = new Date().getDate();
+    const pend = contasPendentes();
+    const caiu = Object.keys(rec).length > 0;
 
-    if (c.caixa <= 0 && prox) {
-      out.push({ t: "bad", txt: `Zerados até dia ${prox.d.getDate()}. iFood ZERO. Cozinha o que tem em casa${tem.length ? ": " + tem.slice(0, 5).map((x) => esc(x.nome)).join(", ") : ""}.` });
-    } else if (c.porDia < 20 && tem.length) {
-      out.push({ t: "warn", txt: `Dinheiro curto. Antes de pedir comida, olha o que tem: ${tem.slice(0, 5).map((x) => esc(x.nome)).join(", ")}.` });
+    // 1) Salário caiu → prioridade de contas (sempre no topo)
+    if (caiu && pend.length) {
+      const total = pend.reduce((a, x) => a + num(x.valor), 0);
+      const sobra = c.caixa - total;
+      const itens = pend.map((x, i) => `<li><b>${esc(x.nome)}</b> ${fmt(x.valor)} <span style="color:var(--ink-soft)">(dia ${x.dia})</span></li>`).join("");
+      out.push({
+        t: sobra >= 0 ? "ok" : "warn",
+        tit: "Salário caiu — vamos organizar!",
+        txt: `Paga nesta ordem (prioridade):<ol>${itens}</ol>Total das contas: <b>${fmt(total)}</b>. ${sobra >= 0 ? `Depois disso ainda sobra <b>${fmt(sobra)}</b> pra viver até o próximo.` : `Falta <b>${fmt(Math.abs(sobra))}</b> — segura gasto e espera o próximo salário.`}`,
+      });
+    } else if (!caiu && pend.length && prox) {
+      out.push({
+        t: "warn",
+        tit: "Contas na fila",
+        txt: `Tem <b>${pend.length}</b> conta${pend.length > 1 ? "s" : ""} pra pagar (${fmt(pend.reduce((a, x) => a + num(x.valor), 0))}). Quando o salário do dia ${prox.d.getDate()} cair, eu te mostro a ordem certinha.`,
+      });
     }
 
+    // 2) Contas realmente vencidas DEPOIS que o app começou
+    const vencidas = pend.filter((x) => contaVencida(x, hojeDia));
+    if (vencidas.length) {
+      out.push({
+        t: "bad",
+        tit: "Atenção — passou do dia",
+        txt: vencidas.map((x) => `<b>${esc(x.nome)}</b> (${fmt(x.valor)}) venceu dia ${x.dia}`).join(" · ") + ". Paga assim que der.",
+      });
+    }
+
+    // 3) Zerado / curto
+    if (c.caixa <= 0 && prox) {
+      out.push({
+        t: "bad",
+        tit: "Zerados até o próximo salário",
+        txt: `Até dia ${prox.d.getDate()} é iFood ZERO. ${tem.length ? `Cozinha o que tem: ${tem.slice(0, 5).map((x) => esc(x.nome)).join(", ")}.` : "Cadastra o que tem na Despensa pra eu te ajudar."}`,
+      });
+    } else if (c.porDia < 20 && c.caixa > 0) {
+      out.push({
+        t: "warn",
+        tit: "Vai com calma",
+        txt: `Sobram só <b>${fmt(Math.max(0, c.porDia))}</b> por dia até dia ${prox ? prox.d.getDate() : "?"}. ${tem.length ? `Olha o que tem em casa: ${tem.slice(0, 4).map((x) => esc(x.nome)).join(", ")}.` : "Antes de pedir comida, cadastra a despensa."}`,
+      });
+    }
+
+    // 4) Despensa / lista
     if (faltando.length && prox) {
-      out.push({ t: "warn", txt: `Põe na compra do dia ${prox.d.getDate()} (cartão): ${faltando.map((x) => esc(x.nome)).join(", ")}.` });
+      out.push({
+        t: "warn",
+        tit: "Lista pro cartão",
+        txt: `Quando chegar o dia ${prox.d.getDate()}, compra no cartão: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.`,
+      });
     }
 
     S.despensa.forEach((d) => {
       const dm = duracaoMedia(d);
       if (dm) {
         const sugestao = Math.max(1, Math.ceil(30 / dm));
-        out.push({ t: "ok", txt: `${esc(d.nome)}: dura ~${Math.round(dm)} dia${Math.round(dm) > 1 ? "s" : ""} por unidade p/ vocês. Pro mês fechar, compra ${sugestao} un.` });
+        out.push({
+          t: "ok",
+          tit: `Dica do ${esc(d.nome)}`,
+          txt: `Olhando o histórico de vocês: dura ~<b>${Math.round(dm)} dia${Math.round(dm) > 1 ? "s" : ""}</b> por unidade. Pro mês fechar, leva <b>${sugestao} un</b>.`,
+        });
       }
     });
 
+    // 5) iFood
     const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
     const ifood = S.gastos.filter((g) => g.cat === "iFood" && g.ts >= ini.getTime()).reduce((a, g) => a + num(g.valor), 0);
     if (ifood > 0) {
-      out.push({ t: "warn", txt: `iFood já comeu ${fmt(ifood)} este mês — dava ${Math.max(1, Math.floor(ifood / 50))} compra${ifood >= 100 ? "s" : ""} de mercado de R$ 50.` });
+      out.push({
+        t: "warn",
+        tit: "iFood este mês",
+        txt: `Já foram <b>${fmt(ifood)}</b> de iFood — dava ${Math.max(1, Math.floor(ifood / 50))} compra${ifood >= 100 ? "s" : ""} de mercado de R$ 50.`,
+      });
     }
 
+    // 6) Cartão
     if (c.comprasCiclo > limite) {
-      out.push({ t: "bad", txt: `Cartão passou do limite de ${fmt(limite)}. Até pagar a fatura, compra só no dinheiro.` });
+      out.push({
+        t: "bad",
+        tit: "Cartão no limite",
+        txt: `Passou dos ${fmt(limite)}. Até pagar a fatura, compra só no dinheiro.`,
+      });
     }
 
-    if (prox) {
+    // 7) Projeção próximo salário
+    if (prox && !caiu) {
       const sobra = prox.valor - c.comprasCiclo;
-      out.push({ t: sobra >= 0 ? "ok" : "bad", txt: `Dia ${prox.d.getDate()}: entra ${fmt(prox.valor)} − fatura ${fmt(c.comprasCiclo)} = sobra ${fmt(sobra)}.` });
+      out.push({
+        t: sobra >= 0 ? "ok" : "bad",
+        tit: `Dia ${prox.d.getDate()} chega`,
+        txt: `Entra <b>${fmt(prox.valor)}</b> − fatura <b>${fmt(c.comprasCiclo)}</b> = sobra <b>${fmt(sobra)}</b>.`,
+      });
     }
+
+    // Vacinas dos gatos
+    S.gatos.forEach((g) => (g.vacinas || []).forEach((va) => {
+      const d = diasPara(va.proxima);
+      if (d !== null && d >= 0 && d <= 30) {
+        out.push({ t: "warn", tit: `Vacina do ${esc(g.nome)}`, txt: `${esc(va.nome)} em ${d === 0 ? "hoje" : d + " dia" + (d > 1 ? "s" : "")} (${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}).` });
+      }
+      if (d !== null && d < 0) {
+        out.push({ t: "bad", tit: `Vacina atrasada — ${esc(g.nome)}`, txt: `${esc(va.nome)} desde ${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}.` });
+      }
+    }));
+
     return out;
   }
 
@@ -634,29 +785,16 @@
         <button class="btn small" type="submit" style="min-height:3rem;">Atualizar</button>
       </form>`;
 
-    // Dicas inteligentes
-    const ds = dicas(c);
-    if (ds.length) {
-      html += `<div class="sect">O que fazer agora</div><div class="card">`;
-      ds.forEach((d) => { html += `<div class="alerta ${d.t}"><span>•</span><span>${d.txt}</span></div>`; });
-      html += `</div>`;
-    }
+    // Balões inteligentes (sempre)
+    html += renderBaloes(dicas(c));
 
-    // Alertas
-    const alertas = [];
-    S.gatos.forEach((g) => (g.vacinas || []).forEach((va) => {
-      const d = diasPara(va.proxima);
-      if (d !== null && d >= 0 && d <= 30) alertas.push(`<div class="alerta warn">💉 <span><b>${esc(g.nome)}</b>: ${esc(va.nome)} em ${d === 0 ? "hoje" : d + " dia" + (d > 1 ? "s" : "")} (${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")})</span></div>`);
-      if (d !== null && d < 0) alertas.push(`<div class="alerta bad">💉 <span><b>${esc(g.nome)}</b>: ${esc(va.nome)} atrasada desde ${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}</span></div>`);
-    }));
+    // Alerta só de cartão estourado (resto vai nos balões)
     const limite = num(S.config.limiteCartao), reserva = num(S.config.reservaCartao);
-    if (c.comprasCiclo > limite + reserva) alertas.push(`<div class="alerta bad">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — estourou limite + reserva (${fmt(limite + reserva)})!</span></div>`);
-    else if (c.comprasCiclo > limite) alertas.push(`<div class="alerta warn">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — passou do limite de ${fmt(limite)}, usando a reserva.</span></div>`);
-    const faltam = S.contas.filter((x) => !pag[x.id] && x.dia < hojeDia);
-    faltam.forEach((x) => alertas.push(`<div class="alerta bad">🧾 <span><b>${esc(x.nome)}</b> venceu dia ${x.dia} e ainda não foi pago (${fmt(x.valor)}).</span></div>`));
-    const nFaltaCasa = S.despensa.filter((d) => d.status !== "tem").length;
-    if (nFaltaCasa) alertas.push(`<div class="alerta warn">🧺 <span><b>${nFaltaCasa}</b> ${nFaltaCasa === 1 ? "item acabando" : "itens acabando"} em casa — confere a Despensa antes de pedir iFood.</span></div>`);
-    if (alertas.length) html += `<div class="card mt">${alertas.join("")}</div>`;
+    if (c.comprasCiclo > limite + reserva) {
+      html += `<div class="card mt"><div class="alerta bad">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — estourou limite + reserva (${fmt(limite + reserva)})!</span></div></div>`;
+    } else if (c.comprasCiclo > limite) {
+      html += `<div class="card mt"><div class="alerta warn">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — passou do limite de ${fmt(limite)}, usando a reserva.</span></div></div>`;
+    }
 
     // Gasto rápido
     html += `
@@ -1173,7 +1311,9 @@
       touch();
     },
     "caixa-set": (f) => {
-      S.caixa = { valor: num(f.valor.value), em: Date.now() };
+      const agora = Date.now();
+      if (!S.inicio) S.inicio = agora;
+      S.caixa = { valor: num(f.valor.value), em: agora };
       touch();
     },
     "compra": (f) => {
