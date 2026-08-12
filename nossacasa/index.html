@@ -373,10 +373,30 @@
   let S = defaultState();
   try {
     const raw = localStorage.getItem(LS);
-    if (raw) S = Object.assign(defaultState(), JSON.parse(raw));
-  } catch (_) {}
-  // Migração: quem já informou saldo antes da v3 ganha "início" naquele momento
-  if (S.caixa && !S.inicio) S.inicio = S.caixa.em || Date.now();
+    if (raw) S = hydrate(JSON.parse(raw));
+  } catch (_) {
+    S = defaultState();
+  }
+
+  function hydrate(doc) {
+    const base = defaultState();
+    if (!doc || typeof doc !== "object") return base;
+    const out = Object.assign(base, doc);
+    out.config = Object.assign({}, base.config, doc.config || {});
+    if (!Array.isArray(out.config.rendas) || !out.config.rendas.length) out.config.rendas = base.config.rendas;
+    out.contas = Array.isArray(doc.contas) ? doc.contas : [];
+    out.gastos = Array.isArray(doc.gastos) ? doc.gastos : [];
+    out.despensa = Array.isArray(doc.despensa) ? doc.despensa : [];
+    out.lista = Array.isArray(doc.lista) ? doc.lista : [];
+    out.gatos = Array.isArray(doc.gatos) ? doc.gatos : [];
+    out.pagamentos = doc.pagamentos && typeof doc.pagamentos === "object" ? doc.pagamentos : {};
+    out.recebidos = doc.recebidos && typeof doc.recebidos === "object" ? doc.recebidos : {};
+    out.cartao = Object.assign({ compras: [], faturas: {} }, doc.cartao || {});
+    if (!Array.isArray(out.cartao.compras)) out.cartao.compras = [];
+    if (!out.cartao.faturas || typeof out.cartao.faturas !== "object") out.cartao.faturas = {};
+    if (out.caixa && !out.inicio) out.inicio = out.caixa.em || Date.now();
+    return out;
+  }
 
   let tab = "hoje";
   let pagandoId = null;
@@ -462,7 +482,7 @@
     try {
       const r = await NCCloud.carregar();
       if (r.doc) {
-        S = Object.assign(defaultState(), r.doc);
+        S = hydrate(r.doc);
         saveLocal();
       }
       if (r.nome) $("#h-nome").textContent = r.nome;
@@ -800,14 +820,23 @@
   /* ═══════════════════════ RENDER ═══════════════════════ */
   function render() {
     if (!logado) return;
-    document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
-    const v = $("#view");
-    if (tab === "hoje") v.innerHTML = viewHoje();
-    else if (tab === "contas") v.innerHTML = viewContas();
-    else if (tab === "cartao") v.innerHTML = viewCartao();
-    else if (tab === "despensa") v.innerHTML = viewDespensa();
-    else if (tab === "gatos") v.innerHTML = viewGatos();
-    else if (tab === "ajustes") v.innerHTML = viewAjustes();
+    try {
+      document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+      const v = $("#view");
+      if (tab === "hoje") v.innerHTML = viewHoje();
+      else if (tab === "contas") v.innerHTML = viewContas();
+      else if (tab === "cartao") v.innerHTML = viewCartao();
+      else if (tab === "despensa") v.innerHTML = viewDespensa();
+      else if (tab === "gatos") v.innerHTML = viewGatos();
+      else if (tab === "ajustes") v.innerHTML = viewAjustes();
+    } catch (e) {
+      console.error(e);
+      const v = $("#view");
+      if (v) {
+        v.innerHTML = `<div class="card mt"><div class="alerta bad">Travou ao montar a tela: <b>${esc(e && e.message ? e.message : e)}</b>. Em Ajustes → Sair, entra de novo. Se continuar, manda print.</div>
+          <button class="btn full" data-action="tab" data-tab="ajustes">Abrir Ajustes</button></div>`;
+      }
+    }
   }
 
   /* ─── Hoje ─── */
