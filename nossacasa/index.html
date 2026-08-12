@@ -256,6 +256,21 @@
     [hidden] { display: none !important; }
     .mt { margin-top: 0.9rem; }
     .view { animation: rise 0.3s ease-out both; }
+
+    .hbar { height: 0.55rem; background: var(--line); border-radius: 99px; overflow: hidden; margin: 0.2rem 0 0.55rem; }
+    .hbar > i { display: block; height: 100%; background: var(--brand); border-radius: inherit; }
+    .hbar.alt > i { background: var(--warn, #c9892a); }
+    .hbar.bad > i { background: var(--bad); }
+    .chkstep { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+    .chkstep:last-child { border-bottom: 0; }
+    .chknum {
+      width: 1.55rem; height: 1.55rem; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-weight: 800; font-size: 0.72rem;
+      background: var(--ok-soft); color: var(--brand);
+    }
+    .chknum.done { background: var(--brand); color: #fff; }
+    .chknum.wait { background: var(--warn-soft, #fff3d6); color: var(--warn, #9a6b12); }
+    nav.tabs button { font-size: 0.68rem; min-width: 0; flex: 1; }
   </style>
 </head>
 <body>
@@ -304,6 +319,10 @@
         <button data-action="tab" data-tab="hoje" class="on">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
           Hoje
+        </button>
+        <button data-action="tab" data-tab="mes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v4"/><path d="M12 11v8"/><path d="M16 7v12"/></svg>
+          Mês
         </button>
         <button data-action="tab" data-tab="contas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
@@ -370,6 +389,7 @@
       despensa: [],   // {id, nome, cat, status: tem|pouco|acabou}
       lista: [],      // {id, nome, cat}
       gatos: [],      // {id, nome, sexo, nasc, peso, racao, obs, vacinas:[{id,nome,data,proxima}]}
+      checklist: {},  // "AAAA-MM": { faturaGuardada: true }
     };
   }
 
@@ -400,6 +420,7 @@
     if (out.caixa && !out.inicio) out.inicio = out.caixa.em || Date.now();
     if (!(num(out.config.lazerMes) > 0)) out.config.lazerMes = 200;
     if (out.config.diaVencFatura == null) out.config.diaVencFatura = 19;
+    out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
     return out;
   }
 
@@ -628,6 +649,62 @@
     if (porDia >= 50) return { cls: "verde", msg: "Pode pedir iFood 🍔", sub: "Dinheiro tranquilo até o próximo salário." };
     if (porDia >= 20) return { cls: "amarelo", msg: "Melhor comer de casa", sub: "Ainda tem dinheiro, mas vai com calma." };
     return { cls: "vermelho", msg: "Segura o iFood ✋", sub: "Foca no que tem na despensa." };
+  }
+
+  function contasDaQuinzena(diaRenda) {
+    const dias = S.config.rendas.map((r) => r.dia).sort((a, b) => a - b);
+    const idx = dias.indexOf(diaRenda);
+    const proxDia = dias.length && idx >= 0 ? dias[(idx + 1) % dias.length] : 32;
+    const viraMes = idx < 0 || !dias.length || proxDia <= diaRenda;
+    return S.contas.filter((ct) => (viraMes ? ct.dia >= diaRenda : (ct.dia >= diaRenda && ct.dia < proxDia)));
+  }
+
+  function checklistEstado() {
+    const hoje = new Date().getDate();
+    const mk = mesKey();
+    const rec = S.recebidos[mk] || {};
+    const pag = S.pagamentos[mk] || {};
+    const rendas = S.config.rendas.slice().sort((a, b) => a.dia - b.dia);
+    if (!rendas.length) return null;
+    let alvo = rendas.find((r) => !rec[r.id] && r.dia <= hoje + 2)
+      || rendas.find((r) => !rec[r.id])
+      || [...rendas].filter((r) => rec[r.id]).sort((a, b) => b.dia - a.dia)[0]
+      || rendas[0];
+    const total = num(alvo.valor) * (num(alvo.pessoas) || 1);
+    const caiu = !!rec[alvo.id];
+    const contas = contasDaQuinzena(alvo.dia);
+    const faltam = contas.filter((c) => !pag[c.id]);
+    const totalContas = faltam.reduce((a, c) => a + num(c.valor), 0);
+    const faturaPaga = !!S.cartao.faturas[mk];
+    const faturaVal = faturaPaga ? 0 : (S.cartao.compras.reduce((a, x) => a + num(x.valor), 0) || num(S.config.faturaEstimada));
+    const faturaGuardada = faturaPaga || !!(S.checklist && S.checklist[mk] && S.checklist[mk].faturaGuardada);
+    const c = calc();
+    const reservar = (caiu ? totalContas : 0) + (faturaGuardada ? 0 : faturaVal) + (caiu ? c.metaNum : 0);
+    const sobra = Math.max(0, c.caixa - reservar);
+    return { mk, alvo, total, caiu, contas, faltam, totalContas, faturaVal, faturaPaga, faturaGuardada, sobra, meta: c.metaNum, lazer: c.lazerRest };
+  }
+
+  function barraPct(val, max) {
+    if (!(max > 0) || !(val > 0)) return 0;
+    return Math.min(100, Math.round((val / max) * 100));
+  }
+
+  function resumoMesDados() {
+    const c = calc();
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    const porCat = {};
+    S.gastos.filter((g) => g.ts >= ini.getTime()).forEach((g) => {
+      const k = g.cat || "Outro";
+      porCat[k] = (porCat[k] || 0) + num(g.valor);
+    });
+    const ifood = porCat["iFood"] || 0;
+    const mercado = porCat["Mercado"] || 0;
+    const lazer = porCat["Lazer"] || 0;
+    const imprevisto = porCat["Imprevisto"] || 0;
+    const saiu = c.contasPagas + c.gastosMes + c.faturaPaga;
+    const saldo = c.entrouMes - saiu;
+    const juntadoEst = Math.max(0, saldo);
+    return { c, porCat, ifood, mercado, lazer, imprevisto, saiu, saldo, juntadoEst };
   }
 
   // Marca início do app (1ª vez que informa saldo). Contas anteriores a isso NÃO entram como "vencidas".
@@ -1005,6 +1082,7 @@
       document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
       const v = $("#view");
       if (tab === "hoje") v.innerHTML = viewHoje();
+      else if (tab === "mes") v.innerHTML = viewMes();
       else if (tab === "contas") v.innerHTML = viewContas();
       else if (tab === "cartao") v.innerHTML = viewCartao();
       else if (tab === "despensa") v.innerHTML = viewDespensa();
@@ -1075,6 +1153,59 @@
     // Balões inteligentes (sempre)
     html += renderBaloes(dicas(c));
 
+    // Checklist quinzena (salário → contas → fatura → sobra)
+    const ck = checklistEstado();
+    if (ck) {
+      const n1 = ck.caiu ? "done" : "wait";
+      const n2 = !ck.faltam.length ? "done" : (ck.caiu ? "wait" : "");
+      const n3 = ck.faturaGuardada ? "done" : (ck.caiu ? "wait" : "");
+      html += `
+      <div class="sect">Checklist quinzena <span class="mini">dia ${ck.alvo.dia}</span></div>
+      <div class="card">
+        <div class="chkstep">
+          <div class="chknum ${n1}">1</div>
+          <div class="grow">
+            <div class="t">${esc(ck.alvo.nome)} — ${fmt(ck.total)}</div>
+            <div class="s">${ck.caiu ? "Salário marcado" : "Marca quando cair na conta"}</div>
+          </div>
+          ${ck.caiu
+            ? `<span class="statusbtn tem">Caiu ✓</span>`
+            : `<button class="btn small" data-action="checklist-salario">Caiu</button>`}
+        </div>
+        <div class="chkstep">
+          <div class="chknum ${n2}">2</div>
+          <div class="grow">
+            <div class="t">Pagar contas da quinzena</div>
+            <div class="s">${ck.faltam.length ? `${ck.faltam.length} falta · ${fmt(ck.totalContas)}` : "Tudo pago"}</div>
+          </div>
+          ${ck.faltam.length
+            ? `<button class="btn small ${ck.caiu ? "" : "ghost"}" data-action="checklist-pagar-quinzena" ${ck.caiu ? "" : "disabled"}>Pagar todas</button>`
+            : `<span class="statusbtn tem">OK ✓</span>`}
+        </div>
+        <div class="chkstep">
+          <div class="chknum ${n3}">3</div>
+          <div class="grow">
+            <div class="t">${ck.faturaPaga ? "Fatura paga" : "Guardar fatura até dia " + (S.config.diaVencFatura || 19)}</div>
+            <div class="s">${ck.faturaVal > 0 ? fmt(ck.faturaVal) : "Sem valor ainda — use estimativa em Ajustes"}</div>
+          </div>
+          ${ck.faturaPaga
+            ? `<span class="statusbtn tem">Paga ✓</span>`
+            : ck.faturaGuardada
+              ? `<span class="statusbtn tem">Guardada ✓</span>`
+              : `<button class="btn small ghost" data-action="checklist-fatura-guardar">Já separei</button>`}
+        </div>
+        <div class="chkstep">
+          <div class="chknum ${ck.caiu && !ck.faltam.length ? "done" : ""}">4</div>
+          <div class="grow">
+            <div class="t">Sobra depois de reservar</div>
+            <div class="s">Lazer ~${fmt(ck.lazer)} · meta ${fmt(ck.meta)}</div>
+          </div>
+          <div class="val">${fmt(ck.sobra)}</div>
+        </div>
+        <div class="dica">1 toque em <b>Caiu</b> → paga contas previstas → marca fatura guardada. Energia/internet: ajusta valor em Contas se mudou.</div>
+      </div>`;
+    }
+
     // Alerta só de cartão estourado (resto vai nos balões)
     const limite = num(S.config.limiteCartao), reserva = num(S.config.reservaCartao);
     if (c.comprasCiclo > limite + reserva) {
@@ -1136,6 +1267,62 @@
         </div>`;
     });
     html += `</div>`;
+    return html;
+  }
+
+  /* ─── Mês (histórico) ─── */
+  function viewMes() {
+    const r = resumoMesDados();
+    const c = r.c;
+    const maxBar = Math.max(c.entrouMes, r.saiu, 1);
+    const meta = c.metaNum;
+    const metaPct = barraPct(r.juntadoEst, meta || 1);
+    let html = `
+      <div class="hero ${r.saldo >= 0 ? "verde" : "vermelho"}">
+        <div class="k">Este mês · ${esc(mesNome())}</div>
+        <div class="v">${fmt(r.saldo)}</div>
+        <div class="sub">Entrou ${fmt(c.entrouMes)} · saiu ${fmt(r.saiu)} (contas + dinheiro + fatura paga)</div>
+      </div>
+
+      <div class="sect">Fluxo</div>
+      <div class="card">
+        <div class="bar-legend"><span>Entrou</span><span>${fmt(c.entrouMes)} / previsto ${fmt(c.previstoMes)}</span></div>
+        <div class="hbar"><i style="width:${barraPct(c.entrouMes, c.previstoMes || maxBar)}%"></i></div>
+        <div class="bar-legend"><span>Saiu</span><span>${fmt(r.saiu)}</span></div>
+        <div class="hbar alt"><i style="width:${barraPct(r.saiu, maxBar)}%"></i></div>
+        <div class="bar-legend"><span>Contas pagas</span><span>${fmt(c.contasPagas)}</span></div>
+        <div class="hbar"><i style="width:${barraPct(c.contasPagas, maxBar)}%"></i></div>
+        <div class="bar-legend"><span>Gastos no dinheiro</span><span>${fmt(c.gastosMes)}</span></div>
+        <div class="hbar"><i style="width:${barraPct(c.gastosMes, maxBar)}%"></i></div>
+        <div class="bar-legend"><span>Fatura paga</span><span>${fmt(c.faturaPaga)}</span></div>
+        <div class="hbar"><i style="width:${barraPct(c.faturaPaga, maxBar)}%"></i></div>
+        <div class="bar-legend"><span>Cartão aberto (ciclo)</span><span>${fmt(c.comprasCiclo)}</span></div>
+        <div class="hbar bad"><i style="width:${barraPct(c.comprasCiclo, maxBar)}%"></i></div>
+      </div>
+
+      <div class="sect">Onde o dinheiro foi</div>
+      <div class="card">
+        <div class="bar-legend"><span>iFood</span><span>${fmt(r.ifood)}</span></div>
+        <div class="hbar alt"><i style="width:${barraPct(r.ifood, Math.max(c.gastosMes, 1))}%"></i></div>
+        <div class="bar-legend"><span>Mercado</span><span>${fmt(r.mercado)}</span></div>
+        <div class="hbar"><i style="width:${barraPct(r.mercado, Math.max(c.gastosMes, 1))}%"></i></div>
+        <div class="bar-legend"><span>Lazer</span><span>${fmt(r.lazer)}</span></div>
+        <div class="hbar"><i style="width:${barraPct(r.lazer, Math.max(c.gastosMes, 1))}%"></i></div>
+        <div class="bar-legend"><span>Imprevisto</span><span>${fmt(r.imprevisto)}</span></div>
+        <div class="hbar bad"><i style="width:${barraPct(r.imprevisto, Math.max(c.gastosMes, 1))}%"></i></div>
+        ${Object.keys(r.porCat).filter((k) => !["iFood", "Mercado", "Lazer", "Imprevisto"].includes(k)).map((k) => `
+          <div class="bar-legend"><span>${esc(k)}</span><span>${fmt(r.porCat[k])}</span></div>
+          <div class="hbar"><i style="width:${barraPct(r.porCat[k], Math.max(c.gastosMes, 1))}%"></i></div>
+        `).join("")}
+        ${!c.gastosMes ? `<div class="vazio">Nenhum gasto no dinheiro este mês.</div>` : ""}
+      </div>
+
+      <div class="sect">Meta de juntar</div>
+      <div class="card">
+        <div class="bar"><div class="fill lim" style="width:${meta > 0 ? metaPct : 0}%"></div></div>
+        <div class="bar-legend"><span>Estimativa sobra do mês</span><span>${fmt(r.juntadoEst)} / meta ${fmt(meta)}</span></div>
+        <div class="dica">Sobra ≈ entrou − contas − gastos − fatura paga. Caixa real em Hoje é o que manda.</div>
+      </div>`;
     return html;
   }
 
@@ -1464,6 +1651,16 @@
         <div id="perfil-msg" class="dica" hidden></div>
       </form>
 
+      <div class="sect">Deploy (Netlify)</div>
+      <div class="card">
+        <div class="t">Git → site automático</div>
+        <div class="s" style="margin-top:0.35rem;">1. Abra <b>app.netlify.com</b> → site <b>luizecatia</b> (ou Add new site).<br>
+        2. <b>Build &amp; deploy → Continuous deployment → Link repository</b> → GitHub <b>luroh213/trevoa-ai</b>.<br>
+        3. Publish directory: <b>nossacasa</b> (já no <code>netlify.toml</code>).<br>
+        4. Depois: push em <b>main</b> atualiza o site — sem Drop.</div>
+        <div class="dica">Enquanto não linkar: Drop ainda funciona (pasta nossacasa).</div>
+      </div>
+
       <div class="card">
         <button class="btn ghost full" style="margin-top:0;" data-action="exportar">Exportar dados (JSON)</button>
         <button class="btn danger full" data-action="sair">Sair da conta</button>
@@ -1490,6 +1687,32 @@
         if (!r) return;
         S.recebidos[mk][r.id] = { valor: num(r.valor) * (num(r.pessoas) || 1), ts: Date.now() };
       }
+      touch();
+    },
+
+    "checklist-salario": () => {
+      const ck = checklistEstado();
+      if (!ck || ck.caiu) return;
+      if (!S.recebidos[ck.mk]) S.recebidos[ck.mk] = {};
+      S.recebidos[ck.mk][ck.alvo.id] = { valor: ck.total, ts: Date.now() };
+      touch();
+    },
+    "checklist-pagar-quinzena": () => {
+      const ck = checklistEstado();
+      if (!ck || !ck.faltam.length) return;
+      if (!ck.caiu) { alert("Marca o salário como Caiu antes."); return; }
+      if (!confirm(`Pagar ${ck.faltam.length} conta(s) da quinzena pelos valores previstos (${fmt(ck.totalContas)})? Energia/internet: ajuste depois em Contas se mudou.`)) return;
+      if (!S.pagamentos[ck.mk]) S.pagamentos[ck.mk] = {};
+      ck.faltam.forEach((ct) => {
+        S.pagamentos[ck.mk][ct.id] = { valor: num(ct.valor), ts: Date.now() };
+      });
+      touch();
+    },
+    "checklist-fatura-guardar": () => {
+      const mk = mesKey();
+      if (!S.checklist) S.checklist = {};
+      if (!S.checklist[mk]) S.checklist[mk] = {};
+      S.checklist[mk].faturaGuardada = true;
       touch();
     },
 

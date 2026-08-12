@@ -1,0 +1,16 @@
+# Publica a pasta do app Nossa Casa em cada push na branch conectada.
+[build]
+  publish = "nossacasa"
+  command = "echo ok"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
