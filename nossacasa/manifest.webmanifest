@@ -1,0 +1,19 @@
+{
+  "name": "Nossa Casa · Finanças e Gatos",
+  "short_name": "Nossa Casa",
+  "description": "Dinheiro do casal, despensa de casa e cadastro dos gatos",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef5ef",
+  "theme_color": "#2e7d52",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

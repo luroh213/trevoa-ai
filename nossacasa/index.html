@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2e7d52" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Nossa Casa" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Dinheiro do casal, despensa de casa e cadastro dos gatos" />
+  <title>Nossa Casa</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #eef5ef;
+      --bg-deep: #dfece1;
+      --ink: #22302a;
+      --ink-soft: #6d7f74;
+      --brand: #2e7d52;
+      --brand-deep: #1f5c3b;
+      --accent: #e9c46a;
+      --accent-soft: #f9efd4;
+      --cream: #fdfefa;
+      --line: #cfdfcf;
+      --ok: #3e7d5b;
+      --ok-soft: #dceedd;
+      --warn: #b0742a;
+      --warn-soft: #f7e8cf;
+      --bad: #b03a3a;
+      --bad-soft: #f6dbdb;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      min-height: 100dvh;
+      font-family: "Manrope", system-ui, sans-serif;
+      font-size: 17px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 90% 55% at 0% -5%, #d8ead9 0%, transparent 55%),
+        radial-gradient(ellipse 70% 45% at 100% 5%, #e8efe4 0%, transparent 50%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+      padding: calc(1rem + var(--safe-top)) 1rem calc(6.6rem + var(--safe-bottom));
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.4;
+      background-image:
+        linear-gradient(rgba(46, 125, 82, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(46, 125, 82, 0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      z-index: 0;
+    }
+
+    .wrap { max-width: 28rem; margin: 0 auto; position: relative; z-index: 1; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    @keyframes pop { from { opacity: 0; transform: scale(0.96) translateY(14px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    /* ─── Login ────────────────────────────────────── */
+    .gate { min-height: calc(100dvh - 8rem); display: flex; flex-direction: column; justify-content: center; animation: rise 0.4s ease-out both; }
+    .gate .brand-mark { display: flex; align-items: center; gap: 0.8rem; }
+    .logo { width: 3.4rem; height: 3.4rem; flex-shrink: 0; filter: drop-shadow(0 8px 16px rgba(46, 125, 82, 0.25)); animation: floaty 4.5s ease-in-out infinite; }
+    .brand { font-family: "Fraunces", Georgia, serif; font-size: 2.3rem; font-weight: 700; color: var(--brand); letter-spacing: -0.02em; line-height: 1.05; }
+    .subtitle { margin-top: 0.4rem; font-size: 0.95rem; color: var(--ink-soft); line-height: 1.4; }
+
+    .card {
+      background: var(--cream);
+      border: 1px solid var(--line);
+      border-radius: 1.2rem;
+      padding: 1.1rem;
+      box-shadow: 0 10px 24px rgba(46, 125, 82, 0.07);
+    }
+    .card + .card { margin-top: 0.9rem; }
+
+    label { display: block; font-size: 0.85rem; font-weight: 800; color: var(--ink-soft); margin: 0.9rem 0 0.35rem; }
+    label:first-child { margin-top: 0; }
+
+    input, select {
+      width: 100%;
+      font: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 0.9rem;
+      padding: 0.8rem 0.9rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--ok-soft); }
+    input[type="date"] { font-weight: 600; }
+    input[type="checkbox"] { width: auto; margin-right: 0.4rem; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .row2 > label { margin-top: 0.9rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font: inherit; font-weight: 800; font-size: 1.05rem;
+      color: #fff; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-deep) 100%);
+      border: none; border-radius: 1rem; padding: 0.95rem 1.1rem; min-height: 3.4rem;
+      cursor: pointer; box-shadow: 0 8px 18px rgba(46, 125, 82, 0.28);
+      transition: transform 0.12s, filter 0.12s;
+    }
+    .btn:hover { filter: brightness(1.06); }
+    .btn:active { transform: translateY(1px) scale(0.98); }
+    .btn.full { width: 100%; margin-top: 1rem; }
+    .btn.ghost { background: #fff; color: var(--brand); border: 2px solid var(--line); box-shadow: none; }
+    .btn.danger { background: linear-gradient(180deg, #c04747 0%, #96333a 100%); box-shadow: 0 8px 18px rgba(176, 58, 58, 0.25); }
+    .btn.small { min-height: 2.5rem; padding: 0.5rem 0.85rem; font-size: 0.92rem; border-radius: 0.8rem; margin-top: 0; }
+
+    .erro { margin-top: 0.8rem; background: var(--bad-soft); color: var(--bad); font-weight: 700; font-size: 0.92rem; padding: 0.7rem 0.9rem; border-radius: 0.8rem; }
+    .dica { margin-top: 0.8rem; font-size: 0.85rem; color: var(--ink-soft); text-align: center; }
+
+    /* ─── Header ───────────────────────────────────── */
+    header.app { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; animation: rise 0.35s ease-out both; }
+    header.app .logo { width: 2.6rem; height: 2.6rem; animation: none; }
+    header.app .brand { font-size: 1.55rem; }
+    header.app .spacer { flex: 1; }
+    .syncdot { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #9aa79f; }
+    .syncdot.ok { background: var(--ok); }
+    .syncdot.busy { background: var(--warn); animation: pulse 0.9s infinite; }
+    .syncdot.err { background: var(--bad); }
+    .iconbtn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.7rem; height: 2.7rem; border-radius: 0.9rem;
+      background: #fff; border: 2px solid var(--line); cursor: pointer;
+      color: var(--brand); transition: transform 0.12s;
+    }
+    .iconbtn:active { transform: scale(0.94); }
+    .iconbtn svg { width: 1.25rem; height: 1.25rem; }
+
+    /* ─── Herói (pode gastar) ──────────────────────── */
+    .hero { border-radius: 1.4rem; padding: 1.3rem 1.2rem; color: #fff; animation: pop 0.35s ease-out both; box-shadow: 0 14px 28px rgba(34, 48, 42, 0.18); }
+    .hero.verde { background: linear-gradient(160deg, #3e8f66 0%, #22603f 100%); }
+    .hero.amarelo { background: linear-gradient(160deg, #c08a35 0%, #8f6220 100%); }
+    .hero.vermelho { background: linear-gradient(160deg, #bd5050 0%, #8d3434 100%); }
+    .hero .k { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+    .hero .v { font-family: "Fraunces", serif; font-size: 2.9rem; font-weight: 700; line-height: 1.05; margin-top: 0.2rem; }
+    .hero .msg { margin-top: 0.5rem; font-weight: 800; font-size: 1.1rem; }
+    .hero .sub { margin-top: 0.3rem; font-size: 0.9rem; opacity: 0.9; }
+
+    /* ─── Seções e listas ──────────────────────────── */
+    .sect { margin: 1.15rem 0 0.55rem; font-family: "Fraunces", serif; font-size: 1.25rem; font-weight: 700; color: var(--brand-deep); display: flex; align-items: baseline; gap: 0.5rem; }
+    .sect .mini { font-family: "Manrope", sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); }
+
+    .item { display: flex; align-items: center; gap: 0.7rem; padding: 0.75rem 0; border-top: 1px dashed var(--line); }
+    .item:first-of-type { border-top: none; }
+    .item .grow { flex: 1; min-width: 0; }
+    .item .t { font-weight: 800; }
+    .item .s { font-size: 0.85rem; color: var(--ink-soft); font-weight: 600; }
+    .item .val { font-weight: 800; white-space: nowrap; }
+
+    .pill { display: inline-block; font-size: 0.75rem; font-weight: 800; padding: 0.18rem 0.55rem; border-radius: 999px; }
+    .pill.ok { background: var(--ok-soft); color: var(--ok); }
+    .pill.warn { background: var(--warn-soft); color: var(--warn); }
+    .pill.bad { background: var(--bad-soft); color: var(--bad); }
+    .pill.neu { background: #e7ede8; color: var(--ink-soft); }
+
+    .vazio { text-align: center; color: var(--ink-soft); font-weight: 600; font-size: 0.95rem; padding: 1.1rem 0.5rem; }
+
+    .alerta { display: flex; gap: 0.6rem; align-items: flex-start; border-radius: 0.9rem; padding: 0.75rem 0.9rem; font-weight: 700; font-size: 0.92rem; margin-top: 0.6rem; }
+    .alerta.warn { background: var(--warn-soft); color: var(--warn); }
+    .alerta.bad { background: var(--bad-soft); color: var(--bad); }
+    .alerta.ok { background: var(--ok-soft); color: var(--ok); }
+
+    /* barra do cartão */
+    .bar { height: 1.05rem; border-radius: 999px; background: #e7ede8; overflow: hidden; display: flex; margin: 0.55rem 0 0.3rem; }
+    .bar .fill { height: 100%; transition: width 0.3s; }
+    .bar .fill.lim { background: linear-gradient(90deg, #4d9a70, #2e7d52); }
+    .bar .fill.res { background: linear-gradient(90deg, #e9c46a, #c08a35); }
+    .bar .fill.over { background: linear-gradient(90deg, #d06a6a, #b03a3a); }
+    .bar-legend { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
+
+    /* status despensa */
+    .statusbtn { border: 2px solid var(--line); background: #fff; border-radius: 999px; font: inherit; font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.7rem; cursor: pointer; white-space: nowrap; }
+    .statusbtn.tem { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+    .statusbtn.pouco { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+    .statusbtn.acabou { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+
+    .buyrow { display: grid; grid-template-columns: 1fr 5.2rem auto auto; gap: 0.45rem; align-items: center; padding: 0.6rem 0; border-top: 1px dashed var(--line); }
+    .buyrow:first-of-type { border-top: none; }
+    .buyrow input { padding: 0.5rem 0.6rem; font-size: 0.95rem; border-radius: 0.7rem; }
+    .buyrow .nome { font-weight: 800; }
+    .buyrow .nome .s { display: block; font-size: 0.78rem; color: var(--ink-soft); font-weight: 700; }
+
+    /* gatos */
+    .gatohead { display: flex; align-items: center; gap: 0.8rem; }
+    .gatoava { width: 3rem; height: 3rem; border-radius: 1rem; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; font-family: "Fraunces", serif; font-size: 1.5rem; font-weight: 700; color: var(--warn); flex-shrink: 0; }
+
+    /* ─── Modal ────────────────────────────────────── */
+    .modalbk { position: fixed; inset: 0; background: rgba(34, 48, 42, 0.45); backdrop-filter: blur(3px); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+    .modalbk[hidden] { display: none; }
+    .modal { background: var(--cream); border-radius: 1.4rem 1.4rem 0 0; width: 100%; max-width: 28rem; max-height: 86dvh; overflow-y: auto; padding: 1.2rem 1.1rem calc(1.4rem + var(--safe-bottom)); animation: pop 0.25s ease-out both; }
+    .modal h3 { font-family: "Fraunces", serif; color: var(--brand-deep); font-size: 1.4rem; margin-bottom: 0.4rem; }
+
+    /* ─── Nav inferior ─────────────────────────────── */
+    nav.tabs {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      display: flex; justify-content: center; gap: 0.15rem;
+      background: rgba(253, 254, 250, 0.92); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--line);
+      padding: 0.45rem 0.4rem calc(0.45rem + var(--safe-bottom));
+    }
+    nav.tabs button {
+      flex: 1; max-width: 5.2rem; border: none; background: none; cursor: pointer;
+      font: inherit; font-size: 0.68rem; font-weight: 800; color: var(--ink-soft);
+      display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+      padding: 0.35rem 0.2rem; border-radius: 0.8rem; transition: color 0.15s, background 0.15s;
+    }
+    nav.tabs button svg { width: 1.4rem; height: 1.4rem; }
+    nav.tabs button.on { color: var(--brand); background: var(--ok-soft); }
+
+    [hidden] { display: none !important; }
+    .mt { margin-top: 0.9rem; }
+    .view { animation: rise 0.3s ease-out both; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ─── Login ─── -->
+    <section id="gate" class="gate" hidden>
+      <div class="brand-mark">
+        <img class="logo" src="./icon.svg" alt="" />
+        <div>
+          <div class="brand">Nossa Casa</div>
+          <div class="subtitle">Dinheiro do casal, despensa e gatos — tudo num lugar só.</div>
+        </div>
+      </div>
+      <form id="form-login" class="card" style="margin-top: 1.4rem;">
+        <label for="l-usuario">Usuário</label>
+        <input id="l-usuario" autocomplete="username" required />
+        <label for="l-senha">Senha</label>
+        <input id="l-senha" type="password" autocomplete="current-password" required />
+        <label style="font-weight:600; display:flex; align-items:center; margin-top:0.8rem;">
+          <input id="l-permanente" type="checkbox" checked /> Manter conectado
+        </label>
+        <button class="btn full" type="submit">Entrar</button>
+        <div id="l-erro" class="erro" hidden></div>
+        <div class="dica">Primeiro acesso: <b>casa</b> / <b>casa123</b> (troque em Ajustes)</div>
+      </form>
+    </section>
+
+    <!-- ─── App ─── -->
+    <div id="app" hidden>
+      <header class="app">
+        <img class="logo" src="./icon.svg" alt="" />
+        <div>
+          <div class="brand" id="h-nome">Nossa Casa</div>
+        </div>
+        <div class="spacer"></div>
+        <span id="syncdot" class="syncdot" title="Sincronização"></span>
+        <button class="iconbtn" data-action="tab" data-tab="ajustes" title="Ajustes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </header>
+
+      <main id="view" class="view"></main>
+
+      <nav class="tabs">
+        <button data-action="tab" data-tab="hoje" class="on">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+          Hoje
+        </button>
+        <button data-action="tab" data-tab="contas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
+          Contas
+        </button>
+        <button data-action="tab" data-tab="cartao">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          Cartão
+        </button>
+        <button data-action="tab" data-tab="despensa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.3 12.1a1 1 0 0 1-1 .9H7.3a1 1 0 0 1-1-.9z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>
+          Despensa
+        </button>
+        <button data-action="tab" data-tab="gatos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="8" r="1.8"/><circle cx="16.5" cy="8" r="1.8"/><circle cx="4.5" cy="13" r="1.6"/><circle cx="19.5" cy="13" r="1.6"/><path d="M12 11c-2.9 0-5.2 2.3-5.2 5 0 1.9 1.5 3 3.2 3 1 0 1.4-.4 2-.4s1 .4 2 .4c1.7 0 3.2-1.1 3.2-3 0-2.7-2.3-5-5.2-5z"/></svg>
+          Gatos
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <div id="modalbk" class="modalbk" hidden>
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./cloud.js"></script>
+  <script>
+  /* ═══════════════════════ ESTADO ═══════════════════════ */
+  const LS = "nc-state-v1";
+  const CATS_GASTO = ["iFood", "Mercado", "Farmácia", "Transporte", "Lazer", "Gatos", "Casa", "Outros"];
+  const CATS_DESP = ["Mercado", "Limpeza", "Higiene", "Ração", "Outros"];
+
+  function uid() {
+    return (crypto.randomUUID ? crypto.randomUUID() : "id" + Date.now() + Math.random().toString(16).slice(2));
+  }
+
+  function defaultState() {
+    return {
+      v: 1,
+      config: {
+        rendas: [
+          { id: uid(), nome: "Salário 1", dia: 7, valor: 738, pessoas: 2 },
+          { id: uid(), nome: "Salário 2", dia: 15, valor: 810, pessoas: 2 },
+        ],
+        limiteCartao: 800,
+        reservaCartao: 400,
+        metaGuardar: 0,
+      },
+      contas: [
+        { id: uid(), nome: "Aluguel", valor: 450, dia: 7 },
+        { id: uid(), nome: "Energia", valor: 230, dia: 7 },
+        { id: uid(), nome: "Internet", valor: 80, dia: 7 },
+      ],
+      pagamentos: {}, // "AAAA-MM": { contaId: {valor, ts} }
+      recebidos: {},  // "AAAA-MM": { rendaId: {valor, ts} }
+      gastos: [],     // dinheiro (pix/débito): {id, desc, cat, valor, ts}
+      cartao: { compras: [], faturas: {} }, // faturas: "AAAA-MM": {valor, ts}
+      despensa: [],   // {id, nome, cat, status: tem|pouco|acabou}
+      lista: [],      // {id, nome, cat}
+      gatos: [],      // {id, nome, sexo, nasc, peso, racao, obs, vacinas:[{id,nome,data,proxima}]}
+    };
+  }
+
+  let S = defaultState();
+  try {
+    const raw = localStorage.getItem(LS);
+    if (raw) S = Object.assign(defaultState(), JSON.parse(raw));
+  } catch (_) {}
+
+  let tab = "hoje";
+  let saveTimer = null;
+  let saving = false;
+  let logado = false;
+
+  /* ═══════════════════════ HELPERS ═══════════════════════ */
+  const $ = (sel) => document.querySelector(sel);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (v) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const num = (v) => { const n = Number(String(v).replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+
+  function mesKey(ts) {
+    const d = ts ? new Date(ts) : new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+  function mesNome() {
+    return new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  }
+  function dataBR(ts) {
+    return new Date(ts).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  }
+  function diasAteFimDoMes() {
+    const h = new Date();
+    const ult = new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate();
+    return ult - h.getDate() + 1;
+  }
+  function idadeTxt(nasc) {
+    if (!nasc) return "idade ?";
+    const d = new Date(nasc + "T12:00:00");
+    if (isNaN(d)) return "idade ?";
+    let meses = (new Date().getFullYear() - d.getFullYear()) * 12 + (new Date().getMonth() - d.getMonth());
+    if (meses < 0) meses = 0;
+    if (meses < 12) return meses + (meses === 1 ? " mês" : " meses");
+    const a = Math.floor(meses / 12), m = meses % 12;
+    return a + (a === 1 ? " ano" : " anos") + (m ? " e " + m + " m" : "");
+  }
+  function diasPara(dataStr) {
+    if (!dataStr) return null;
+    const alvo = new Date(dataStr + "T12:00:00");
+    if (isNaN(alvo)) return null;
+    const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
+    return Math.round((alvo - hoje) / 86400000);
+  }
+
+  /* ═══════════════════════ NUVEM ═══════════════════════ */
+  function setSync(estado) {
+    const d = $("#syncdot");
+    if (!d) return;
+    d.className = "syncdot" + (estado ? " " + estado : "");
+  }
+
+  function saveLocal() {
+    try { localStorage.setItem(LS, JSON.stringify(S)); } catch (_) {}
+  }
+
+  function touch() {
+    saveLocal();
+    if (logado && NCCloud.configured()) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(cloudSave, 900);
+    }
+    render();
+  }
+
+  async function cloudSave() {
+    if (saving) return;
+    saving = true;
+    setSync("busy");
+    try {
+      await NCCloud.salvar(S);
+      setSync("ok");
+    } catch (e) {
+      setSync("err");
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function cloudLoad() {
+    setSync("busy");
+    try {
+      const r = await NCCloud.carregar();
+      if (r.doc) {
+        S = Object.assign(defaultState(), r.doc);
+        saveLocal();
+      }
+      if (r.nome) $("#h-nome").textContent = r.nome;
+      setSync("ok");
+    } catch (e) {
+      setSync("err");
+    }
+    render();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && logado && NCCloud.configured() && !saving) {
+      cloudLoad();
+    }
+  });
+
+  /* ═══════════════════════ CÁLCULO FINANCEIRO ═══════════════════════ */
+  function calc() {
+    const mk = mesKey();
+    const cfg = S.config;
+    const rec = S.recebidos[mk] || {};
+    const pag = S.pagamentos[mk] || {};
+
+    const entrouMes = Object.values(rec).reduce((a, r) => a + num(r.valor), 0);
+    const previstoMes = cfg.rendas.reduce((a, r) => a + num(r.valor) * (num(r.pessoas) || 1), 0);
+
+    let contasPagas = 0;
+    for (const k in pag) contasPagas += num(pag[k].valor);
+    const contasFaltam = S.contas
+      .filter((c) => !pag[c.id])
+      .reduce((a, c) => a + num(c.valor), 0);
+
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    const gastosMes = S.gastos
+      .filter((g) => g.ts >= ini.getTime())
+      .reduce((a, g) => a + num(g.valor), 0);
+
+    const comprasCiclo = S.cartao.compras.reduce((a, c) => a + num(c.valor), 0);
+    const faturaPaga = S.cartao.faturas[mk] ? num(S.cartao.faturas[mk].valor) : 0;
+
+    const caixa = entrouMes - contasPagas - gastosMes - faturaPaga;
+    const pendente = contasFaltam + comprasCiclo + num(cfg.metaGuardar);
+    const livre = caixa - pendente;
+    const dias = diasAteFimDoMes();
+    const porDia = livre / dias;
+
+    return { mk, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, caixa, pendente, livre, dias, porDia };
+  }
+
+  function semaforo(porDia) {
+    if (porDia >= 50) return { cls: "verde", msg: "Pode pedir iFood 🍔", sub: "Dinheiro do mês tá tranquilo." };
+    if (porDia >= 20) return { cls: "amarelo", msg: "Melhor comer de casa", sub: "Ainda tem dinheiro, mas vai com calma." };
+    return { cls: "vermelho", msg: "Segura o iFood ✋", sub: "Foca no que tem na despensa." };
+  }
+
+  /* ═══════════════════════ RENDER ═══════════════════════ */
+  function render() {
+    if (!logado) return;
+    document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+    const v = $("#view");
+    if (tab === "hoje") v.innerHTML = viewHoje();
+    else if (tab === "contas") v.innerHTML = viewContas();
+    else if (tab === "cartao") v.innerHTML = viewCartao();
+    else if (tab === "despensa") v.innerHTML = viewDespensa();
+    else if (tab === "gatos") v.innerHTML = viewGatos();
+    else if (tab === "ajustes") v.innerHTML = viewAjustes();
+  }
+
+  /* ─── Hoje ─── */
+  function viewHoje() {
+    const c = calc();
+    const sem = semaforo(c.porDia);
+    const mk = c.mk;
+    const rec = S.recebidos[mk] || {};
+    const pag = S.pagamentos[mk] || {};
+    const hojeDia = new Date().getDate();
+
+    let html = `
+      <div class="hero ${sem.cls}">
+        <div class="k">Pode gastar por dia</div>
+        <div class="v">${fmt(c.porDia)}</div>
+        <div class="msg">${sem.msg}</div>
+        <div class="sub">${sem.sub} Livres até dia ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}: <b>${fmt(c.livre)}</b> · em conta: <b>${fmt(c.caixa)}</b></div>
+      </div>`;
+
+    // Alertas
+    const alertas = [];
+    S.gatos.forEach((g) => (g.vacinas || []).forEach((va) => {
+      const d = diasPara(va.proxima);
+      if (d !== null && d >= 0 && d <= 30) alertas.push(`<div class="alerta warn">💉 <span><b>${esc(g.nome)}</b>: ${esc(va.nome)} em ${d === 0 ? "hoje" : d + " dia" + (d > 1 ? "s" : "")} (${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")})</span></div>`);
+      if (d !== null && d < 0) alertas.push(`<div class="alerta bad">💉 <span><b>${esc(g.nome)}</b>: ${esc(va.nome)} atrasada desde ${new Date(va.proxima + "T12:00:00").toLocaleDateString("pt-BR")}</span></div>`);
+    }));
+    const limite = num(S.config.limiteCartao), reserva = num(S.config.reservaCartao);
+    if (c.comprasCiclo > limite + reserva) alertas.push(`<div class="alerta bad">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — estourou limite + reserva (${fmt(limite + reserva)})!</span></div>`);
+    else if (c.comprasCiclo > limite) alertas.push(`<div class="alerta warn">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — passou do limite de ${fmt(limite)}, usando a reserva.</span></div>`);
+    const faltam = S.contas.filter((x) => !pag[x.id] && x.dia < hojeDia);
+    faltam.forEach((x) => alertas.push(`<div class="alerta bad">🧾 <span><b>${esc(x.nome)}</b> venceu dia ${x.dia} e ainda não foi pago (${fmt(x.valor)}).</span></div>`));
+    const nFaltaCasa = S.despensa.filter((d) => d.status !== "tem").length;
+    if (nFaltaCasa) alertas.push(`<div class="alerta warn">🧺 <span><b>${nFaltaCasa}</b> ${nFaltaCasa === 1 ? "item acabando" : "itens acabando"} em casa — confere a Despensa antes de pedir iFood.</span></div>`);
+    if (alertas.length) html += `<div class="card mt">${alertas.join("")}</div>`;
+
+    // Gasto rápido
+    html += `
+      <div class="sect">Gastei agora <span class="mini">dinheiro / pix / débito</span></div>
+      <form class="card" data-form="gasto">
+        <label>Descrição</label>
+        <input name="desc" placeholder="iFood, farmácia…" required />
+        <div class="row2">
+          <div>
+            <label>Valor (R$)</label>
+            <input name="valor" inputmode="decimal" placeholder="35,00" required />
+          </div>
+          <div>
+            <label>Categoria</label>
+            <select name="cat">${CATS_GASTO.map((x) => `<option>${x}</option>`).join("")}</select>
+          </div>
+        </div>
+        <button class="btn full" type="submit">Anotar gasto</button>
+      </form>`;
+
+    // Recebimentos do mês
+    html += `<div class="sect">Recebimentos <span class="mini">${esc(mesNome())}</span></div><div class="card">`;
+    if (!S.config.rendas.length) html += `<div class="vazio">Nenhuma renda cadastrada. Ajuste em Ajustes.</div>`;
+    S.config.rendas.forEach((r) => {
+      const total = num(r.valor) * (num(r.pessoas) || 1);
+      const got = rec[r.id];
+      html += `
+        <div class="item">
+          <div class="grow">
+            <div class="t">${esc(r.nome)} <span class="pill neu">dia ${r.dia}</span></div>
+            <div class="s">${fmt(r.valor)} × ${r.pessoas || 1}</div>
+          </div>
+          <div class="val">${fmt(total)}</div>
+          ${got
+            ? `<button class="statusbtn tem" data-action="renda-toggle" data-id="${r.id}">Caiu ✓</button>`
+            : `<button class="statusbtn ${r.dia <= hojeDia ? "acabou" : ""}" data-action="renda-toggle" data-id="${r.id}">Caiu?</button>`}
+        </div>`;
+    });
+    html += `</div>`;
+
+    // Gastos recentes
+    const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+    const recentes = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts).slice(0, 8);
+    html += `<div class="sect">Gastos do mês <span class="mini">${fmt(c.gastosMes)} no dinheiro</span></div><div class="card">`;
+    if (!recentes.length) html += `<div class="vazio">Nenhum gasto anotado. Bora manter assim 😄</div>`;
+    recentes.forEach((g) => {
+      html += `
+        <div class="item">
+          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)} · ${dataBR(g.ts)}</div></div>
+          <div class="val">${fmt(g.valor)}</div>
+          <button class="statusbtn" data-action="gasto-del" data-id="${g.id}">✕</button>
+        </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+
+  /* ─── Contas ─── */
+  function viewContas() {
+    const c = calc();
+    const mk = c.mk;
+    const pag = S.pagamentos[mk] || {};
+    const totalMes = S.contas.reduce((a, x) => a + num(x.valor), 0);
+    const pagoMes = S.contas.filter((x) => pag[x.id]).reduce((a, x) => a + num(pag[x.id].valor), 0);
+
+    let html = `
+      <div class="sect">Contas fixas <span class="mini">${esc(mesNome())}</span></div>
+      <div class="card">
+        <div class="bar"><div class="fill lim" style="width:${totalMes ? Math.min(100, (pagoMes / totalMes) * 100) : 0}%"></div></div>
+        <div class="bar-legend"><span>Pago: ${fmt(pagoMes)}</span><span>Total: ${fmt(totalMes)}</span></div>
+      </div>
+      <div class="card">`;
+
+    if (!S.contas.length) html += `<div class="vazio">Nenhuma conta cadastrada.</div>`;
+    S.contas.slice().sort((a, b) => a.dia - b.dia).forEach((x) => {
+      const p = pag[x.id];
+      html += `
+        <div class="item">
+          <div class="grow">
+            <div class="t">${esc(x.nome)} <span class="pill neu">dia ${x.dia}</span></div>
+            <div class="s">${p ? "pago " + dataBR(p.ts) : "previsto " + fmt(x.valor)}</div>
+          </div>
+          <div class="val">${fmt(p ? p.valor : x.valor)}</div>
+          ${p
+            ? `<button class="statusbtn tem" data-action="conta-desfazer" data-id="${x.id}">Pago ✓</button>`
+            : `<button class="statusbtn acabou" data-action="conta-pagar" data-id="${x.id}">Pagar</button>`}
+          <button class="statusbtn" data-action="conta-del" data-id="${x.id}">✕</button>
+        </div>`;
+      if (!p) {
+        html += `
+        <form class="buyrow" data-form="conta-paga" data-id="${x.id}" style="border-top:none; padding-top:0;">
+          <div class="nome"><span class="s">Valor real deste mês (ex.: energia varia)</span></div>
+          <input name="valor" inputmode="decimal" value="${String(num(x.valor)).replace(".", ",")}" />
+          <button class="btn small" type="submit">Confirmar</button>
+          <span></span>
+        </form>`;
+      }
+    });
+    html += `</div>
+      <div class="sect">Nova conta fixa</div>
+      <form class="card" data-form="conta-add">
+        <label>Nome</label>
+        <input name="nome" placeholder="Água, gás…" required />
+        <div class="row2">
+          <div><label>Valor (R$)</label><input name="valor" inputmode="decimal" placeholder="100,00" required /></div>
+          <div><label>Dia do vencimento</label><input name="dia" type="number" min="1" max="31" value="7" required /></div>
+        </div>
+        <button class="btn full" type="submit">Adicionar conta</button>
+      </form>`;
+    return html;
+  }
+
+  /* ─── Cartão ─── */
+  function viewCartao() {
+    const c = calc();
+    const mk = c.mk;
+    const limite = num(S.config.limiteCartao);
+    const reserva = num(S.config.reservaCartao);
+    const teto = limite + reserva;
+    const total = c.comprasCiclo;
+    const fatura = S.cartao.faturas[mk];
+
+    const pctLim = Math.min(total, limite) / teto * 100;
+    const pctRes = Math.max(0, Math.min(total - limite, reserva)) / teto * 100;
+    const pctOver = Math.max(0, total - teto) / teto * 100;
+
+    let html = `
+      <div class="sect">Fatura atual <span class="mini">paga dia ~15–20</span></div>
+      <div class="card">
+        <div class="item" style="border:none; padding-top:0;">
+          <div class="grow"><div class="t" style="font-size:1.35rem;">${fmt(total)}</div>
+          <div class="s">de ${fmt(limite)} de limite + ${fmt(reserva)} de reserva</div></div>
+          ${total > teto ? `<span class="pill bad">Estourou!</span>` : total > limite ? `<span class="pill warn">Na reserva</span>` : `<span class="pill ok">No limite</span>`}
+        </div>
+        <div class="bar">
+          <div class="fill lim" style="width:${pctLim}%"></div>
+          <div class="fill res" style="width:${pctRes}%"></div>
+          <div class="fill over" style="width:${Math.min(pctOver, 100 - pctLim - pctRes)}%"></div>
+        </div>
+        <div class="bar-legend"><span>Limite ${fmt(limite)}</span><span>Reserva ${fmt(reserva)}</span></div>
+        ${total > 0 ? `<button class="btn full" data-action="fatura-pagar" ${fatura ? "disabled style='opacity:.5'" : ""}>${fatura ? "Fatura paga ✓" : "Pagar fatura " + fmt(total)}</button>` : ""}
+        ${fatura ? `<div class="dica">Fatura de ${esc(mesNome())} paga (${fmt(fatura.valor)}). Compras novas entram na próxima fatura.</div>` : ""}
+      </div>
+
+      <div class="sect">Comprei no cartão</div>
+      <form class="card" data-form="compra">
+        <label>Descrição</label>
+        <input name="desc" placeholder="Mercado, remédio…" required />
+        <label>Valor (R$)</label>
+        <input name="valor" inputmode="decimal" placeholder="120,00" required />
+        <button class="btn full" type="submit">Lançar no cartão</button>
+      </form>
+
+      <div class="sect">Compras do ciclo</div>
+      <div class="card">`;
+
+    const lista = S.cartao.compras.slice().sort((a, b) => b.ts - a.ts);
+    if (!lista.length) html += `<div class="vazio">Cartão zerado. Maravilha!</div>`;
+    lista.forEach((x) => {
+      html += `
+        <div class="item">
+          <div class="grow"><div class="t">${esc(x.desc)}</div><div class="s">${dataBR(x.ts)}</div></div>
+          <div class="val">${fmt(x.valor)}</div>
+          <button class="statusbtn" data-action="compra-del" data-id="${x.id}">✕</button>
+        </div>`;
+    });
+    html += `</div>`;
+
+    const pags = Object.keys(S.cartao.faturas).sort().reverse().slice(0, 4);
+    if (pags.length) {
+      html += `<div class="sect">Faturas pagas</div><div class="card">`;
+      pags.forEach((k) => {
+        const f = S.cartao.faturas[k];
+        const [y, m] = k.split("-");
+        const nome = new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+        html += `<div class="item"><div class="grow"><div class="t">${esc(nome)}</div></div><div class="val">${fmt(f.valor)}</div></div>`;
+      });
+      html += `</div>`;
+    }
+    return html;
+  }
+
+  /* ─── Despensa ─── */
+  function viewDespensa() {
+    let html = `
+      <div class="sect">Lista de compras <span class="mini">usar o cartão dos R$ 1.200</span></div>
+      <div class="card">`;
+    if (!S.lista.length) html += `<div class="vazio">Lista vazia. Ao marcar algo como "acabando" ou "acabou", ele aparece aqui.</div>`;
+    S.lista.forEach((it) => {
+      html += `
+        <form class="buyrow" data-form="lista-comprar" data-id="${it.id}">
+          <div class="nome">${esc(it.nome)}<span class="s">${esc(it.cat || "")}</span></div>
+          <input name="valor" inputmode="decimal" placeholder="R$" />
+          <button class="btn small" type="submit" data-pago="cartao">Cartão</button>
+          <button class="btn small ghost" type="submit" data-pago="dinheiro">Dinheiro</button>
+        </form>`;
+    });
+    html += `
+        <form class="buyrow" data-form="lista-add" style="border-top:1px dashed var(--line); margin-top:0.3rem;">
+          <div class="nome"><input name="nome" placeholder="Adicionar à lista…" required style="border:none; padding:0; font-weight:800;" /></div>
+          <span></span>
+          <button class="btn small" type="submit">Add</button>
+          <span></span>
+        </form>
+      </div>
+
+      <div class="sect">Tem em casa <span class="mini">toque no status p/ mudar</span></div>
+      <div class="card">`;
+    if (!S.despensa.length) html += `<div class="vazio">Despensa vazia. Cadastre o que vocês costumam ter em casa.</div>`;
+    const ord = { acabou: 0, pouco: 1, tem: 2 };
+    S.despensa.slice().sort((a, b) => ord[a.status] - ord[b.status] || a.nome.localeCompare(b.nome)).forEach((d) => {
+      const lbl = d.status === "tem" ? "Tem" : d.status === "pouco" ? "Acabando" : "Acabou";
+      html += `
+        <div class="item">
+          <div class="grow"><div class="t">${esc(d.nome)}</div><div class="s">${esc(d.cat)}</div></div>
+          <button class="statusbtn ${d.status}" data-action="des-status" data-id="${d.id}">${lbl}</button>
+          <button class="statusbtn" data-action="des-del" data-id="${d.id}">✕</button>
+        </div>`;
+    });
+    html += `</div>
+      <div class="sect">Novo item da despensa</div>
+      <form class="card" data-form="des-add">
+        <label>Nome</label>
+        <input name="nome" placeholder="Arroz, café, ração dos gatos…" required />
+        <label>Categoria</label>
+        <select name="cat">${CATS_DESP.map((x) => `<option>${x}</option>`).join("")}</select>
+        <button class="btn full" type="submit">Adicionar</button>
+      </form>`;
+    return html;
+  }
+
+  /* ─── Gatos ─── */
+  function viewGatos() {
+    let html = `<div class="sect">Nossos gatos <span class="mini">${S.gatos.length || ""}</span></div>`;
+    if (!S.gatos.length) html += `<div class="card"><div class="vazio">Nenhum gato cadastrado ainda. 🐱</div></div>`;
+    S.gatos.forEach((g) => {
+      const prox = (g.vacinas || []).map((v) => diasPara(v.proxima)).filter((d) => d !== null).sort((a, b) => a - b)[0];
+      let badge = "";
+      if (prox !== undefined && prox < 0) badge = `<span class="pill bad">vacina atrasada</span>`;
+      else if (prox !== undefined && prox <= 30) badge = `<span class="pill warn">vacina em ${prox}d</span>`;
+      else if (prox !== undefined) badge = `<span class="pill ok">vacinas ok</span>`;
+      html += `
+        <div class="card">
+          <div class="gatohead">
+            <div class="gatoava">${esc((g.nome || "?")[0].toUpperCase())}</div>
+            <div class="grow">
+              <div class="t" style="font-size:1.15rem;">${esc(g.nome)}</div>
+              <div class="s">${esc(g.sexo || "")} · ${idadeTxt(g.nasc)}${g.peso ? " · " + String(g.peso).replace(".", ",") + " kg" : ""}</div>
+            </div>
+            ${badge}
+          </div>
+          <div class="mt" style="display:flex; gap:0.5rem;">
+            <button class="btn small ghost" style="flex:1;" data-action="gato-abrir" data-id="${g.id}">Abrir ficha</button>
+            <button class="btn small danger" data-action="gato-del" data-id="${g.id}">✕</button>
+          </div>
+        </div>`;
+    });
+    html += `
+      <div class="sect">Novo gato</div>
+      <form class="card" data-form="gato-add">
+        <label>Nome</label>
+        <input name="nome" placeholder="Nome do gato" required />
+        <div class="row2">
+          <div><label>Sexo</label><select name="sexo"><option>Fêmea</option><option>Macho</option></select></div>
+          <div><label>Nascimento</label><input name="nasc" type="date" /></div>
+        </div>
+        <div class="row2">
+          <div><label>Peso (kg)</label><input name="peso" inputmode="decimal" placeholder="4,2" /></div>
+          <div><label>Ração</label><input name="racao" placeholder="Marca da ração" /></div>
+        </div>
+        <label>Observações</label>
+        <input name="obs" placeholder="Alergias, manias…" />
+        <button class="btn full" type="submit">Cadastrar gato</button>
+      </form>`;
+    return html;
+  }
+
+  function modalGato(g) {
+    const vacinas = (g.vacinas || []).slice().sort((a, b) => (a.proxima || "").localeCompare(b.proxima || ""));
+    let html = `
+      <h3>${esc(g.nome)}</h3>
+      <div class="s" style="color:var(--ink-soft); font-weight:700;">${esc(g.sexo || "")} · ${idadeTxt(g.nasc)}${g.peso ? " · " + String(g.peso).replace(".", ",") + " kg" : ""}</div>
+      ${g.racao ? `<div class="mt"><b>Ração:</b> ${esc(g.racao)}</div>` : ""}
+      ${g.obs ? `<div class="mt"><b>Obs:</b> ${esc(g.obs)}</div>` : ""}
+      <div class="sect">Vacinas</div>`;
+    if (!vacinas.length) html += `<div class="vazio">Sem vacina registrada.</div>`;
+    vacinas.forEach((v) => {
+      const d = diasPara(v.proxima);
+      let pill = "";
+      if (d !== null && d < 0) pill = `<span class="pill bad">atrasada</span>`;
+      else if (d !== null && d <= 30) pill = `<span class="pill warn">em ${d}d</span>`;
+      else if (d !== null) pill = `<span class="pill ok">ok</span>`;
+      html += `
+        <div class="item">
+          <div class="grow"><div class="t">${esc(v.nome)}</div>
+          <div class="s">aplicada ${v.data ? new Date(v.data + "T12:00:00").toLocaleDateString("pt-BR") : "?"}${v.proxima ? " · próxima " + new Date(v.proxima + "T12:00:00").toLocaleDateString("pt-BR") : ""}</div></div>
+          ${pill}
+          <button class="statusbtn" data-action="vacina-del" data-gato="${g.id}" data-id="${v.id}">✕</button>
+        </div>`;
+    });
+    html += `
+      <form class="mt" data-form="vacina-add" data-id="${g.id}">
+        <div class="row2">
+          <div><label>Vacina</label><input name="nome" placeholder="V4, raiva…" required /></div>
+          <div><label>Data aplicada</label><input name="data" type="date" /></div>
+        </div>
+        <label>Próxima dose</label>
+        <input name="proxima" type="date" />
+        <button class="btn full" type="submit">Anotar vacina</button>
+      </form>
+      <button class="btn ghost full" data-action="modal-close">Fechar</button>`;
+    return html;
+  }
+
+  /* ─── Ajustes ─── */
+  function viewAjustes() {
+    const cfg = S.config;
+    let html = `
+      <div class="sect">Renda do casal</div>
+      <div class="card">`;
+    cfg.rendas.forEach((r) => {
+      html += `
+        <form class="buyrow" data-form="renda-upd" data-id="${r.id}" style="grid-template-columns: 1fr 4.4rem 4.8rem auto;">
+          <input name="nome" value="${esc(r.nome)}" />
+          <input name="dia" type="number" min="1" max="31" value="${r.dia}" title="Dia" />
+          <input name="valor" inputmode="decimal" value="${String(num(r.valor)).replace(".", ",")}" title="Valor por pessoa" />
+          <button class="btn small" type="submit">OK</button>
+        </form>
+        <div class="s" style="font-size:0.8rem; color:var(--ink-soft); font-weight:700; padding-left:0.2rem;">dia ${r.dia} · ${fmt(r.valor)} por pessoa × ${r.pessoas || 1} = ${fmt(num(r.valor) * (num(r.pessoas) || 1))} <a href="#" data-action="renda-del" data-id="${r.id}" style="color:var(--bad); font-weight:800;">remover</a></div>`;
+    });
+    html += `
+        <form class="buyrow mt" data-form="renda-add" style="grid-template-columns: 1fr 4.4rem 4.8rem auto;">
+          <input name="nome" placeholder="Nova renda" required />
+          <input name="dia" type="number" min="1" max="31" placeholder="Dia" required />
+          <input name="valor" inputmode="decimal" placeholder="R$/pessoa" required />
+          <button class="btn small" type="submit">Add</button>
+        </form>
+        <div class="dica">Valores são por pessoa — o app multiplica por 2 (você + esposa).</div>
+      </div>
+
+      <div class="sect">Cartão de crédito</div>
+      <form class="card" data-form="cfg-cartao">
+        <div class="row2">
+          <div><label>Limite (R$)</label><input name="limite" inputmode="decimal" value="${String(num(cfg.limiteCartao)).replace(".", ",")}" /></div>
+          <div><label>Reserva (R$)</label><input name="reserva" inputmode="decimal" value="${String(num(cfg.reservaCartao)).replace(".", ",")}" /></div>
+        </div>
+        <label>Meta de sobra no fim do mês (R$)</label>
+        <input name="meta" inputmode="decimal" value="${String(num(cfg.metaGuardar)).replace(".", ",")}" />
+        <button class="btn full" type="submit">Salvar limites</button>
+      </form>
+
+      <div class="sect">Conta da casa</div>
+      <form class="card" data-form="perfil">
+        <label>Nome da casa</label>
+        <input name="nome" value="${esc((NCCloud.getMeta() || {}).nome || "Nossa Casa")}" />
+        <div class="row2">
+          <div><label>Senha atual</label><input name="atual" type="password" autocomplete="current-password" /></div>
+          <div><label>Senha nova</label><input name="nova" type="password" autocomplete="new-password" /></div>
+        </div>
+        <button class="btn full" type="submit">Salvar perfil</button>
+        <div id="perfil-msg" class="dica" hidden></div>
+      </form>
+
+      <div class="card">
+        <button class="btn ghost full" style="margin-top:0;" data-action="exportar">Exportar dados (JSON)</button>
+        <button class="btn danger full" data-action="sair">Sair da conta</button>
+      </div>`;
+    return html;
+  }
+
+  /* ═══════════════════════ AÇÕES ═══════════════════════ */
+  function closeModal() {
+    $("#modalbk").hidden = true;
+    $("#modal").innerHTML = "";
+  }
+
+  const A = {
+    "tab": (el) => { tab = el.dataset.tab; closeModal(); render(); window.scrollTo(0, 0); },
+    "modal-close": () => closeModal(),
+
+    "renda-toggle": (el) => {
+      const mk = mesKey();
+      if (!S.recebidos[mk]) S.recebidos[mk] = {};
+      if (S.recebidos[mk][el.dataset.id]) delete S.recebidos[mk][el.dataset.id];
+      else {
+        const r = S.config.rendas.find((x) => x.id === el.dataset.id);
+        if (!r) return;
+        S.recebidos[mk][r.id] = { valor: num(r.valor) * (num(r.pessoas) || 1), ts: Date.now() };
+      }
+      touch();
+    },
+
+    "gasto-del": (el) => {
+      S.gastos = S.gastos.filter((g) => g.id !== el.dataset.id);
+      touch();
+    },
+
+    "conta-pagar": (el) => {
+      const form = document.querySelector(`form[data-form="conta-paga"][data-id="${el.dataset.id}"] input`);
+      if (form) { form.focus(); form.select(); }
+    },
+    "conta-desfazer": (el) => {
+      const mk = mesKey();
+      if (S.pagamentos[mk]) delete S.pagamentos[mk][el.dataset.id];
+      touch();
+    },
+    "conta-del": (el) => {
+      if (!confirm("Remover esta conta fixa?")) return;
+      S.contas = S.contas.filter((c) => c.id !== el.dataset.id);
+      touch();
+    },
+
+    "fatura-pagar": () => {
+      const c = calc();
+      if (c.comprasCiclo <= 0) return;
+      if (!confirm(`Pagar fatura de ${fmt(c.comprasCiclo)}? As compras saem do ciclo e viram fatura paga.`)) return;
+      S.cartao.faturas[c.mk] = { valor: c.comprasCiclo, ts: Date.now() };
+      S.cartao.compras = [];
+      touch();
+    },
+    "compra-del": (el) => {
+      S.cartao.compras = S.cartao.compras.filter((x) => x.id !== el.dataset.id);
+      touch();
+    },
+
+    "des-status": (el) => {
+      const d = S.despensa.find((x) => x.id === el.dataset.id);
+      if (!d) return;
+      d.status = d.status === "tem" ? "pouco" : d.status === "pouco" ? "acabou" : "tem";
+      const naLista = S.lista.some((l) => l.nome.toLowerCase() === d.nome.toLowerCase());
+      if (d.status !== "tem" && !naLista) S.lista.push({ id: uid(), nome: d.nome, cat: d.cat });
+      if (d.status === "tem" && naLista) S.lista = S.lista.filter((l) => l.nome.toLowerCase() !== d.nome.toLowerCase());
+      touch();
+    },
+    "des-del": (el) => {
+      S.despensa = S.despensa.filter((x) => x.id !== el.dataset.id);
+      touch();
+    },
+
+    "gato-abrir": (el) => {
+      const g = S.gatos.find((x) => x.id === el.dataset.id);
+      if (!g) return;
+      $("#modal").innerHTML = modalGato(g);
+      $("#modalbk").hidden = false;
+    },
+    "gato-del": (el) => {
+      const g = S.gatos.find((x) => x.id === el.dataset.id);
+      if (!g || !confirm(`Remover ${g.nome}? Vacinas e ficha vão junto.`)) return;
+      S.gatos = S.gatos.filter((x) => x.id !== el.dataset.id);
+      touch();
+    },
+    "vacina-del": (el) => {
+      const g = S.gatos.find((x) => x.id === el.dataset.gato);
+      if (!g) return;
+      g.vacinas = (g.vacinas || []).filter((v) => v.id !== el.dataset.id);
+      touch();
+      $("#modal").innerHTML = modalGato(g);
+    },
+
+    "renda-del": (el) => {
+      el.preventDefault();
+      if (!confirm("Remover esta renda?")) return;
+      S.config.rendas = S.config.rendas.filter((r) => r.id !== el.dataset.id);
+      touch();
+    },
+
+    "exportar": () => {
+      const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "nossa-casa-backup.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    },
+
+    "sair": async () => {
+      if (!confirm("Sair da conta neste aparelho?")) return;
+      try { await NCCloud.logout(); } catch (_) {}
+      logado = false;
+      location.reload();
+    },
+  };
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-action]");
+    if (el && A[el.dataset.action]) A[el.dataset.action](el, e);
+    if (e.target.id === "modalbk") closeModal();
+  });
+
+  /* ─── Forms ─── */
+  const F = {
+    "gasto": (f) => {
+      S.gastos.push({ id: uid(), desc: f.desc.value.trim(), cat: f.cat.value, valor: num(f.valor.value), ts: Date.now() });
+      touch();
+    },
+    "conta-add": (f) => {
+      S.contas.push({ id: uid(), nome: f.nome.value.trim(), valor: num(f.valor.value), dia: Math.min(31, Math.max(1, parseInt(f.dia.value) || 7)) });
+      touch();
+    },
+    "conta-paga": (f) => {
+      const mk = mesKey();
+      if (!S.pagamentos[mk]) S.pagamentos[mk] = {};
+      S.pagamentos[mk][f.dataset.id] = { valor: num(f.valor.value), ts: Date.now() };
+      touch();
+    },
+    "compra": (f) => {
+      S.cartao.compras.push({ id: uid(), desc: f.desc.value.trim(), valor: num(f.valor.value), ts: Date.now() });
+      touch();
+    },
+    "des-add": (f) => {
+      S.despensa.push({ id: uid(), nome: f.nome.value.trim(), cat: f.cat.value, status: "tem" });
+      touch();
+    },
+    "lista-add": (f) => {
+      S.lista.push({ id: uid(), nome: f.nome.value.trim(), cat: "" });
+      touch();
+    },
+    "lista-comprar": (f, btn) => {
+      const it = S.lista.find((x) => x.id === f.dataset.id);
+      if (!it) return;
+      const valor = num(f.valor.value);
+      const pago = btn && btn.dataset.pago === "dinheiro" ? "dinheiro" : "cartao";
+      if (valor > 0) {
+        if (pago === "cartao") S.cartao.compras.push({ id: uid(), desc: it.nome, valor, ts: Date.now() });
+        else S.gastos.push({ id: uid(), desc: it.nome, cat: "Mercado", valor, ts: Date.now() });
+      }
+      S.lista = S.lista.filter((x) => x.id !== it.id);
+      const dep = S.despensa.find((d) => d.nome.toLowerCase() === it.nome.toLowerCase());
+      if (dep) dep.status = "tem";
+      touch();
+    },
+    "gato-add": (f) => {
+      S.gatos.push({
+        id: uid(), nome: f.nome.value.trim(), sexo: f.sexo.value,
+        nasc: f.nasc.value || "", peso: f.peso.value || "", racao: f.racao.value.trim(),
+        obs: f.obs.value.trim(), vacinas: [],
+      });
+      touch();
+    },
+    "vacina-add": (f) => {
+      const g = S.gatos.find((x) => x.id === f.dataset.id);
+      if (!g) return;
+      if (!g.vacinas) g.vacinas = [];
+      g.vacinas.push({ id: uid(), nome: f.nome.value.trim(), data: f.data.value || "", proxima: f.proxima.value || "" });
+      touch();
+      $("#modal").innerHTML = modalGato(g);
+    },
+    "renda-upd": (f) => {
+      const r = S.config.rendas.find((x) => x.id === f.dataset.id);
+      if (!r) return;
+      r.nome = f.nome.value.trim() || r.nome;
+      r.dia = Math.min(31, Math.max(1, parseInt(f.dia.value) || r.dia));
+      r.valor = num(f.valor.value);
+      touch();
+    },
+    "renda-add": (f) => {
+      S.config.rendas.push({ id: uid(), nome: f.nome.value.trim(), dia: Math.min(31, Math.max(1, parseInt(f.dia.value) || 7)), valor: num(f.valor.value), pessoas: 2 });
+      touch();
+    },
+    "cfg-cartao": (f) => {
+      S.config.limiteCartao = num(f.limite.value);
+      S.config.reservaCartao = num(f.reserva.value);
+      S.config.metaGuardar = num(f.meta.value);
+      touch();
+    },
+    "perfil": async (f) => {
+      const msg = $("#perfil-msg");
+      try {
+        const r = await NCCloud.atualizarPerfil({ nome: f.nome.value.trim(), senhaAtual: f.atual.value || null, senhaNova: f.nova.value || null });
+        if (r && r.ok) {
+          if (r.nome) $("#h-nome").textContent = r.nome;
+          if (msg) { msg.hidden = false; msg.textContent = "Perfil salvo."; }
+          f.atual.value = ""; f.nova.value = "";
+        } else if (msg) {
+          msg.hidden = false;
+          msg.textContent = (r && r.erro) || "Não deu pra salvar.";
+        }
+      } catch (e2) {
+        if (msg) { msg.hidden = false; msg.textContent = "Sem nuvem agora — tente de novo."; }
+      }
+    },
+  };
+
+  document.addEventListener("submit", (e) => {
+    const f = e.target.closest("form[data-form]");
+    if (!f) return;
+    e.preventDefault();
+    const fn = F[f.dataset.form];
+    if (fn) fn(f, e.submitter);
+  });
+
+  /* ═══════════════════════ BOOT ═══════════════════════ */
+  $("#form-login").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector("button");
+    const erro = $("#l-erro");
+    btn.disabled = true;
+    erro.hidden = true;
+    try {
+      const r = await NCCloud.login($("#l-usuario").value, $("#l-senha").value, $("#l-permanente").checked);
+      if (!r.ok) {
+        erro.textContent = r.erro || "Login inválido";
+        erro.hidden = false;
+        return;
+      }
+      entrar();
+    } catch (e2) {
+      erro.textContent = "Sem conexão com a nuvem. Confere a internet.";
+      erro.hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function entrar() {
+    logado = true;
+    $("#gate").hidden = true;
+    $("#app").hidden = false;
+    const meta = NCCloud.getMeta();
+    if (meta.nome) $("#h-nome").textContent = meta.nome;
+    render();
+    await cloudLoad();
+  }
+
+  (async function boot() {
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+    if (NCCloud.configured() && NCCloud.getToken()) {
+      $("#gate").hidden = true;
+      $("#app").hidden = false;
+      logado = true;
+      const meta = NCCloud.getMeta();
+      if (meta.nome) $("#h-nome").textContent = meta.nome;
+      render();
+      cloudLoad();
+    } else if (!NCCloud.configured()) {
+      // Sem nuvem: modo local, sem login
+      logado = true;
+      $("#gate").hidden = true;
+      $("#app").hidden = false;
+      setSync("");
+      render();
+    } else {
+      $("#gate").hidden = false;
+    }
+  })();
+  </script>
+</body>
+</html>
