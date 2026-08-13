@@ -370,7 +370,8 @@
     return {
       v: 3,
       inicio: null, // timestamp do 1º uso (saldo informado) — não julga contas de antes disso
-      caixa: null, // {valor, em} — quanto tem no banco e quando informou; eventos com ts > em entram na conta
+      caixa: null, // {valor, em} — saldo no BANCO + quando informou
+      cedula: { valor: 0 }, // dinheiro em papel na mão (não passa no banco)
       config: {
         rendas: [
           { id: uid(), nome: "Salário 1", dia: 7, valor: 738, pessoas: 2 },
@@ -435,6 +436,8 @@
     if (!out.cartao.faturas || typeof out.cartao.faturas !== "object") out.cartao.faturas = {};
     if (!Array.isArray(out.cartao.parcelas)) out.cartao.parcelas = [];
     if (out.caixa && !out.inicio) out.inicio = out.caixa.em || Date.now();
+    out.cedula = Object.assign({ valor: 0 }, doc.cedula || {});
+    if (!(num(out.cedula.valor) >= 0)) out.cedula.valor = 0;
     if (!(num(out.config.lazerMes) > 0)) out.config.lazerMes = 200;
     if (out.config.diaVencFatura == null) out.config.diaVencFatura = 19;
     if (!(num(out.config.emergenciaMeta) >= 0)) out.config.emergenciaMeta = 2000;
@@ -682,8 +685,12 @@
       const f = S.cartao.faturas[k];
       if (num(f.ts) > emBase) faturasPagas += num(f.valor);
     }
-    const gastosPos = S.gastos.filter((g) => g.ts > emBase).reduce((a, g) => a + num(g.valor), 0);
-    const caixa = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas;
+    const gastosPos = S.gastos
+      .filter((g) => g.ts > emBase && g.fonte !== "cedula")
+      .reduce((a, g) => a + num(g.valor), 0);
+    const banco = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas;
+    const cedula = Math.max(0, num((S.cedula || {}).valor));
+    const caixa = banco + cedula; // total na mão + banco
 
     // Visão do mês (telas de controle)
     const iniMesCalc = new Date(); iniMesCalc.setDate(1); iniMesCalc.setHours(0, 0, 0, 0);
@@ -698,10 +705,7 @@
     const comprasCiclo = S.cartao.compras.reduce((a, c) => a + num(c.valor), 0);
     const faturaPaga = S.cartao.faturas[mk] ? num(S.cartao.faturas[mk].valor) : 0;
 
-    // Reserva no caixa atual:
-    // - Se salário da quinzena já caiu → contas dessa quinzena + fatura + meta
-    // - Se ainda esperando salário → NÃO reserva contas antigas (dia 7 no dia 12) nem as do próximo
-    //   (essas saem do salário que vai cair). Só meta leve opcional.
+    // Reserva no BANCO (contas/fatura/meta saem da conta, não da cédula)
     const prox = proxRenda();
     const diasAte = prox ? Math.max(1, Math.round((prox.d - hoje0) / 86400000)) : diasAteFimDoMes();
     let obrigAte = 0;
@@ -730,21 +734,22 @@
     // Meta: automática (metaSugerida) ou forçada em Ajustes
     const metaNum = metaEfetiva();
     // Enquanto espera salário, não reserva meta cheia no caixa pequeno
-    const metaReserva = bestCaiu ? metaNum : Math.min(metaNum, Math.max(0, Math.floor(caixa * 0.1)));
+    const metaReserva = bestCaiu ? metaNum : Math.min(metaNum, Math.max(0, Math.floor(banco * 0.1)));
     obrigAte += metaReserva;
 
     const lazerOrc = num(S.config.lazerMes) > 0 ? num(S.config.lazerMes) : 200;
-    const livreAte = caixa - obrigAte;
+    // Livre = (banco − reservado) + cédula
+    const livreAte = Math.max(0, banco - obrigAte) + cedula;
     const lazerRest = Math.max(0, lazerOrc - (() => {
       const iniM = new Date(); iniM.setDate(1); iniM.setHours(0, 0, 0, 0);
       return S.gastos.filter((g) => g.ts >= iniM.getTime() && (g.cat === "iFood" || g.cat === "Lazer")).reduce((a, g) => a + num(g.valor), 0);
     })());
-    // Esperando salário: lazer quase zerado de propósito (protege os 63)
+    // Esperando salário: lazer quase zerado de propósito
     const lazerDisp = bestCaiu ? lazerRest : Math.min(lazerRest, Math.max(0, Math.floor(caixa * 0.15)));
     const livreViver = Math.max(0, livreAte - (bestCaiu ? lazerRest : 0));
     const porDia = livreViver / diasAte;
 
-    return { mk, caixa, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, livreViver, lazerRest: lazerDisp, porDia, metaNum, esperandoSalario: !bestCaiu };
+    return { mk, caixa, banco, cedula, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, livreViver, lazerRest: lazerDisp, porDia, metaNum, esperandoSalario: !bestCaiu };
   }
 
   // Duração média por unidade (dias) de um item da despensa, pelo histórico de compras
@@ -760,9 +765,9 @@
   }
 
   function semaforo(porDia) {
-    if (porDia >= 50) return { cls: "verde", msg: "Pode pedir iFood 🍔", sub: "Dinheiro tranquilo até o próximo salário." };
-    if (porDia >= 20) return { cls: "amarelo", msg: "Melhor comer de casa", sub: "Ainda tem dinheiro, mas vai com calma." };
-    return { cls: "vermelho", msg: "Segura o iFood ✋", sub: "Foca no que tem na despensa." };
+    if (porDia >= 50) return { cls: "verde", msg: "Ritmo tranquilo", sub: "Dá pra viver sem aperto até o próximo salário." };
+    if (porDia >= 20) return { cls: "amarelo", msg: "Vai com calma", sub: "Tem dinheiro, mas sem exagero no dia a dia." };
+    return { cls: "vermelho", msg: "Apertado", sub: "Prioriza essencial. Evita gasto à toa." };
   }
 
   function contasDaQuinzena(diaRenda) {
@@ -1049,7 +1054,7 @@
       return {
         t: "ok",
         tit: "Discernimento da casa",
-        txt: `Com <b>${fmt(c.caixa)}</b> dá pra: pagar <b>${esc(nomes)}</b> (${fmt(totalP)}) <b>e</b> separar fatura (${fmt(fat)}). Sobra ~<b>${fmt(c.caixa - totalP - fat)}</b>.<br><b>Recomendação:</b> 1) separa fatura 2) paga as contas se já estiverem perto do vencimento 3) o resto = lazer ${fmt(lazerRest)} + juntar ${fmt(meta)}. <b>Não</b> gasta tudo em iFood.`,
+        txt: `Com <b>${fmt(c.caixa)}</b> (banco ${fmt(c.banco)} + cédula ${fmt(c.cedula)}) dá pra: pagar <b>${esc(nomes)}</b> (${fmt(totalP)}) <b>e</b> separar fatura (${fmt(fat)}). Sobra ~<b>${fmt(c.caixa - totalP - fat)}</b>.<br><b>Recomendação:</b> 1) separa fatura 2) paga as contas se já estiverem perto do vencimento 3) o resto = lazer ${fmt(lazerRest)} + juntar ${fmt(meta)}.`,
       };
     }
     if (c.caixa >= totalP) {
@@ -1118,7 +1123,7 @@
       `APP: Nossa Casa (finanças do casal + despensa + gatos). Você TEM acesso a estes dados — use-os. Nunca diga que não conhece o projeto.`,
       `Hoje: dia ${new Date().getDate()} de ${mesNome()}.`,
       `Casal: ${nq.eu} e ${nq.ela}.`,
-      `CAIXA no banco agora: ${fmt(c.caixa)}.`,
+      `CAIXA total: ${fmt(c.caixa)} (banco ${fmt(c.banco)} + cédula ${fmt(c.cedula)}).`,
       `Pode gastar/dia até próximo salário: ${fmt(c.porDia)} (${c.diasAte} dias). Livre viver: ${fmt(c.livreViver)}. Reservado obrigatório: ${fmt(c.obrigAte)}.`,
       `Lazer/iFood orçamento mês: ${fmt(lazer)}. Já gasto lazer: ${fmt(lazerGastoMes())}. Lazer que ainda pode: ${fmt(c.lazerRest)}.`,
       `META juntar (calculada pelo app): ${fmt(meta)}. ${num(S.config.metaGuardar) > 0 ? "Meta foi forçada manualmente." : "Meta automática = ~50% da sobra (renda − contas − fatura − lazer)."}`,
@@ -1240,7 +1245,7 @@
       };
     }
     if (/ifood|lazer/.test(q)) {
-      return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer / iFood", txt: lazerRest > 0 ? `Pode até <b>${fmt(lazerRest)}</b>.` : `Lazer acabou. Próximo iFood come a meta.` };
+      return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer", txt: lazerRest > 0 ? `Pode até <b>${fmt(lazerRest)}</b> de lazer este mês.` : `Lazer acabou. Próximo gasto de lazer come a meta.` };
     }
     if (/fatura|cart[aã]o/.test(q)) {
       return { t: faturaPagaEsteMes() ? "ok" : "warn", tit: "Fatura", txt: faturaPagaEsteMes() ? "Fatura já paga." : `Vence dia <b>${vf}</b>. ${valorFaturaPendente() > 0 ? `Guarda <b>${fmt(valorFaturaPendente())}</b>.` : "Valor ainda não saiu."}` };
@@ -1350,7 +1355,7 @@
           <input name="q" id="chat-input" placeholder="Fala com a casa…" required autocomplete="off" />
           <button class="btn full" type="submit">Enviar</button>
           <div class="dica" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
-            <span>Exemplos: posso gastar hoje? · e se 40 no iFood? · entrou 400?</span>
+            <span>Exemplos: posso gastar hoje? · e se 40? · entrou 400?</span>
             ${msgs.length ? `<a href="#" data-action="chat-limpar" style="color:var(--bad); font-weight:800; white-space:nowrap;">Limpar chat</a>` : ""}
           </div>
         </form>
@@ -1416,7 +1421,7 @@
       out.push({
         t: "bad",
         tit: "Conta quase/zerada",
-        txt: `Até dia <b>${prox.d.getDate()}</b>, sem iFood. ${tem.length ? `Come o que tem: ${tem.slice(0, 4).map((x) => esc(x.nome)).join(", ")}.` : "Olha a despensa."}`,
+        txt: `Até dia <b>${prox.d.getDate()}</b>, só o essencial. ${tem.length ? `Tem em casa: ${tem.slice(0, 4).map((x) => esc(x.nome)).join(", ")}.` : "Olha a despensa."}`,
       });
     } else if (!fatPaga && hojeDia >= vf && hojeDia <= vf + 2) {
       out.push({
@@ -1427,7 +1432,7 @@
     } else if (c.comprasCiclo > limite) {
       out.push({ t: "bad", tit: "Cartão passou do limite", txt: `Fatura em ${fmt(c.comprasCiclo)}. Até pagar, só dinheiro.` });
     } else if (lazerRest <= 0 && lazerOrc > 0 && rendaCaiu) {
-      out.push({ t: "warn", tit: "Lazer do mês acabou", txt: `Os ${fmt(lazerOrc)} de lazer/iFood acabaram. Próximo pedido come o que ia juntar.` });
+      out.push({ t: "warn", tit: "Lazer do mês acabou", txt: `Os ${fmt(lazerOrc)} de lazer acabaram. Próximo gasto de lazer come o que ia juntar.` });
     } else if (faltando.length && hojeDia >= vf - 2 && hojeDia <= vf + 1) {
       out.push({ t: "ok", tit: "Lista de compras", txt: `Falta em casa: <b>${faltando.map((x) => esc(x.nome)).join(", ")}</b>.` });
     }
@@ -1479,36 +1484,42 @@
       return `
       <div class="hero amarelo">
         <div class="k">Começa aqui</div>
-        <div class="v" style="font-size:1.9rem;">Quanto vocês têm no banco hoje?</div>
-        <div class="sub">O app soma e tira tudo sozinho a partir daí. Atualize sempre que olhar o app do banco.</div>
+        <div class="v" style="font-size:1.9rem;">Quanto tem agora?</div>
+        <div class="sub">Separa <b>banco</b> e <b>cédula</b> (papel). O app acompanha os dois.</div>
       </div>
       <form class="card mt" data-form="caixa-set">
-        <label>Saldo em conta agora (R$)</label>
-        <input name="valor" inputmode="decimal" placeholder="0,00" required autofocus />
-        <button class="btn full" type="submit">Salvar saldo</button>
+        <div class="row2">
+          <div><label>No banco (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required autofocus /></div>
+          <div><label>Em cédula (R$)</label><input name="cedula" inputmode="decimal" placeholder="0,00" /></div>
+        </div>
+        <button class="btn full" type="submit">Salvar saldos</button>
         <div class="dica">Zerado? Pode pôr 0 — o app já projeta o salário do dia ${c.prox ? c.prox.d.getDate() : "?"}.</div>
       </form>`;
     }
 
     const sem = semaforo(c.porDia);
+    const diaProx = c.prox ? c.prox.d.getDate() : "?";
     let html = `
       <div class="hero ${sem.cls}">
-        <div class="k">Temos em conta</div>
+        <div class="k">Total agora</div>
         <div class="v">${fmt(c.caixa)}</div>
+        <div class="sub">Banco ${fmt(c.banco)} · Cédula ${fmt(c.cedula)}</div>
         <div class="msg">${sem.msg}</div>
         <div class="sub">${sem.sub}</div>
-        <div class="sub" style="margin-top:0.5rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.5rem;">
-          Pode gastar <b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${c.prox ? c.prox.d.getDate() : "?"}
-          · lazer: <b>${fmt(c.lazerRest || 0)}</b>
-          ${c.obrigAte > 0 ? ` · reservado (contas+fatura+meta): <b>${fmt(c.obrigAte)}</b>` : ""}
+        <div class="sub" style="margin-top:0.55rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.55rem; line-height:1.55;">
+          <div>Pode ~<b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${diaProx}</div>
+          <div>Lazer do mês: <b>${fmt(c.lazerRest || 0)}</b></div>
+          ${c.obrigAte > 0 ? `<div>Reservado no banco (contas/fatura/meta): <b>${fmt(c.obrigAte)}</b></div>` : ""}
         </div>
       </div>
-      <form class="card mt" data-form="caixa-set" style="display:flex; gap:0.6rem; align-items:flex-end;">
-        <div style="flex:1;">
-          <label style="margin-top:0;">Banco mudou? Atualiza o saldo</label>
-          <input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required />
+      <form class="card mt" data-form="caixa-set">
+        <label style="margin-top:0;">Atualizar saldos</label>
+        <div class="row2">
+          <div><label>Banco</label><input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required /></div>
+          <div><label>Cédula</label><input name="cedula" inputmode="decimal" value="${String(num((S.cedula || {}).valor)).replace(".", ",")}" /></div>
         </div>
-        <button class="btn small" type="submit" style="min-height:3rem;">Atualizar</button>
+        <button class="btn full" type="submit">Atualizar</button>
+        <div class="dica">Banco = app do banco. Cédula = papel na carteira. Contas e fatura saem do banco.</div>
       </form>`;
 
     html += lembretesSmartCard(c);
@@ -1657,6 +1668,11 @@
           <option value="ela">${esc(nq.ela)}</option>
           <option value="casa">Casa (junto)</option>
         </select>
+        <label>Saiu de onde?</label>
+        <select name="fonte">
+          <option value="banco">Banco / PIX / débito</option>
+          <option value="cedula">Cédula (papel)</option>
+        </select>
         <button class="btn full" type="submit">Anotar gasto</button>
       </form>`;
 
@@ -1695,9 +1711,10 @@
     if (!recentes.length) html += `<div class="vazio">${filtroQuem === "todos" ? "Nenhum gasto anotado. Bora manter assim 😄" : "Nada neste filtro."}</div>`;
     recentes.forEach((g) => {
       const quemLbl = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : (g.quem === "casa" ? "Casa" : "");
+      const fonteLbl = g.fonte === "cedula" ? "cédula" : "banco";
       html += `
         <div class="item">
-          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)}${quemLbl ? " · " + esc(quemLbl) : ""} · ${dataBR(g.ts)}</div></div>
+          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)}${quemLbl ? " · " + esc(quemLbl) : ""} · ${fonteLbl} · ${dataBR(g.ts)}</div></div>
           <div class="val">${fmt(g.valor)}</div>
           <button class="statusbtn" data-action="gasto-del" data-id="${g.id}">✕</button>
         </div>`;
@@ -2573,14 +2590,35 @@
   /* ─── Forms ─── */
   const F = {
     "gasto": (f) => {
+      const valor = num(f.valor.value);
+      const fonte = f.fonte && f.fonte.value === "cedula" ? "cedula" : "banco";
+      if (valor <= 0) return;
+      if (fonte === "cedula") {
+        if (!S.cedula) S.cedula = { valor: 0 };
+        if (num(S.cedula.valor) < valor) {
+          if (!confirm(`Cédula tem só ${fmt(S.cedula.valor)}. Anotar mesmo e zerar cédula?`)) return;
+          S.cedula.valor = 0;
+        } else {
+          S.cedula.valor = Math.round((num(S.cedula.valor) - valor) * 100) / 100;
+        }
+      }
       S.gastos.push({
         id: uid(),
         desc: f.desc.value.trim(),
         cat: f.cat.value,
-        valor: num(f.valor.value),
+        valor,
         quem: f.quem ? f.quem.value : "casa",
+        fonte,
         ts: Date.now(),
       });
+      touch();
+    },
+    "caixa-set": (f) => {
+      const agora = Date.now();
+      if (!S.inicio) S.inicio = agora;
+      S.caixa = { valor: num(f.valor.value), em: agora };
+      if (!S.cedula) S.cedula = { valor: 0 };
+      if (f.cedula) S.cedula.valor = Math.max(0, num(f.cedula.value));
       touch();
     },
     "conta-add": (f) => {
@@ -2624,12 +2662,6 @@
         }
       };
       reader.readAsText(file);
-    },
-    "caixa-set": (f) => {
-      const agora = Date.now();
-      if (!S.inicio) S.inicio = agora;
-      S.caixa = { valor: num(f.valor.value), em: agora };
-      touch();
     },
     "entrada-add": (f) => {
       const valor = num(f.valor.value);
