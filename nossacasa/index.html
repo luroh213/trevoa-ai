@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#2e7d52" />
+  <meta name="theme-color" content="#1f6b45" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Nossa Casa" />
@@ -15,331 +15,466 @@
   <link rel="apple-touch-icon" href="./icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #eef5ef;
-      --bg-deep: #dfece1;
-      --ink: #22302a;
-      --ink-soft: #6d7f74;
-      --brand: #2e7d52;
-      --brand-deep: #1f5c3b;
-      --accent: #e9c46a;
-      --accent-soft: #f9efd4;
-      --cream: #fdfefa;
-      --line: #cfdfcf;
-      --ok: #3e7d5b;
-      --ok-soft: #dceedd;
-      --warn: #b0742a;
-      --warn-soft: #f7e8cf;
+      --bg: #f6f8f6;
+      --bg-deep: #eef2ef;
+      --surface: #ffffff;
+      --ink: #1a2e24;
+      --ink-soft: #6b7c72;
+      --ink-mute: #93a399;
+      --brand: #1f6b45;
+      --brand-deep: #155234;
+      --brand-soft: #e8f3ec;
+      --line: #e3ebe5;
+      --line-strong: #c9d6cd;
+      --ok: #1f6b45;
+      --ok-soft: #e8f3ec;
+      --warn: #9a6b12;
+      --warn-soft: #f8efd9;
       --bad: #b03a3a;
-      --bad-soft: #f6dbdb;
+      --bad-soft: #f8e4e4;
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      --shadow: 0 1px 2px rgba(26, 46, 36, 0.04), 0 4px 12px rgba(26, 46, 36, 0.04);
+      --shadow-soft: 0 1px 3px rgba(26, 46, 36, 0.06);
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --safe-top: env(safe-area-inset-top, 0px);
+      --font: "Plus Jakarta Sans", system-ui, sans-serif;
+      --touch: 44px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
       min-height: 100dvh;
-      font-family: "Manrope", system-ui, sans-serif;
-      font-size: 17px;
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.45;
       color: var(--ink);
-      background:
-        radial-gradient(ellipse 90% 55% at 0% -5%, #d8ead9 0%, transparent 55%),
-        radial-gradient(ellipse 70% 45% at 100% 5%, #e8efe4 0%, transparent 50%),
-        linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
-      padding: calc(1rem + var(--safe-top)) 1rem calc(6.6rem + var(--safe-bottom));
+      background: var(--bg);
+      padding: calc(var(--space-4) + var(--safe-top)) var(--space-4) calc(5.75rem + var(--safe-bottom));
+      -webkit-font-smoothing: antialiased;
     }
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.4;
-      background-image:
-        linear-gradient(rgba(46, 125, 82, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(46, 125, 82, 0.035) 1px, transparent 1px);
-      background-size: 28px 28px;
-      z-index: 0;
-    }
+    .wrap { max-width: 26.5rem; margin: 0 auto; position: relative; z-index: 1; }
 
-    .wrap { max-width: 28rem; margin: 0 auto; position: relative; z-index: 1; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-    @keyframes pop { from { opacity: 0; transform: scale(0.96) translateY(14px); } to { opacity: 1; transform: none; } }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-    /* ─── Login ────────────────────────────────────── */
-    .gate { min-height: calc(100dvh - 8rem); display: flex; flex-direction: column; justify-content: center; animation: rise 0.4s ease-out both; }
-    .gate .brand-mark { display: flex; align-items: center; gap: 0.8rem; }
-    .logo { width: 3.4rem; height: 3.4rem; flex-shrink: 0; filter: drop-shadow(0 8px 16px rgba(46, 125, 82, 0.25)); animation: floaty 4.5s ease-in-out infinite; }
-    .brand { font-family: "Fraunces", Georgia, serif; font-size: 2.3rem; font-weight: 700; color: var(--brand); letter-spacing: -0.02em; line-height: 1.05; }
-    .subtitle { margin-top: 0.4rem; font-size: 0.95rem; color: var(--ink-soft); line-height: 1.4; }
+    .gate { min-height: calc(100dvh - 6rem); display: flex; flex-direction: column; justify-content: center; animation: rise 0.35s ease both; }
+    .gate .brand-mark { display: flex; align-items: center; gap: var(--space-3); }
+    .logo { width: 2.75rem; height: 2.75rem; flex-shrink: 0; }
+    .brand { font-size: 1.35rem; font-weight: 800; color: var(--brand-deep); letter-spacing: -0.03em; line-height: 1.1; }
+    .subtitle { margin-top: 4px; font-size: 0.9rem; color: var(--ink-soft); font-weight: 500; }
 
     .card {
-      background: var(--cream);
+      background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 1.2rem;
-      padding: 1.1rem;
-      box-shadow: 0 10px 24px rgba(46, 125, 82, 0.07);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-soft);
     }
-    .card + .card { margin-top: 0.9rem; }
+    .card + .card { margin-top: var(--space-3); }
 
-    label { display: block; font-size: 0.85rem; font-weight: 800; color: var(--ink-soft); margin: 0.9rem 0 0.35rem; }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      margin: var(--space-4) 0 var(--space-2);
+      letter-spacing: 0.01em;
+    }
     label:first-child { margin-top: 0; }
 
     input, select {
       width: 100%;
       font: inherit;
-      font-size: 1.05rem;
-      font-weight: 700;
+      font-size: 1rem;
+      font-weight: 600;
       color: var(--ink);
-      background: #fff;
-      border: 2px solid var(--line);
-      border-radius: 0.9rem;
-      padding: 0.8rem 0.9rem;
+      background: var(--bg);
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.875rem;
+      min-height: var(--touch);
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     }
-    input:focus, select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--ok-soft); }
-    input[type="date"] { font-weight: 600; }
-    input[type="checkbox"] { width: auto; margin-right: 0.4rem; }
+    input:focus, select:focus {
+      border-color: var(--brand);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--brand-soft);
+    }
+    input[type="date"] { font-weight: 500; }
+    input[type="checkbox"] { width: auto; min-height: 0; margin-right: 8px; }
 
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-    .row2 > label { margin-top: 0.9rem; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .row2 > label { margin-top: var(--space-4); }
 
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-      font: inherit; font-weight: 800; font-size: 1.05rem;
-      color: #fff; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-deep) 100%);
-      border: none; border-radius: 1rem; padding: 0.95rem 1.1rem; min-height: 3.4rem;
-      cursor: pointer; box-shadow: 0 8px 18px rgba(46, 125, 82, 0.28);
-      transition: transform 0.12s, filter 0.12s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font: inherit; font-weight: 700; font-size: 0.95rem;
+      color: #fff; background: var(--brand);
+      border: none; border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem; min-height: var(--touch);
+      cursor: pointer;
+      transition: transform 0.12s, background 0.15s, opacity 0.15s;
     }
-    .btn:hover { filter: brightness(1.06); }
-    .btn:active { transform: translateY(1px) scale(0.98); }
-    .btn.full { width: 100%; margin-top: 1rem; }
-    .btn.ghost { background: #fff; color: var(--brand); border: 2px solid var(--line); box-shadow: none; }
-    .btn.danger { background: linear-gradient(180deg, #c04747 0%, #96333a 100%); box-shadow: 0 8px 18px rgba(176, 58, 58, 0.25); }
-    .btn.small { min-height: 2.5rem; padding: 0.5rem 0.85rem; font-size: 0.92rem; border-radius: 0.8rem; margin-top: 0; }
+    .btn:hover { background: var(--brand-deep); }
+    .btn:active { transform: scale(0.98); }
+    .btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .btn.full { width: 100%; margin-top: var(--space-4); }
+    .btn.ghost {
+      background: transparent; color: var(--brand);
+      border: 1.5px solid var(--line-strong);
+    }
+    .btn.ghost:hover { background: var(--brand-soft); }
+    .btn.danger { background: var(--bad); }
+    .btn.small { min-height: 2.5rem; padding: 0.45rem 0.8rem; font-size: 0.85rem; margin-top: 0; }
 
-    .erro { margin-top: 0.8rem; background: var(--bad-soft); color: var(--bad); font-weight: 700; font-size: 0.92rem; padding: 0.7rem 0.9rem; border-radius: 0.8rem; }
-    .dica { margin-top: 0.8rem; font-size: 0.85rem; color: var(--ink-soft); text-align: center; }
+    .erro { margin-top: var(--space-3); background: var(--bad-soft); color: var(--bad); font-weight: 600; font-size: 0.875rem; padding: 12px 14px; border-radius: var(--radius-sm); }
+    .dica { margin-top: var(--space-3); font-size: 0.8rem; color: var(--ink-soft); text-align: center; font-weight: 500; line-height: 1.4; }
 
-    /* ─── Header ───────────────────────────────────── */
-    header.app { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; animation: rise 0.35s ease-out both; }
-    header.app .logo { width: 2.6rem; height: 2.6rem; animation: none; }
-    header.app .brand { font-size: 1.55rem; }
+    header.app {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: var(--space-5);
+      animation: rise 0.3s ease both;
+    }
+    header.app .logo { width: 2rem; height: 2rem; }
+    header.app .brand { font-size: 1.15rem; }
     header.app .spacer { flex: 1; }
-    .syncdot { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #9aa79f; }
+    .syncdot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-mute); }
     .syncdot.ok { background: var(--ok); }
     .syncdot.busy { background: var(--warn); animation: pulse 0.9s infinite; }
     .syncdot.err { background: var(--bad); }
     .iconbtn {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 2.7rem; height: 2.7rem; border-radius: 0.9rem;
-      background: #fff; border: 2px solid var(--line); cursor: pointer;
-      color: var(--brand); transition: transform 0.12s;
+      width: var(--touch); height: var(--touch); border-radius: var(--radius-sm);
+      background: var(--surface); border: 1.5px solid var(--line); cursor: pointer;
+      color: var(--ink-soft); transition: background 0.15s, color 0.15s;
     }
-    .iconbtn:active { transform: scale(0.94); }
-    .iconbtn svg { width: 1.25rem; height: 1.25rem; }
+    .iconbtn:hover { color: var(--brand); background: var(--brand-soft); }
+    .iconbtn:active { transform: scale(0.96); }
+    .iconbtn svg { width: 1.2rem; height: 1.2rem; }
 
-    /* ─── Herói (pode gastar) ──────────────────────── */
-    .hero { border-radius: 1.4rem; padding: 1.3rem 1.2rem; color: #fff; animation: pop 0.35s ease-out both; box-shadow: 0 14px 28px rgba(34, 48, 42, 0.18); }
-    .hero.verde { background: linear-gradient(160deg, #3e8f66 0%, #22603f 100%); }
-    .hero.amarelo { background: linear-gradient(160deg, #c08a35 0%, #8f6220 100%); }
-    .hero.vermelho { background: linear-gradient(160deg, #bd5050 0%, #8d3434 100%); }
-    .hero .k { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
-    .hero .v { font-family: "Fraunces", serif; font-size: 2.9rem; font-weight: 700; line-height: 1.05; margin-top: 0.2rem; }
-    .hero .msg { margin-top: 0.5rem; font-weight: 800; font-size: 1.1rem; }
-    .hero .sub { margin-top: 0.3rem; font-size: 0.9rem; opacity: 0.9; }
+    .hero {
+      border-radius: var(--radius-xl);
+      padding: var(--space-5) var(--space-5) var(--space-5);
+      color: #fff;
+      animation: pop 0.3s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero.verde { background: linear-gradient(155deg, #2a8054 0%, #1a5636 100%); }
+    .hero.amarelo { background: linear-gradient(155deg, #b8862d 0%, #8a6418 100%); }
+    .hero.vermelho { background: linear-gradient(155deg, #b04a4a 0%, #853333 100%); }
+    .hero .k {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; opacity: 0.8;
+    }
+    .hero .v {
+      font-size: clamp(2.4rem, 9vw, 2.85rem); font-weight: 800;
+      letter-spacing: -0.04em; line-height: 1.05; margin-top: 6px;
+    }
+    .hero .split { margin-top: 6px; font-size: 0.875rem; font-weight: 500; opacity: 0.88; }
+    .hero .status-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: var(--space-4); padding-top: var(--space-4);
+      border-top: 1px solid rgba(255,255,255,0.18);
+    }
+    .hero .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #fff; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+    }
+    .hero .msg { font-weight: 700; font-size: 1rem; }
+    .hero .sub { margin-top: 2px; font-size: 0.85rem; opacity: 0.85; font-weight: 500; }
+    .hero .metrics {
+      margin-top: var(--space-4);
+      display: grid; gap: 6px;
+      font-size: 0.85rem; font-weight: 500; opacity: 0.92;
+      line-height: 1.4;
+    }
 
-    /* ─── Seções e listas ──────────────────────────── */
-    .sect { margin: 1.15rem 0 0.55rem; font-family: "Fraunces", serif; font-size: 1.25rem; font-weight: 700; color: var(--brand-deep); display: flex; align-items: baseline; gap: 0.5rem; }
-    .sect .mini { font-family: "Manrope", sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); }
+    .sect {
+      margin: var(--space-6) 0 var(--space-3);
+      font-size: 1.05rem; font-weight: 800; color: var(--ink);
+      display: flex; align-items: baseline; gap: 8px; letter-spacing: -0.02em;
+    }
+    .sect .mini { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
 
-    .item { display: flex; align-items: center; gap: 0.7rem; padding: 0.75rem 0; border-top: 1px dashed var(--line); }
-    .item:first-of-type { border-top: none; }
+    .item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+    .item:first-of-type { border-top: none; padding-top: 0; }
+    .item:last-child { padding-bottom: 0; }
     .item .grow { flex: 1; min-width: 0; }
-    .item .t { font-weight: 800; }
-    .item .s { font-size: 0.85rem; color: var(--ink-soft); font-weight: 600; }
-    .item .val { font-weight: 800; white-space: nowrap; }
+    .item .t { font-weight: 700; font-size: 0.95rem; }
+    .item .s { font-size: 0.8rem; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
+    .item .val { font-weight: 800; white-space: nowrap; font-size: 0.95rem; letter-spacing: -0.02em; }
 
-    .pill { display: inline-block; font-size: 0.75rem; font-weight: 800; padding: 0.18rem 0.55rem; border-radius: 999px; }
+    .pill {
+      display: inline-flex; align-items: center;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 9999px;
+      letter-spacing: 0.01em;
+    }
     .pill.ok { background: var(--ok-soft); color: var(--ok); }
     .pill.warn { background: var(--warn-soft); color: var(--warn); }
     .pill.bad { background: var(--bad-soft); color: var(--bad); }
-    .pill.neu { background: #e7ede8; color: var(--ink-soft); }
+    .pill.neu { background: var(--bg-deep); color: var(--ink-soft); }
 
-    .vazio { text-align: center; color: var(--ink-soft); font-weight: 600; font-size: 0.95rem; padding: 1.1rem 0.5rem; }
+    .vazio { text-align: center; color: var(--ink-soft); font-weight: 500; font-size: 0.9rem; padding: var(--space-6) var(--space-3); line-height: 1.5; }
 
-    .alerta { display: flex; gap: 0.6rem; align-items: flex-start; border-radius: 0.9rem; padding: 0.75rem 0.9rem; font-weight: 700; font-size: 0.92rem; margin-top: 0.6rem; }
+    .alerta {
+      display: flex; gap: 10px; align-items: flex-start;
+      border-radius: var(--radius-sm); padding: 12px 14px;
+      font-weight: 600; font-size: 0.875rem; margin-bottom: 8px;
+    }
+    .alerta:last-child { margin-bottom: 0; }
     .alerta.warn { background: var(--warn-soft); color: var(--warn); }
     .alerta.bad { background: var(--bad-soft); color: var(--bad); }
     .alerta.ok { background: var(--ok-soft); color: var(--ok); }
 
-    /* balãozinho amigável (assistente da casa) */
-    .chat { margin-top: 0.85rem; }
-    .chatbox { max-height: 22rem; overflow-y: auto; padding-right: 0.15rem; }
-    .balao { display: flex; gap: 0.65rem; margin-top: 0.7rem; animation: rise 0.35s ease-out both; }
+    .chat { margin-top: var(--space-3); }
+    .chatbox { max-height: 20rem; overflow-y: auto; }
+    .balao { display: flex; gap: 10px; margin-top: 12px; animation: rise 0.25s ease both; }
     .balao .ava {
-      width: 2.5rem; height: 2.5rem; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(160deg, var(--brand) 0%, var(--brand-deep) 100%);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 0.78rem; box-shadow: 0 6px 12px rgba(46, 125, 82, 0.25);
+      width: 2.25rem; height: 2.25rem; border-radius: 50%; flex-shrink: 0;
+      background: var(--brand); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.7rem;
     }
     .balao .msg {
-      flex: 1; background: #fff; border: 1px solid var(--line);
-      border-radius: 0.25rem 1.15rem 1.15rem 1.15rem;
-      padding: 0.8rem 0.95rem; box-shadow: 0 8px 18px rgba(46, 125, 82, 0.07);
+      flex: 1; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md);
+      padding: 12px 14px;
     }
-    .balao .who { font-size: 0.72rem; font-weight: 800; color: var(--brand); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.2rem; }
-    .balao .tit { font-family: "Fraunces", serif; font-weight: 700; font-size: 1.05rem; color: var(--ink); margin-bottom: 0.25rem; }
-    .balao .txt { font-weight: 600; font-size: 0.94rem; line-height: 1.4; color: var(--ink); }
-    .balao .txt ol { margin: 0.35rem 0 0.2rem 1.1rem; padding: 0; }
-    .balao .txt li { margin: 0.15rem 0; }
-    .balao.warn .msg { background: #fffbf0; border-color: #e8c98a; }
+    .balao .who { font-size: 0.68rem; font-weight: 700; color: var(--brand); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; }
+    .balao .tit { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+    .balao .txt { font-weight: 500; font-size: 0.875rem; line-height: 1.45; color: var(--ink); }
+    .balao .txt ol { margin: 6px 0 0 1.1rem; }
+    .balao.warn .msg { background: #fffbf3; border-color: #ebd7a8; }
     .balao.warn .who { color: var(--warn); }
-    .balao.bad .msg { background: #fff5f5; border-color: #e8b0b0; }
+    .balao.bad .msg { background: #fff6f6; border-color: #e8b8b8; }
     .balao.bad .who { color: var(--bad); }
-    .balao.ok .msg { background: #f3faf5; border-color: #b5d9c0; }
+    .balao.ok .msg { background: #f4faf6; border-color: #b9d6c4; }
     .balao.eu { flex-direction: row-reverse; }
-    .balao.eu .ava { background: linear-gradient(160deg, #5a7fb0 0%, #3a5a8c 100%); box-shadow: 0 6px 12px rgba(58, 90, 140, 0.25); }
-    .balao.eu .msg { background: #eef4fc; border-color: #b7c9e4; border-radius: 1.15rem 0.25rem 1.15rem 1.15rem; }
+    .balao.eu .ava { background: #4a6fa5; }
+    .balao.eu .msg { background: #f0f4fa; border-color: #c2d0e4; border-radius: var(--radius-md) 4px var(--radius-md) var(--radius-md); }
     .balao.eu .who { color: #3a5a8c; }
 
-    /* barra do cartão */
-    .bar { height: 1.05rem; border-radius: 999px; background: #e7ede8; overflow: hidden; display: flex; margin: 0.55rem 0 0.3rem; }
-    .bar .fill { height: 100%; transition: width 0.3s; }
-    .bar .fill.lim { background: linear-gradient(90deg, #4d9a70, #2e7d52); }
-    .bar .fill.res { background: linear-gradient(90deg, #e9c46a, #c08a35); }
-    .bar .fill.over { background: linear-gradient(90deg, #d06a6a, #b03a3a); }
-    .bar-legend { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
+    .bar { height: 8px; border-radius: 999px; background: var(--bg-deep); overflow: hidden; display: flex; margin: 12px 0 8px; }
+    .bar .fill { height: 100%; transition: width 0.25s ease; }
+    .bar .fill.lim { background: var(--brand); }
+    .bar .fill.res { background: #d4a017; }
+    .bar .fill.over { background: var(--bad); }
+    .bar-legend { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
 
-    /* status despensa */
-    .statusbtn { border: 2px solid var(--line); background: #fff; border-radius: 999px; font: inherit; font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.7rem; cursor: pointer; white-space: nowrap; }
-    .statusbtn.tem { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
-    .statusbtn.pouco { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
-    .statusbtn.acabou { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+    .statusbtn {
+      border: 1.5px solid var(--line-strong); background: var(--surface);
+      border-radius: 9999px; font: inherit; font-size: 0.78rem; font-weight: 700;
+      padding: 8px 12px; min-height: 36px; cursor: pointer; white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .statusbtn.tem { border-color: transparent; color: var(--ok); background: var(--ok-soft); }
+    .statusbtn.pouco { border-color: transparent; color: var(--warn); background: var(--warn-soft); }
+    .statusbtn.acabou { border-color: transparent; color: var(--brand); background: var(--brand-soft); }
 
-    .buyrow { display: grid; grid-template-columns: 1fr 3.4rem 4.8rem auto auto; gap: 0.45rem; align-items: center; padding: 0.6rem 0; border-top: 1px dashed var(--line); }
+    .buyrow {
+      display: grid; grid-template-columns: 1fr 3.4rem 4.8rem auto auto;
+      gap: 8px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line);
+    }
     .buyrow:first-of-type { border-top: none; }
-    .buyrow input { padding: 0.5rem 0.6rem; font-size: 0.95rem; border-radius: 0.7rem; }
-    .buyrow .nome { font-weight: 800; }
-    .buyrow .nome .s { display: block; font-size: 0.78rem; color: var(--ink-soft); font-weight: 700; }
+    .buyrow input { padding: 8px 10px; font-size: 0.9rem; min-height: 40px; }
+    .buyrow .nome { font-weight: 700; }
+    .buyrow .nome .s { display: block; font-size: 0.75rem; color: var(--ink-soft); font-weight: 500; }
 
-    /* gatos */
-    .gatohead { display: flex; align-items: center; gap: 0.8rem; }
-    .gatoava { width: 3rem; height: 3rem; border-radius: 1rem; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; font-family: "Fraunces", serif; font-size: 1.5rem; font-weight: 700; color: var(--warn); flex-shrink: 0; }
+    .gatohead { display: flex; align-items: center; gap: 12px; }
+    .gatoava {
+      width: 2.75rem; height: 2.75rem; border-radius: var(--radius-sm);
+      background: var(--brand-soft); display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; font-weight: 800; color: var(--brand); flex-shrink: 0;
+    }
 
-    /* ─── Modal ────────────────────────────────────── */
-    .modalbk { position: fixed; inset: 0; background: rgba(34, 48, 42, 0.45); backdrop-filter: blur(3px); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+    .modalbk {
+      position: fixed; inset: 0; background: rgba(26, 46, 36, 0.4);
+      backdrop-filter: blur(2px); z-index: 40;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
     .modalbk[hidden] { display: none; }
-    .modal { background: var(--cream); border-radius: 1.4rem 1.4rem 0 0; width: 100%; max-width: 28rem; max-height: 86dvh; overflow-y: auto; padding: 1.2rem 1.1rem calc(1.4rem + var(--safe-bottom)); animation: pop 0.25s ease-out both; }
-    .modal h3 { font-family: "Fraunces", serif; color: var(--brand-deep); font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      width: 100%; max-width: 26.5rem; max-height: 86dvh; overflow-y: auto;
+      padding: var(--space-5) var(--space-5) calc(var(--space-5) + var(--safe-bottom));
+      animation: pop 0.22s ease both;
+    }
+    .modal h3 { font-size: 1.2rem; font-weight: 800; color: var(--ink); margin-bottom: 8px; letter-spacing: -0.02em; }
 
-    /* ─── Nav inferior ─────────────────────────────── */
     nav.tabs {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-      display: flex; justify-content: center; gap: 0.15rem;
-      background: rgba(253, 254, 250, 0.92); backdrop-filter: blur(12px);
+      display: flex; justify-content: center;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(16px) saturate(1.2);
       border-top: 1px solid var(--line);
-      padding: 0.45rem 0.4rem calc(0.45rem + var(--safe-bottom));
+      padding: 6px 8px calc(6px + var(--safe-bottom));
     }
     nav.tabs button {
-      flex: 1; max-width: 5.2rem; border: none; background: none; cursor: pointer;
-      font: inherit; font-size: 0.68rem; font-weight: 800; color: var(--ink-soft);
-      display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
-      padding: 0.35rem 0.2rem; border-radius: 0.8rem; transition: color 0.15s, background 0.15s;
+      flex: 1; max-width: none; border: none; background: none; cursor: pointer;
+      font: inherit; font-size: 0.68rem; font-weight: 700; color: var(--ink-mute);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 8px 4px; min-height: 52px; border-radius: 12px;
+      transition: color 0.15s, background 0.15s;
     }
-    nav.tabs button svg { width: 1.4rem; height: 1.4rem; }
-    nav.tabs button.on { color: var(--brand); background: var(--ok-soft); }
+    nav.tabs button svg { width: 1.35rem; height: 1.35rem; stroke-width: 1.75; }
+    nav.tabs button.on { color: var(--brand); background: var(--brand-soft); }
 
     [hidden] { display: none !important; }
-    .mt { margin-top: 0.9rem; }
-    .view { animation: rise 0.3s ease-out both; }
+    .mt { margin-top: var(--space-3); }
+    .view { animation: rise 0.25s ease both; }
 
-    .hbar { height: 0.55rem; background: var(--line); border-radius: 99px; overflow: hidden; margin: 0.2rem 0 0.55rem; }
+    .hbar { height: 6px; background: var(--bg-deep); border-radius: 99px; overflow: hidden; margin: 4px 0 10px; }
     .hbar > i { display: block; height: 100%; background: var(--brand); border-radius: inherit; }
-    .hbar.alt > i { background: var(--warn, #c9892a); }
+    .hbar.alt > i { background: #d4a017; }
     .hbar.bad > i { background: var(--bad); }
-    .chkstep { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+
+    .chkstep { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--line); }
     .chkstep:last-child { border-bottom: 0; }
     .chknum {
-      width: 1.55rem; height: 1.55rem; border-radius: 50%; flex-shrink: 0;
-      display: grid; place-items: center; font-weight: 800; font-size: 0.72rem;
-      background: var(--ok-soft); color: var(--brand);
+      width: 1.5rem; height: 1.5rem; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-weight: 800; font-size: 0.7rem;
+      background: var(--brand-soft); color: var(--brand);
     }
     .chknum.done { background: var(--brand); color: #fff; }
-    .chknum.wait { background: var(--warn-soft, #fff3d6); color: var(--warn, #9a6b12); }
-    nav.tabs button { font-size: 0.68rem; min-width: 0; flex: 1; }
-    /* ─── UX leigo 2026 ─────────────────────────────── */
-    .card {
-      border: none;
-      box-shadow: 0 12px 28px rgba(34, 48, 42, 0.08);
-    }
+    .chknum.wait { background: var(--warn-soft); color: var(--warn); }
+
     .acao-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 0.55rem;
-      margin-top: 0.95rem;
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px; margin-top: var(--space-4);
     }
     .acao-btn {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.35rem; min-height: 5.2rem; padding: 0.7rem 0.4rem;
-      border: none; border-radius: 1.15rem; cursor: pointer;
-      font: inherit; font-weight: 800; font-size: 0.88rem; color: var(--brand-deep);
-      background: #fff; box-shadow: 0 10px 22px rgba(46, 125, 82, 0.1);
-      transition: transform 0.12s, background 0.12s;
+      gap: 8px; min-height: 5rem; padding: 12px 8px;
+      border: 1.5px solid var(--line); border-radius: var(--radius-md); cursor: pointer;
+      font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--ink);
+      background: var(--surface);
+      transition: transform 0.12s, border-color 0.15s, background 0.15s;
     }
     .acao-btn:active { transform: scale(0.97); }
-    .acao-btn.on { background: var(--ok-soft); outline: 2px solid var(--brand); }
-    .acao-btn .ico { font-size: 1.55rem; line-height: 1; }
+    .acao-btn.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+    .acao-btn .ico {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: var(--brand-soft); color: var(--brand);
+    }
+    .acao-btn.on .ico { background: var(--brand); color: #fff; }
+    .acao-btn .ico svg { width: 18px; height: 18px; }
+
     .subtabs {
-      display: flex; gap: 0.4rem; margin: 0.2rem 0 0.9rem;
-      background: rgba(255,255,255,0.7); padding: 0.3rem; border-radius: 1rem;
+      display: flex; gap: 4px; margin: 0 0 var(--space-4);
+      background: var(--bg-deep); padding: 4px; border-radius: var(--radius-sm);
     }
     .subtabs button {
       flex: 1; border: none; background: transparent; cursor: pointer;
-      font: inherit; font-weight: 800; font-size: 0.95rem; color: var(--ink-soft);
-      padding: 0.7rem 0.5rem; border-radius: 0.8rem;
+      font: inherit; font-weight: 700; font-size: 0.875rem; color: var(--ink-soft);
+      padding: 10px 8px; min-height: 40px; border-radius: 10px;
+      transition: background 0.15s, color 0.15s;
     }
-    .subtabs button.on { background: var(--brand); color: #fff; }
+    .subtabs button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-soft); }
+
     #toast {
-      position: fixed; left: 50%; bottom: calc(5.2rem + var(--safe-bottom));
+      position: fixed; left: 50%; bottom: calc(4.75rem + var(--safe-bottom));
       transform: translateX(-50%) translateY(120%);
       z-index: 50; max-width: calc(100% - 2rem); width: max-content;
-      background: var(--ink); color: #fff; font-weight: 700; font-size: 0.95rem;
-      padding: 0.75rem 1.1rem; border-radius: 999px;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.22);
-      transition: transform 0.28s ease, opacity 0.28s;
+      background: var(--ink); color: #fff; font-weight: 600; font-size: 0.875rem;
+      padding: 12px 18px; border-radius: 9999px;
+      box-shadow: var(--shadow);
+      transition: transform 0.22s ease, opacity 0.22s;
       opacity: 0; pointer-events: none;
     }
     #toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+
     .onboard {
       position: fixed; inset: 0; z-index: 60;
-      background: rgba(34, 48, 42, 0.55); backdrop-filter: blur(4px);
-      display: flex; align-items: flex-end; justify-content: center;
-      padding: 1rem;
+      background: rgba(26, 46, 36, 0.45); backdrop-filter: blur(3px);
+      display: flex; align-items: flex-end; justify-content: center; padding: 16px;
     }
     .onboard .sheet {
-      width: 100%; max-width: 28rem; background: var(--cream);
-      border-radius: 1.5rem; padding: 1.4rem 1.2rem calc(1.4rem + var(--safe-bottom));
-      animation: pop 0.28s ease-out both;
+      width: 100%; max-width: 26.5rem; background: var(--surface);
+      border-radius: var(--radius-xl); padding: var(--space-6) var(--space-5) calc(var(--space-5) + var(--safe-bottom));
+      animation: pop 0.25s ease both;
     }
-    .onboard .sheet h2 { font-family: "Fraunces", serif; font-size: 1.55rem; color: var(--brand-deep); margin-bottom: 0.45rem; }
-    .onboard .sheet p { color: var(--ink-soft); font-weight: 600; line-height: 1.45; margin-bottom: 1rem; }
-    .softlink {
-      display: block; width: 100%; margin-top: 0.85rem; text-align: center;
-      background: none; border: none; cursor: pointer; font: inherit;
-      font-weight: 800; color: var(--brand); padding: 0.7rem;
-    }
-    body { font-size: 17.5px; }
-    nav.tabs button { max-width: none; font-size: 0.72rem; }
+    .onboard .sheet h2 { font-size: 1.35rem; font-weight: 800; color: var(--ink); margin-bottom: 8px; letter-spacing: -0.02em; }
+    .onboard .sheet p { color: var(--ink-soft); font-weight: 500; line-height: 1.5; margin-bottom: var(--space-5); }
 
+    .softlink {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      width: 100%; margin-top: var(--space-4); text-align: center;
+      background: none; border: none; cursor: pointer; font: inherit;
+      font-weight: 700; font-size: 0.875rem; color: var(--brand); padding: 12px;
+    }
+    .softlink:hover { opacity: 0.85; }
+
+    .resumo-card .resumo-label { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
+    .resumo-card .resumo-valor { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; margin: 4px 0 2px; }
+    .resumo-card .resumo-meta { font-size: 0.85rem; font-weight: 500; color: var(--ink-soft); }
+
+    .conta-row { display: flex; align-items: flex-start; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); }
+    .conta-row:first-of-type { border-top: none; padding-top: 0; }
+    .conta-row .grow { flex: 1; min-width: 0; }
+    .conta-row .t { font-weight: 700; font-size: 0.95rem; }
+    .conta-row .s { font-size: 0.8rem; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
+    .conta-row .val { font-weight: 800; white-space: nowrap; margin-top: 2px; }
+    .conta-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    .icon-more {
+      width: 36px; height: 36px; border: none; background: transparent;
+      border-radius: 10px; cursor: pointer; color: var(--ink-mute);
+      display: grid; place-items: center; font-size: 1.1rem; font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .icon-more:hover { background: var(--bg-deep); color: var(--ink); }
+
+    .menu-sheet { display: grid; gap: 8px; margin-top: 8px; }
+    .menu-sheet button { width: 100%; }
+
+    .fatura-hero .fh-val { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+    .fatura-hero .fh-meta { font-size: 0.85rem; color: var(--ink-soft); font-weight: 500; margin-top: 4px; }
+    .fatura-stats {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+      margin-top: var(--space-4); padding-top: var(--space-4);
+      border-top: 1px solid var(--line);
+    }
+    .fatura-stats div { text-align: center; }
+    .fatura-stats .k { font-size: 0.7rem; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+    .fatura-stats .v { font-size: 0.9rem; font-weight: 800; margin-top: 2px; letter-spacing: -0.02em; }
+
+    .add-trigger {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; min-height: var(--touch);
+      border: 1.5px dashed var(--line-strong); border-radius: var(--radius-md);
+      background: transparent; cursor: pointer;
+      font: inherit; font-weight: 700; font-size: 0.9rem; color: var(--brand);
+      margin-top: var(--space-4); padding: 12px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .add-trigger:hover { background: var(--brand-soft); border-color: var(--brand); }
+
+    @media (min-width: 480px) {
+      body { padding-left: var(--space-6); padding-right: var(--space-6); }
+    }
   </style>
 </head>
 <body>
@@ -524,6 +659,8 @@
   let histCmpA = "";
   let histCmpB = "";
   let showCorrigirSaldos = false;
+  let showNovaConta = false;
+  let menuContaId = null;
   let hojePainel = null; // entrou | gastei | caiu
   let showMaisHoje = false;
   let casaSub = "despensa";
@@ -603,9 +740,9 @@
     });
     if (!linhas.length) return "";
     return `
-      <div class="sect">Lembretes <span class="mini">hoje</span></div>
+      <div class="sect">Lembretes</div>
       <div class="card">
-        ${linhas.slice(0, 5).map((l) => `<div class="alerta ${l.cls}" style="margin-bottom:0.45rem;"><span>${l.txt}</span></div>`).join("")}
+        ${linhas.slice(0, 5).map((l) => `<div class="alerta ${l.cls}"><span>${l.txt}</span></div>`).join("")}
       </div>`;
   }
   function diaAcabaItem(d) {
@@ -848,8 +985,8 @@
 
   function semaforo(porDia) {
     if (porDia >= 50) return { cls: "verde", msg: "Ritmo tranquilo", sub: "Dá pra viver sem aperto até o próximo salário." };
-    if (porDia >= 20) return { cls: "amarelo", msg: "Vai com calma", sub: "Tem dinheiro, mas sem exagero no dia a dia." };
-    return { cls: "vermelho", msg: "Apertado", sub: "Prioriza essencial. Evita gasto à toa." };
+    if (porDia >= 20) return { cls: "amarelo", msg: "Atenção", sub: "Tem dinheiro, mas sem exagero no dia a dia." };
+    return { cls: "vermelho", msg: "Apertado", sub: "Prioriza o essencial até o próximo salário." };
   }
 
   function contasDaQuinzena(diaRenda) {
@@ -1582,30 +1719,37 @@
 
     const sem = semaforo(c.porDia);
     const diaProx = c.prox ? c.prox.d.getDate() : "?";
+    const icoPlus = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+    const icoMinus = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>`;
+    const icoCheck = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`;
     let html = `
       <div class="hero ${sem.cls}">
         <div class="k">Vocês têm</div>
         <div class="v">${fmt(c.caixa)}</div>
-        <div class="sub">Banco ${fmt(c.banco)} · Cédula ${fmt(c.cedula)}</div>
-        <div class="msg">${sem.msg}</div>
-        <div class="sub">${sem.sub}</div>
-        <div class="sub" style="margin-top:0.55rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.55rem; line-height:1.55;">
+        <div class="split">Banco ${fmt(c.banco)} · Cédula ${fmt(c.cedula)}</div>
+        <div class="status-row">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div>
+            <div class="msg">${sem.msg}</div>
+            <div class="sub">${sem.sub}</div>
+          </div>
+        </div>
+        <div class="metrics">
           <div>Pode ~<b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${diaProx}</div>
           <div>Lazer do mês: <b>${fmt(c.lazerRest || 0)}</b></div>
-          ${c.obrigAte > 0 ? `<div>Não gasta isso agora: <b>${fmt(c.obrigAte)}</b></div>
-          <div style="opacity:0.9; font-size:0.92em;">(contas + fatura + meta ${fmt(c.metaNum)})</div>` : ""}
+          ${c.obrigAte > 0 ? `<div>Não gasta agora: <b>${fmt(c.obrigAte)}</b> <span style="opacity:0.85">(contas + fatura + meta ${fmt(c.metaNum)})</span></div>` : ""}
         </div>
       </div>
 
       <div class="acao-grid">
         <button type="button" class="acao-btn ${hojePainel === "entrou" ? "on" : ""}" data-action="hoje-painel" data-painel="entrou">
-          <span class="ico">＋</span>Entrou
+          <span class="ico">${icoPlus}</span>Entrou
         </button>
         <button type="button" class="acao-btn ${hojePainel === "gastei" ? "on" : ""}" data-action="hoje-painel" data-painel="gastei">
-          <span class="ico">−</span>Gastei
+          <span class="ico">${icoMinus}</span>Gastei
         </button>
         <button type="button" class="acao-btn ${hojePainel === "caiu" ? "on" : ""}" data-action="hoje-painel" data-painel="caiu">
-          <span class="ico">✓</span>Caiu?
+          <span class="ico">${icoCheck}</span>Caiu?
         </button>
       </div>`;
 
@@ -1674,11 +1818,11 @@
     html += lembretesSmartCard(c);
 
     if (!showMaisHoje) {
-      html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Ver mais do dia (chat, passo a passo…)</button>`;
+      html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Ver mais do dia →</button>`;
       return html;
     }
 
-    html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Esconder extras</button>`;
+    html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Esconder extras ↑</button>`;
     html += renderChatConversa();
     html += `
       <form class="card mt" data-form="simular">
@@ -2024,57 +2168,80 @@
     const pag = S.pagamentos[mk] || {};
     const totalMes = S.contas.reduce((a, x) => a + num(x.valor), 0);
     const pagoMes = S.contas.filter((x) => pag[x.id]).reduce((a, x) => a + num(pag[x.id].valor), 0);
+    const pct = totalMes ? Math.min(100, (pagoMes / totalMes) * 100) : 0;
 
     let html = `
       <div class="sect">Contas da casa <span class="mini">${esc(mesNome())}</span></div>
-      <div class="card">
-        <div class="bar"><div class="fill lim" style="width:${totalMes ? Math.min(100, (pagoMes / totalMes) * 100) : 0}%"></div></div>
-        <div class="bar-legend"><span>Pago: ${fmt(pagoMes)}</span><span>Total: ${fmt(totalMes)}</span></div>
+      <div class="card resumo-card">
+        <div class="resumo-label">Contas do mês</div>
+        <div class="resumo-valor">${fmt(totalMes)}</div>
+        <div class="resumo-meta">Total previsto · <b>${fmt(pagoMes)}</b> pago</div>
+        <div class="bar"><div class="fill lim" style="width:${pct}%"></div></div>
+        <div class="bar-legend"><span>${Math.round(pct)}% quitado</span><span>${fmt(Math.max(0, totalMes - pagoMes))} falta</span></div>
       </div>
       <div class="card">`;
 
-    if (!S.contas.length) html += `<div class="vazio">Nenhuma conta cadastrada.</div>`;
+    if (!S.contas.length) {
+      html += `<div class="vazio">Nenhuma conta cadastrada.<br>Adicione a primeira conta fixa pra começar.</div>`;
+    }
     const nqC = nomesQuem();
     S.contas.slice().sort((a, b) => a.dia - b.dia).forEach((x) => {
       const p = pag[x.id];
       const quemLbl = p && p.quem === "ela" ? nqC.ela : p && p.quem === "eu" ? nqC.eu : "";
+      const openMenu = menuContaId === x.id;
       html += `
-        <div class="item">
+        <div class="conta-row">
           <div class="grow">
-            <div class="t">${esc(x.nome)} <span class="pill neu">dia ${x.dia}</span></div>
-            <div class="s">${p ? "pago " + dataBR(p.ts) + (quemLbl ? " · " + esc(quemLbl) : "") : "previsto " + fmt(x.valor)}</div>
+            <div class="t">${esc(x.nome)}</div>
+            <div class="s">${p ? "Pago " + dataBR(p.ts) + (quemLbl ? " · " + esc(quemLbl) : "") : "Vence dia " + x.dia}</div>
+            <div class="val">${fmt(p ? p.valor : x.valor)}</div>
           </div>
-          <div class="val">${fmt(p ? p.valor : x.valor)}</div>
-          ${p
-            ? `<button class="statusbtn tem" data-action="conta-desfazer" data-id="${x.id}">Pago ✓</button>`
-            : `<button class="statusbtn acabou" data-action="conta-pagar" data-id="${x.id}">Pagar</button>`}
-          <button class="statusbtn" data-action="conta-del" data-id="${x.id}">✕</button>
+          <div class="conta-actions">
+            ${p
+              ? `<button class="statusbtn tem" data-action="conta-desfazer" data-id="${x.id}">Pago ✓</button>`
+              : `<button class="btn small" data-action="conta-pagar" data-id="${x.id}">Pagar</button>`}
+            <button type="button" class="icon-more" data-action="conta-menu" data-id="${x.id}" aria-label="Mais opções">⋮</button>
+          </div>
         </div>`;
+      if (openMenu) {
+        html += `<div class="menu-sheet" style="padding-bottom:8px;">
+          <button class="btn ghost full" style="margin-top:0;" data-action="conta-edit" data-id="${x.id}">Editar valor previsto</button>
+          <button class="btn danger full" style="margin-top:0;" data-action="conta-del" data-id="${x.id}">Excluir conta</button>
+          <button class="btn ghost full" style="margin-top:0;" data-action="conta-menu-close">Fechar</button>
+        </div>`;
+      }
       if (!p && pagandoId === x.id) {
         html += `
-        <form class="buyrow" data-form="conta-paga" data-id="${x.id}" style="border-top:none; padding-top:0; grid-template-columns: 1fr 1fr auto;">
-          <div class="nome" style="grid-column:1/-1;"><span class="s">Valor real + quem pagou</span></div>
+        <form class="card" data-form="conta-paga" data-id="${x.id}" style="margin:0 0 12px; box-shadow:none; border-style:dashed;">
+          <label style="margin-top:0;">Valor real deste mês</label>
           <input name="valor" inputmode="decimal" value="${String(num(x.valor)).replace(".", ",")}" required />
+          <label>Quem pagou?</label>
           <select name="quem">
             <option value="eu">${esc(nqC.eu)}</option>
             <option value="ela">${esc(nqC.ela)}</option>
-            <option value="casa">Casa</option>
+            <option value="casa">Juntos</option>
           </select>
-          <button class="btn small" type="submit">OK</button>
+          <button class="btn full" type="submit">Confirmar pagamento</button>
         </form>`;
       }
     });
-    html += `</div>
-      <div class="sect">Nova conta fixa</div>
-      <form class="card" data-form="conta-add">
-        <label>Nome</label>
-        <input name="nome" placeholder="Água, gás…" required />
+    html += `</div>`;
+
+    if (!showNovaConta) {
+      html += `<button type="button" class="add-trigger" data-action="toggle-nova-conta">+ Nova conta fixa</button>`;
+    } else {
+      html += `
+      <form class="card mt" data-form="conta-add">
+        <label style="margin-top:0;">Nome da conta</label>
+        <input name="nome" placeholder="Água, gás…" required autofocus />
         <div class="row2">
           <div><label>Valor (R$)</label><input name="valor" inputmode="decimal" placeholder="100,00" required /></div>
           <div><label>Dia do vencimento</label><input name="dia" type="number" min="1" max="31" value="7" required /></div>
         </div>
-        <button class="btn full" type="submit">Adicionar conta</button>
+        <button class="btn full" type="submit">Salvar conta</button>
+        <button type="button" class="softlink" data-action="toggle-nova-conta">Cancelar</button>
       </form>`;
+    }
     return html;
   }
 
@@ -2094,30 +2261,37 @@
 
     let html = `
       <div class="sect">Fatura atual <span class="mini">vence dia ${S.config.diaVencFatura || 19}</span></div>
-      <div class="card">
-        <div class="item" style="border:none; padding-top:0;">
-          <div class="grow"><div class="t" style="font-size:1.35rem;">${fmt(total)}</div>
-          <div class="s">de ${fmt(limite)} de limite + ${fmt(reserva)} de reserva${fatura ? " · já paga ✓" : " · ainda não paga"}</div></div>
-          ${fatura ? `<span class="pill ok">Paga</span>` : total > teto ? `<span class="pill bad">Estourou!</span>` : total > limite ? `<span class="pill warn">Na reserva</span>` : `<span class="pill neu">Aberta</span>`}
+      <div class="card fatura-hero">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+          <div>
+            <div class="fh-val">${fmt(total)}</div>
+            <div class="fh-meta">${fatura ? "Fatura paga neste mês" : "Ciclo aberto · ainda não paga"}</div>
+          </div>
+          ${fatura ? `<span class="pill ok">Paga</span>` : total > teto ? `<span class="pill bad">Estourou</span>` : total > limite ? `<span class="pill warn">Reserva</span>` : `<span class="pill neu">Aberta</span>`}
         </div>
         <div class="bar">
           <div class="fill lim" style="width:${pctLim}%"></div>
           <div class="fill res" style="width:${pctRes}%"></div>
           <div class="fill over" style="width:${Math.min(pctOver, 100 - pctLim - pctRes)}%"></div>
         </div>
-        <div class="bar-legend"><span>Limite ${fmt(limite)}</span><span>Reserva ${fmt(reserva)}</span></div>
+        <div class="bar-legend"><span>${fmt(total)} usado</span><span>${fmt(teto)} teto</span></div>
+        <div class="fatura-stats">
+          <div><div class="k">Limite</div><div class="v">${fmt(limite)}</div></div>
+          <div><div class="k">Reserva</div><div class="v">${fmt(reserva)}</div></div>
+          <div><div class="k">Utilizado</div><div class="v">${fmt(total)}</div></div>
+        </div>
         ${!fatura ? `
         <form data-form="fatura-paga-valor" class="mt">
-          <label>Valor real da fatura (se ainda não lançou tudo)</label>
-          <input name="valor" inputmode="decimal" value="${total > 0 ? String(total).replace(".", ",") : String(num(S.config.faturaEstimada)).replace(".", ",")}" placeholder="ex.: 980,00" required />
+          <label>Valor da fatura (R$)</label>
+          <input name="valor" inputmode="decimal" value="${total > 0 ? String(total).replace(".", ",") : String(num(S.config.faturaEstimada)).replace(".", ",")}" placeholder="0,00" required />
           <button class="btn full" type="submit">Pagar fatura e zerar ciclo</button>
-        </form>
-        <div class="dica">Até o dia ${S.config.diaVencFatura || 19}: guarda o dinheiro. No dia, confirma o valor e paga.</div>` : `<div class="dica">Fatura de ${esc(mesNome())} paga (${fmt(fatura.valor)}). Compras novas entram na próxima.</div>`}
+          <div class="dica">Confirma o valor e zera as compras deste ciclo. Parcelas futuras entram depois.</div>
+        </form>` : `<div class="dica">Fatura de ${esc(mesNome())} paga (${fmt(fatura.valor)}). Compras novas entram na próxima.</div>`}
       </div>
 
       <div class="sect">Comprei no cartão</div>
       <form class="card" data-form="compra">
-        <label>Descrição</label>
+        <label style="margin-top:0;">Descrição</label>
         <input name="desc" placeholder="Mercado, remédio…" required />
         <div class="row2">
           <div>
@@ -2130,20 +2304,20 @@
           </div>
         </div>
         <button class="btn full" type="submit">Lançar no cartão</button>
-        <div class="dica">Ex.: R$ 300 em 3× → entra R$ 100 nesta fatura; as outras 2 caem depois que pagar a fatura.</div>
+        <div class="dica">Ex.: R$ 300 em 3× → R$ 100 nesta fatura; o resto cai depois.</div>
       </form>
 
       <div class="sect">Compras do ciclo</div>
       <div class="card">`;
 
     const lista = S.cartao.compras.slice().sort((a, b) => b.ts - a.ts);
-    if (!lista.length) html += `<div class="vazio">Cartão zerado. Maravilha!</div>`;
+    if (!lista.length) html += `<div class="vazio">Nenhuma compra neste ciclo.<br>Cartão zerado — ótimo.</div>`;
     lista.forEach((x) => {
       html += `
         <div class="item">
           <div class="grow"><div class="t">${esc(x.desc)}</div><div class="s">${dataBR(x.ts)}</div></div>
           <div class="val">${fmt(x.valor)}</div>
-          <button class="statusbtn" data-action="compra-del" data-id="${x.id}">✕</button>
+          <button class="icon-more" data-action="compra-del" data-id="${x.id}" aria-label="Remover compra" title="Remover">×</button>
         </div>`;
     });
     html += `</div>`;
@@ -2555,19 +2729,38 @@
 
     "conta-pagar": (el) => {
       pagandoId = pagandoId === el.dataset.id ? null : el.dataset.id;
+      menuContaId = null;
       render();
       const input = document.querySelector(`form[data-form="conta-paga"][data-id="${el.dataset.id}"] input`);
       if (input) { input.focus(); input.select(); }
     },
+    "conta-menu": (el) => {
+      menuContaId = menuContaId === el.dataset.id ? null : el.dataset.id;
+      render();
+    },
+    "conta-menu-close": () => { menuContaId = null; render(); },
+    "toggle-nova-conta": () => { showNovaConta = !showNovaConta; render(); },
+    "conta-edit": (el) => {
+      const ct = S.contas.find((c) => c.id === el.dataset.id);
+      if (!ct) return;
+      const raw = prompt("Novo valor previsto (R$)", String(num(ct.valor)).replace(".", ","));
+      if (raw === null) return;
+      const v = num(raw);
+      if (!(v > 0)) { alert("Valor inválido."); return; }
+      ct.valor = v;
+      menuContaId = null;
+      touch("Conta atualizada");
+    },
     "conta-desfazer": (el) => {
       const mk = mesKey();
       if (S.pagamentos[mk]) delete S.pagamentos[mk][el.dataset.id];
-      touch();
+      touch("Pagamento desfeito");
     },
     "conta-del": (el) => {
-      if (!confirm("Remover esta conta fixa?")) return;
+      if (!confirm("Excluir esta conta?\n\nEla sai do controle mensal. Lançamentos já pagos deste mês ficam no histórico até limpar o mês.")) return;
       S.contas = S.contas.filter((c) => c.id !== el.dataset.id);
-      touch();
+      menuContaId = null;
+      touch("Conta excluída");
     },
 
     "fatura-pagar": () => {
@@ -2757,7 +2950,7 @@
         ts: Date.now(),
       });
       hojePainel = null;
-      touch("Pronto — gasto anotado (" + fmt(valor) + ")");
+      touch("✓ Gasto registrado (" + fmt(valor) + ")");
     },
     "caixa-set": (f) => {
       const agora = Date.now();
@@ -2766,11 +2959,12 @@
       if (!S.cedula) S.cedula = { valor: 0 };
       if (f.cedula) S.cedula.valor = Math.max(0, num(f.cedula.value));
       showCorrigirSaldos = false;
-      touch("Saldos atualizados");
+      touch("✓ Saldos atualizados");
     },
     "conta-add": (f) => {
       S.contas.push({ id: uid(), nome: f.nome.value.trim(), valor: num(f.valor.value), dia: Math.min(31, Math.max(1, parseInt(f.dia.value) || 7)) });
-      touch("Conta adicionada");
+      showNovaConta = false;
+      touch("✓ Conta adicionada");
     },
     "conta-paga": (f) => {
       const mk = mesKey();
@@ -2781,7 +2975,7 @@
         ts: Date.now(),
       };
       pagandoId = null;
-      touch("Conta paga ✓");
+      touch("✓ Conta paga");
     },
     "hist-cmp": (f) => {
       histCmpA = f.a.value;
@@ -2821,7 +3015,7 @@
       if (!S.entradas) S.entradas = [];
       S.entradas.push({ id: uid(), desc, valor, fonte, ts: Date.now() });
       hojePainel = null;
-      touch("Somou " + fmt(valor) + " no " + (fonte === "cedula" ? "papel" : "banco"));
+      touch("✓ Entrada registrada (" + fmt(valor) + ")");
       window.scrollTo(0, 0);
     },
     "pergunte": async (f) => {
