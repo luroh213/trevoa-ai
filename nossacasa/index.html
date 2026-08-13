@@ -276,6 +276,70 @@
     .chknum.done { background: var(--brand); color: #fff; }
     .chknum.wait { background: var(--warn-soft, #fff3d6); color: var(--warn, #9a6b12); }
     nav.tabs button { font-size: 0.68rem; min-width: 0; flex: 1; }
+    /* ─── UX leigo 2026 ─────────────────────────────── */
+    .card {
+      border: none;
+      box-shadow: 0 12px 28px rgba(34, 48, 42, 0.08);
+    }
+    .acao-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.55rem;
+      margin-top: 0.95rem;
+    }
+    .acao-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.35rem; min-height: 5.2rem; padding: 0.7rem 0.4rem;
+      border: none; border-radius: 1.15rem; cursor: pointer;
+      font: inherit; font-weight: 800; font-size: 0.88rem; color: var(--brand-deep);
+      background: #fff; box-shadow: 0 10px 22px rgba(46, 125, 82, 0.1);
+      transition: transform 0.12s, background 0.12s;
+    }
+    .acao-btn:active { transform: scale(0.97); }
+    .acao-btn.on { background: var(--ok-soft); outline: 2px solid var(--brand); }
+    .acao-btn .ico { font-size: 1.55rem; line-height: 1; }
+    .subtabs {
+      display: flex; gap: 0.4rem; margin: 0.2rem 0 0.9rem;
+      background: rgba(255,255,255,0.7); padding: 0.3rem; border-radius: 1rem;
+    }
+    .subtabs button {
+      flex: 1; border: none; background: transparent; cursor: pointer;
+      font: inherit; font-weight: 800; font-size: 0.95rem; color: var(--ink-soft);
+      padding: 0.7rem 0.5rem; border-radius: 0.8rem;
+    }
+    .subtabs button.on { background: var(--brand); color: #fff; }
+    #toast {
+      position: fixed; left: 50%; bottom: calc(5.2rem + var(--safe-bottom));
+      transform: translateX(-50%) translateY(120%);
+      z-index: 50; max-width: calc(100% - 2rem); width: max-content;
+      background: var(--ink); color: #fff; font-weight: 700; font-size: 0.95rem;
+      padding: 0.75rem 1.1rem; border-radius: 999px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+      transition: transform 0.28s ease, opacity 0.28s;
+      opacity: 0; pointer-events: none;
+    }
+    #toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .onboard {
+      position: fixed; inset: 0; z-index: 60;
+      background: rgba(34, 48, 42, 0.55); backdrop-filter: blur(4px);
+      display: flex; align-items: flex-end; justify-content: center;
+      padding: 1rem;
+    }
+    .onboard .sheet {
+      width: 100%; max-width: 28rem; background: var(--cream);
+      border-radius: 1.5rem; padding: 1.4rem 1.2rem calc(1.4rem + var(--safe-bottom));
+      animation: pop 0.28s ease-out both;
+    }
+    .onboard .sheet h2 { font-family: "Fraunces", serif; font-size: 1.55rem; color: var(--brand-deep); margin-bottom: 0.45rem; }
+    .onboard .sheet p { color: var(--ink-soft); font-weight: 600; line-height: 1.45; margin-bottom: 1rem; }
+    .softlink {
+      display: block; width: 100%; margin-top: 0.85rem; text-align: center;
+      background: none; border: none; cursor: pointer; font: inherit;
+      font-weight: 800; color: var(--brand); padding: 0.7rem;
+    }
+    body { font-size: 17.5px; }
+    nav.tabs button { max-width: none; font-size: 0.72rem; }
+
   </style>
 </head>
 <body>
@@ -313,21 +377,17 @@
         </div>
         <div class="spacer"></div>
         <span id="syncdot" class="syncdot" title="Sincronização"></span>
-        <button class="iconbtn" data-action="tab" data-tab="ajustes" title="Ajustes">
+        <button class="iconbtn" data-action="ir-mais" data-mais="ajustes" title="Ajustes">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </header>
 
       <main id="view" class="view"></main>
 
-      <nav class="tabs">
+            <nav class="tabs">
         <button data-action="tab" data-tab="hoje" class="on">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
           Hoje
-        </button>
-        <button data-action="tab" data-tab="mes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v4"/><path d="M12 11v8"/><path d="M16 7v12"/></svg>
-          Mês
         </button>
         <button data-action="tab" data-tab="contas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
@@ -337,17 +397,19 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           Cartão
         </button>
-        <button data-action="tab" data-tab="despensa">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.3 12.1a1 1 0 0 1-1 .9H7.3a1 1 0 0 1-1-.9z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>
-          Despensa
+        <button data-action="tab" data-tab="casa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+          Casa
         </button>
-        <button data-action="tab" data-tab="gatos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="8" r="1.8"/><circle cx="16.5" cy="8" r="1.8"/><circle cx="4.5" cy="13" r="1.6"/><circle cx="19.5" cy="13" r="1.6"/><path d="M12 11c-2.9 0-5.2 2.3-5.2 5 0 1.9 1.5 3 3.2 3 1 0 1.4-.4 2-.4s1 .4 2 .4c1.7 0 3.2-1.1 3.2-3 0-2.7-2.3-5-5.2-5z"/></svg>
-          Gatos
+        <button data-action="tab" data-tab="mais">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+          Mais
         </button>
       </nav>
     </div>
   </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <div id="modalbk" class="modalbk" hidden>
     <div class="modal" id="modal"></div>
@@ -388,6 +450,7 @@
         quemEla: "Esposa",
         lembretesOn: false,
         aiOn: true,
+        onboardDone: false,
       },
       contas: [
         { id: uid(), nome: "Aluguel", valor: 450, dia: 7 },
@@ -445,6 +508,7 @@
     if (!out.config.quemEla) out.config.quemEla = "Esposa";
     if (out.config.lembretesOn == null) out.config.lembretesOn = false;
     if (out.config.aiOn == null) out.config.aiOn = !!(window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey);
+    if (out.config.onboardDone == null) out.config.onboardDone = false;
     if (!out.config.aiProvider) out.config.aiProvider = (window.NC_AI && window.NC_AI.provider) || "groq";
     if (window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey) out.config.aiOn = true;
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
@@ -460,6 +524,12 @@
   let histCmpA = "";
   let histCmpB = "";
   let showCorrigirSaldos = false;
+  let hojePainel = null; // entrou | gastei | caiu
+  let showMaisHoje = false;
+  let casaSub = "despensa";
+  let maisSub = "mes";
+  let onboardStep = 0;
+  let toastTimer = null;
   let saveTimer = null;
   let saving = false;
   let logado = false;
@@ -602,13 +672,23 @@
     try { localStorage.setItem(LS, JSON.stringify(S)); } catch (_) {}
   }
 
-  function touch() {
+  function touch(msg) {
     saveLocal();
     if (logado && NCCloud.configured()) {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(cloudSave, 900);
     }
     render();
+    if (msg) toast(msg);
+  }
+
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    if (!el || !msg) return;
+    el.textContent = msg;
+    el.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("on"), 2400);
   }
 
   async function cloudSave() {
@@ -1454,21 +1534,23 @@
   function render() {
     if (!logado) return;
     try {
+      if (tab === "despensa" || tab === "gatos") { casaSub = tab; tab = "casa"; }
+      if (tab === "mes" || tab === "ajustes") { maisSub = tab === "ajustes" ? "ajustes" : "mes"; tab = "mais"; }
       document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
       const v = $("#view");
       if (tab === "hoje") v.innerHTML = viewHoje();
-      else if (tab === "mes") v.innerHTML = viewMes();
       else if (tab === "contas") v.innerHTML = viewContas();
       else if (tab === "cartao") v.innerHTML = viewCartao();
-      else if (tab === "despensa") v.innerHTML = viewDespensa();
-      else if (tab === "gatos") v.innerHTML = viewGatos();
-      else if (tab === "ajustes") v.innerHTML = viewAjustes();
+      else if (tab === "casa") v.innerHTML = viewCasa();
+      else if (tab === "mais") v.innerHTML = viewMais();
+      else v.innerHTML = viewHoje();
+      maybeShowOnboard();
     } catch (e) {
       console.error(e);
       const v = $("#view");
       if (v) {
-        v.innerHTML = `<div class="card mt"><div class="alerta bad">Travou ao montar a tela: <b>${esc(e && e.message ? e.message : e)}</b>. Em Ajustes → Sair, entra de novo. Se continuar, manda print.</div>
-          <button class="btn full" data-action="tab" data-tab="ajustes">Abrir Ajustes</button></div>`;
+        v.innerHTML = `<div class="card mt"><div class="alerta bad">Travou ao montar a tela: <b>${esc(e && e.message ? e.message : e)}</b>. Em Mais → Ajustes → Sair, entra de novo.</div>
+          <button class="btn full" data-action="ir-mais" data-mais="ajustes">Abrir Ajustes</button></div>`;
       }
     }
   }
@@ -1478,24 +1560,23 @@
     const c = calc();
     const mk = c.mk;
     const rec = S.recebidos[mk] || {};
-    const pag = S.pagamentos[mk] || {};
     const hojeDia = new Date().getDate();
+    const nq = nomesQuem();
 
-    // Primeiro uso / saldo não informado: pergunta quanto tem no banco
     if (!S.caixa) {
       return `
       <div class="hero amarelo">
-        <div class="k">Começa aqui</div>
-        <div class="v" style="font-size:1.9rem;">Quanto tem agora?</div>
-        <div class="sub">Separa <b>banco</b> e <b>cédula</b> (papel). O app acompanha os dois.</div>
+        <div class="k">Bem-vindos</div>
+        <div class="v" style="font-size:1.85rem;">Quanto tem agora?</div>
+        <div class="sub">Só 2 números: no banco e em papel (cédula).</div>
       </div>
       <form class="card mt" data-form="caixa-set">
         <div class="row2">
           <div><label>No banco (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required autofocus /></div>
           <div><label>Em cédula (R$)</label><input name="cedula" inputmode="decimal" placeholder="0,00" /></div>
         </div>
-        <button class="btn full" type="submit">Salvar saldos</button>
-        <div class="dica">Zerado? Pode pôr 0 — o app já projeta o salário do dia ${c.prox ? c.prox.d.getDate() : "?"}.</div>
+        <button class="btn full" type="submit">Começar</button>
+        <div class="dica">Pode pôr 0. Salário do dia ${c.prox ? c.prox.d.getDate() : "?"} o app já espera.</div>
       </form>`;
     }
 
@@ -1503,7 +1584,7 @@
     const diaProx = c.prox ? c.prox.d.getDate() : "?";
     let html = `
       <div class="hero ${sem.cls}">
-        <div class="k">Total agora</div>
+        <div class="k">Vocês têm</div>
         <div class="v">${fmt(c.caixa)}</div>
         <div class="sub">Banco ${fmt(c.banco)} · Cédula ${fmt(c.cedula)}</div>
         <div class="msg">${sem.msg}</div>
@@ -1511,18 +1592,31 @@
         <div class="sub" style="margin-top:0.55rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.55rem; line-height:1.55;">
           <div>Pode ~<b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${diaProx}</div>
           <div>Lazer do mês: <b>${fmt(c.lazerRest || 0)}</b></div>
-          ${c.obrigAte > 0 ? `<div>Não gasta isso (contas + fatura + meta do mês): <b>${fmt(c.obrigAte)}</b></div>
-          <div style="opacity:0.9; font-size:0.92em;">↳ meta do mês só: <b>${fmt(c.metaNum)}</b> · emergência é outro potinho (aba Mês)</div>` : ""}
+          ${c.obrigAte > 0 ? `<div>Não gasta isso agora: <b>${fmt(c.obrigAte)}</b></div>
+          <div style="opacity:0.9; font-size:0.92em;">(contas + fatura + meta ${fmt(c.metaNum)})</div>` : ""}
         </div>
+      </div>
+
+      <div class="acao-grid">
+        <button type="button" class="acao-btn ${hojePainel === "entrou" ? "on" : ""}" data-action="hoje-painel" data-painel="entrou">
+          <span class="ico">＋</span>Entrou
+        </button>
+        <button type="button" class="acao-btn ${hojePainel === "gastei" ? "on" : ""}" data-action="hoje-painel" data-painel="gastei">
+          <span class="ico">−</span>Gastei
+        </button>
+        <button type="button" class="acao-btn ${hojePainel === "caiu" ? "on" : ""}" data-action="hoje-painel" data-painel="caiu">
+          <span class="ico">✓</span>Caiu?
+        </button>
       </div>`;
 
-    html += `
+    if (hojePainel === "entrou") {
+      html += `
       <form class="card mt" data-form="entrada-add">
-        <label style="margin-top:0;">Entrou dinheiro?</label>
-        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, presente, papel — <b>não</b> é salário (salário = botão Caiu).</div>
+        <label style="margin-top:0;">Quanto entrou?</label>
+        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, presente — não é salário.</div>
         <div class="row2">
-          <div><label>Quanto (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required /></div>
-          <div><label>De onde</label><input name="desc" placeholder="PIX da mãe, bônus…" required /></div>
+          <div><label>Valor (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required autofocus /></div>
+          <div><label>De onde</label><input name="desc" placeholder="PIX da mãe…" required /></div>
         </div>
         <label>Foi pra onde?</label>
         <select name="fonte">
@@ -1531,6 +1625,98 @@
         </select>
         <button class="btn full" type="submit">Somar</button>
       </form>`;
+    }
+
+    if (hojePainel === "gastei") {
+      html += `
+      <form class="card mt" data-form="gasto">
+        <label style="margin-top:0;">O que gastou?</label>
+        <input name="desc" placeholder="Mercado, farmácia…" required autofocus />
+        <div class="row2">
+          <div><label>Valor (R$)</label><input name="valor" inputmode="decimal" placeholder="35,00" required /></div>
+          <div><label>Tipo</label><select name="cat">${CATS_GASTO.map((x) => `<option>${x}</option>`).join("")}</select></div>
+        </div>
+        <label>Quem?</label>
+        <select name="quem">
+          <option value="eu">${esc(nq.eu)}</option>
+          <option value="ela">${esc(nq.ela)}</option>
+          <option value="casa">Juntos</option>
+        </select>
+        <label>Saiu de onde?</label>
+        <select name="fonte">
+          <option value="banco">Banco / PIX</option>
+          <option value="cedula">Cédula</option>
+        </select>
+        <button class="btn full" type="submit">Anotar</button>
+      </form>`;
+    }
+
+    if (hojePainel === "caiu") {
+      html += `<div class="sect">Salário caiu?</div><div class="card">`;
+      if (!S.config.rendas.length) html += `<div class="vazio">Nenhuma renda. Ajuste em Mais → Ajustes.</div>`;
+      S.config.rendas.forEach((r) => {
+        const total = num(r.valor) * (num(r.pessoas) || 1);
+        const got = rec[r.id];
+        html += `
+        <div class="item">
+          <div class="grow">
+            <div class="t">${esc(r.nome)} <span class="pill neu">dia ${r.dia}</span></div>
+            <div class="s">${fmt(total)}</div>
+          </div>
+          ${got
+            ? `<button class="statusbtn tem" data-action="renda-toggle" data-id="${r.id}">Caiu ✓</button>`
+            : `<button class="statusbtn ${r.dia <= hojeDia ? "acabou" : ""}" data-action="renda-toggle" data-id="${r.id}">Marcar Caiu</button>`}
+        </div>`;
+      });
+      html += `<div class="dica">Toque Caiu só quando o dinheiro aparecer no banco.</div></div>`;
+    }
+
+    html += lembretesSmartCard(c);
+
+    if (!showMaisHoje) {
+      html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Ver mais do dia (chat, passo a passo…)</button>`;
+      return html;
+    }
+
+    html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Esconder extras</button>`;
+    html += renderChatConversa();
+    html += `
+      <form class="card mt" data-form="simular">
+        <label style="margin-top:0;">E se gastar quanto?</label>
+        <div style="display:flex; gap:0.6rem; align-items:flex-end;">
+          <div style="flex:1;"><input name="valor" inputmode="decimal" placeholder="40,00" required /></div>
+          <button class="btn small" type="submit" style="min-height:3rem;">Simular</button>
+        </div>
+      </form>`;
+    html += renderBaloes(dicas(c));
+
+    const ck = checklistEstado();
+    if (ck) {
+      const espera = ck.modo === "espera" && !ck.caiu;
+      html += `
+      <div class="sect">Passo a passo</div>
+      <div class="card">
+        ${espera ? `<div class="dica" style="margin-top:0;">Próximo salário dia <b>${ck.alvo.dia}</b>. Até lá, sem conta grande.</div>` : ""}
+        <div class="chkstep">
+          <div class="chknum ${ck.caiu ? "done" : "wait"}">1</div>
+          <div class="grow">
+            <div class="t">${esc(ck.alvo.nome)} — ${fmt(ck.total)}</div>
+            <div class="s">${ck.caiu ? "Já caiu ✓" : "Quando cair, marca Caiu"}</div>
+          </div>
+          ${ck.caiu ? `<span class="statusbtn tem">OK</span>` : `<button class="btn small" data-action="checklist-salario">Caiu</button>`}
+        </div>
+        <div class="chkstep">
+          <div class="chknum ${!ck.faltam.length ? "done" : (ck.caiu ? "wait" : "")}">2</div>
+          <div class="grow">
+            <div class="t">Pagar contas</div>
+            <div class="s">${ck.faltam.length ? ck.faltam.length + " falta · " + fmt(ck.totalContas) : "Tudo pago"}</div>
+          </div>
+          ${ck.faltam.length && ck.caiu
+            ? `<button class="btn small" data-action="checklist-pagar-quinzena">Pagar</button>`
+            : `<span class="statusbtn">${ck.faltam.length ? "Depois" : "OK"}</span>`}
+        </div>
+      </div>`;
+    }
 
     const entradasMesLista = (S.entradas || [])
       .filter((e) => {
@@ -1540,14 +1726,11 @@
       .slice()
       .sort((a, b) => num(b.ts) - num(a.ts));
     if (entradasMesLista.length) {
-      html += `<div class="sect">Entradas <span class="mini">este mês</span></div><div class="card">`;
+      html += `<div class="sect">Entradas</div><div class="card">`;
       entradasMesLista.forEach((e) => {
         const dest = e.fonte === "cedula" ? "cédula" : "banco";
         html += `<div class="chkstep">
-          <div class="grow">
-            <div class="t">${esc(e.desc || "Entrada")}</div>
-            <div class="s">${fmt(e.valor)} · ${dest}</div>
-          </div>
+          <div class="grow"><div class="t">${esc(e.desc || "Entrada")}</div><div class="s">${fmt(e.valor)} · ${dest}</div></div>
           <button class="btn small ghost" data-action="entrada-del" data-id="${esc(e.id)}">Apagar</button>
         </div>`;
       });
@@ -1556,161 +1739,18 @@
 
     html += `
       <div class="card mt">
-        <button type="button" class="btn ghost full" style="margin-top:0;" data-action="toggle-corrigir">${showCorrigirSaldos ? "Esconder correção de saldo" : "Banco/cédula errado? Corrigir"}</button>
+        <button type="button" class="btn ghost full" style="margin-top:0;" data-action="toggle-corrigir">${showCorrigirSaldos ? "Esconder correção" : "Banco/cédula errado? Corrigir"}</button>
         ${showCorrigirSaldos ? `
         <form data-form="caixa-set" class="mt">
-          <div class="dica" style="margin-top:0;">Só se o app do banco (ou a carteira) mostrar outro valor — não é pra anotar entrada nova.</div>
+          <div class="dica" style="margin-top:0;">Só se o banco ou a carteira mostrar outro valor.</div>
           <div class="row2">
             <div><label>Banco</label><input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required /></div>
             <div><label>Cédula</label><input name="cedula" inputmode="decimal" value="${String(num((S.cedula || {}).valor)).replace(".", ",")}" /></div>
           </div>
-          <button class="btn full" type="submit">Corrigir saldos</button>
+          <button class="btn full" type="submit">Corrigir</button>
         </form>` : ""}
       </div>`;
 
-    html += lembretesSmartCard(c);
-
-    html += renderChatConversa();
-
-    html += `
-      <form class="card mt" data-form="simular">
-        <label style="margin-top:0;">E se gastar quanto? (simulador rápido)</label>
-        <div style="display:flex; gap:0.6rem; align-items:flex-end;">
-          <div style="flex:1;"><input name="valor" inputmode="decimal" placeholder="40,00" required /></div>
-          <button class="btn small" type="submit" style="min-height:3rem;">Simular</button>
-        </div>
-      </form>`;
-
-    // Balões inteligentes (sempre)
-    html += renderBaloes(dicas(c));
-
-    // Checklist quinzena (mira o salário que importa AGORA)
-    const ck = checklistEstado();
-    if (ck) {
-      const espera = ck.modo === "espera" && !ck.caiu;
-      const n1 = ck.caiu ? "done" : (espera ? "wait" : "wait");
-      const n2 = !ck.faltam.length ? "done" : (ck.caiu ? "wait" : "");
-      const n3 = ck.faturaGuardada ? "done" : (ck.caiu ? "wait" : "");
-      const titMini = espera
-        ? `próximo: dia ${ck.alvo.dia}`
-        : `dia ${ck.alvo.dia}`;
-      html += `
-      <div class="sect">Passo a passo <span class="mini">${titMini}</span></div>
-      <div class="card">
-        ${espera ? `<div class="dica" style="margin-top:0;">Hoje ainda <b>não</b> é dia de salário. Próximo cai dia <b>${ck.alvo.dia}</b>. Até lá: não paga conta grande.</div>` : ""}
-        <div class="chkstep">
-          <div class="chknum ${n1}">1</div>
-          <div class="grow">
-            <div class="t">${esc(ck.alvo.nome)} — ${fmt(ck.total)}</div>
-            <div class="s">${ck.caiu ? "Já caiu na conta ✓" : (espera ? `Espera o dia ${ck.alvo.dia}. Quando cair, toca Caiu.` : "Toca Caiu quando o dinheiro aparecer no banco")}</div>
-          </div>
-          ${ck.caiu
-            ? `<span class="statusbtn tem">Caiu ✓</span>`
-            : (espera
-              ? `<button class="btn small ghost" data-action="checklist-salario">Já caiu?</button>`
-              : `<button class="btn small" data-action="checklist-salario">Caiu</button>`)}
-        </div>
-        <div class="chkstep">
-          <div class="chknum ${n2}">2</div>
-          <div class="grow">
-            <div class="t">${espera ? "Depois: pagar contas" : "Pagar contas desta quinzena"}</div>
-            <div class="s">${ck.faltam.length
-              ? (espera
-                ? `Quando cair: ${ck.faltam.map((x) => esc(x.nome)).join(", ")} · ${fmt(ck.totalContas)}`
-                : `${ck.faltam.length} falta · ${fmt(ck.totalContas)}`)
-              : "Nada pendente"}</div>
-          </div>
-          ${ck.faltam.length
-            ? (ck.caiu
-              ? `<button class="btn small" data-action="checklist-pagar-quinzena">Pagar todas</button>`
-              : `<span class="statusbtn">Depois</span>`)
-            : `<span class="statusbtn tem">OK ✓</span>`}
-        </div>
-        <div class="chkstep">
-          <div class="chknum ${n3}">3</div>
-          <div class="grow">
-            <div class="t">${ck.faturaPaga ? "Fatura paga" : `Reservar fatura (dia ${S.config.diaVencFatura || 19})`}</div>
-            <div class="s">${ck.faturaVal > 0 ? fmt(ck.faturaVal) : (espera ? "Valor sai perto do dia 19" : "Anota nas compras do cartão")}</div>
-          </div>
-          ${ck.faturaPaga
-            ? `<span class="statusbtn tem">Paga ✓</span>`
-            : ck.faturaGuardada
-              ? `<span class="statusbtn tem">Separada ✓</span>`
-              : (ck.caiu
-                ? `<button class="btn small ghost" data-action="checklist-fatura-guardar">Já separei</button>`
-                : `<span class="statusbtn">Depois</span>`)}
-        </div>
-        <div class="chkstep">
-          <div class="chknum ${ck.caiu && !ck.faltam.length ? "done" : ""}">4</div>
-          <div class="grow">
-            <div class="t">${espera ? "Depois do salário, sobra pra" : "Sobra pra viver / juntar"}</div>
-            <div class="s">Lazer ~${fmt(ck.lazer)} · juntar (auto) ${fmt(ck.meta)}</div>
-          </div>
-          <div class="val">${espera ? "—" : fmt(ck.sobra)}</div>
-        </div>
-      </div>`;
-    }
-
-    // Alerta só de cartão estourado (resto vai nos balões)
-    const limite = num(S.config.limiteCartao), reserva = num(S.config.reservaCartao);
-    if (c.comprasCiclo > limite + reserva) {
-      html += `<div class="card mt"><div class="alerta bad">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — estourou limite + reserva (${fmt(limite + reserva)})!</span></div></div>`;
-    } else if (c.comprasCiclo > limite) {
-      html += `<div class="card mt"><div class="alerta warn">💳 <span>Fatura em <b>${fmt(c.comprasCiclo)}</b> — passou do limite de ${fmt(limite)}, usando a reserva.</span></div></div>`;
-    }
-
-    // Gasto rápido
-    const nq = nomesQuem();
-    html += `
-      <div class="sect">Gastei agora <span class="mini">dinheiro / pix / débito</span></div>
-      <form class="card" data-form="gasto">
-        <label>Descrição</label>
-        <input name="desc" placeholder="iFood, farmácia…" required />
-        <div class="row2">
-          <div>
-            <label>Valor (R$)</label>
-            <input name="valor" inputmode="decimal" placeholder="35,00" required />
-          </div>
-          <div>
-            <label>Categoria</label>
-            <select name="cat">${CATS_GASTO.map((x) => `<option>${x}</option>`).join("")}</select>
-          </div>
-        </div>
-        <label>Quem gastou?</label>
-        <select name="quem">
-          <option value="eu">${esc(nq.eu)}</option>
-          <option value="ela">${esc(nq.ela)}</option>
-          <option value="casa">Casa (junto)</option>
-        </select>
-        <label>Saiu de onde?</label>
-        <select name="fonte">
-          <option value="banco">Banco / PIX / débito</option>
-          <option value="cedula">Cédula (papel)</option>
-        </select>
-        <button class="btn full" type="submit">Anotar gasto</button>
-      </form>`;
-
-    // Recebimentos do mês
-    html += `<div class="sect">Recebimentos <span class="mini">${esc(mesNome())}</span></div><div class="card">`;
-    if (!S.config.rendas.length) html += `<div class="vazio">Nenhuma renda cadastrada. Ajuste em Ajustes.</div>`;
-    S.config.rendas.forEach((r) => {
-      const total = num(r.valor) * (num(r.pessoas) || 1);
-      const got = rec[r.id];
-      html += `
-        <div class="item">
-          <div class="grow">
-            <div class="t">${esc(r.nome)} <span class="pill neu">dia ${r.dia}</span></div>
-            <div class="s">${fmt(r.valor)} × ${r.pessoas || 1}</div>
-          </div>
-          <div class="val">${fmt(total)}</div>
-          ${got
-            ? `<button class="statusbtn tem" data-action="renda-toggle" data-id="${r.id}">Caiu ✓</button>`
-            : `<button class="statusbtn ${r.dia <= hojeDia ? "acabou" : ""}" data-action="renda-toggle" data-id="${r.id}">Caiu?</button>`}
-        </div>`;
-    });
-    html += `</div>`;
-
-    // Gastos recentes
     const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
     const recentesAll = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts);
     const recentes = recentesAll.filter((g) => passaFiltroQuem(g.quem)).slice(0, 12);
@@ -1719,12 +1759,12 @@
       if (g.quem === "eu") totEu += num(g.valor);
       if (g.quem === "ela") totEla += num(g.valor);
     });
-    html += `<div class="sect">Gastos do mês <span class="mini">${fmt(c.gastosMes)} no dinheiro</span></div><div class="card">
+    html += `<div class="sect">Gastos do mês</div><div class="card">
       ${htmlFiltroQuem()}
       <div class="dica" style="margin-top:0;">${esc(nq.eu)} ${fmt(totEu)} · ${esc(nq.ela)} ${fmt(totEla)}</div>`;
-    if (!recentes.length) html += `<div class="vazio">${filtroQuem === "todos" ? "Nenhum gasto anotado. Bora manter assim 😄" : "Nada neste filtro."}</div>`;
+    if (!recentes.length) html += `<div class="vazio">Nenhum gasto ainda.</div>`;
     recentes.forEach((g) => {
-      const quemLbl = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : (g.quem === "casa" ? "Casa" : "");
+      const quemLbl = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : (g.quem === "casa" ? "Juntos" : "");
       const fonteLbl = g.fonte === "cedula" ? "cédula" : "banco";
       html += `
         <div class="item">
@@ -1735,6 +1775,48 @@
     });
     html += `</div>`;
     return html;
+  }
+
+  function viewCasa() {
+    return `
+      <div class="subtabs">
+        <button type="button" class="${casaSub === "despensa" ? "on" : ""}" data-action="casa-sub" data-sub="despensa">Despensa</button>
+        <button type="button" class="${casaSub === "gatos" ? "on" : ""}" data-action="casa-sub" data-sub="gatos">Gatos</button>
+      </div>
+      ${casaSub === "gatos" ? viewGatos() : viewDespensa()}`;
+  }
+
+  function viewMais() {
+    return `
+      <div class="subtabs">
+        <button type="button" class="${maisSub === "mes" ? "on" : ""}" data-action="mais-sub" data-sub="mes">Mês</button>
+        <button type="button" class="${maisSub === "ajustes" ? "on" : ""}" data-action="mais-sub" data-sub="ajustes">Ajustes</button>
+      </div>
+      ${maisSub === "ajustes" ? viewAjustes() : viewMes()}`;
+  }
+
+  function maybeShowOnboard() {
+    const old = document.getElementById("onboard");
+    if (old) old.remove();
+    if (!logado || !S.caixa || S.config.onboardDone) return;
+    const steps = [
+      { t: "Só 3 botões no Hoje", p: "Entrou = dinheiro novo. Gastei = anotou saída. Caiu? = salário chegou no banco." },
+      { t: "Contas e Cartão embaixo", p: "Pague contas na aba Contas. Compras no cartão ficam em Cartão. Casa = despensa + gatos." },
+      { t: "Meta alimenta emergência", p: "Meta do mês = quanto juntar agora. Quando juntar, some no Fundo de emergência (aba Mais → Mês)." },
+    ];
+    const s = steps[Math.min(onboardStep, steps.length - 1)];
+    const last = onboardStep >= steps.length - 1;
+    const wrap = document.createElement("div");
+    wrap.id = "onboard";
+    wrap.className = "onboard";
+    wrap.innerHTML = `<div class="sheet">
+      <div class="pill ok" style="margin-bottom:0.6rem;">Dica ${onboardStep + 1}/${steps.length}</div>
+      <h2>${s.t}</h2>
+      <p>${s.p}</p>
+      <button class="btn full" type="button" data-action="onboard-next">${last ? "Entendi, bora" : "Próximo"}</button>
+      <button class="softlink" type="button" data-action="onboard-skip">Pular</button>
+    </div>`;
+    document.body.appendChild(wrap);
   }
 
   /* ─── Mês (histórico) ─── */
@@ -1944,7 +2026,7 @@
     const pagoMes = S.contas.filter((x) => pag[x.id]).reduce((a, x) => a + num(pag[x.id].valor), 0);
 
     let html = `
-      <div class="sect">Contas fixas <span class="mini">${esc(mesNome())}</span></div>
+      <div class="sect">Contas da casa <span class="mini">${esc(mesNome())}</span></div>
       <div class="card">
         <div class="bar"><div class="fill lim" style="width:${totalMes ? Math.min(100, (pagoMes / totalMes) * 100) : 0}%"></div></div>
         <div class="bar-legend"><span>Pago: ${fmt(pagoMes)}</span><span>Total: ${fmt(totalMes)}</span></div>
@@ -2352,7 +2434,41 @@
   }
 
   const A = {
-    "tab": (el) => { tab = el.dataset.tab; closeModal(); render(); window.scrollTo(0, 0); },
+    "tab": (el) => {
+      tab = el.dataset.tab;
+      if (tab === "casa" && el.dataset.sub) casaSub = el.dataset.sub;
+      if (tab === "mais" && el.dataset.mais) maisSub = el.dataset.mais;
+      hojePainel = null;
+      closeModal();
+      render();
+      window.scrollTo(0, 0);
+    },
+    "ir-mais": (el) => {
+      tab = "mais";
+      maisSub = el.dataset.mais || "ajustes";
+      closeModal();
+      render();
+      window.scrollTo(0, 0);
+    },
+    "hoje-painel": (el) => {
+      const p = el.dataset.painel;
+      hojePainel = hojePainel === p ? null : p;
+      render();
+    },
+    "toggle-mais-hoje": () => { showMaisHoje = !showMaisHoje; render(); },
+    "casa-sub": (el) => { casaSub = el.dataset.sub || "despensa"; render(); window.scrollTo(0, 0); },
+    "mais-sub": (el) => { maisSub = el.dataset.sub || "mes"; render(); window.scrollTo(0, 0); },
+    "onboard-next": () => {
+      const total = 3;
+      if (onboardStep >= total - 1) {
+        S.config.onboardDone = true;
+        touch();
+        return;
+      }
+      onboardStep += 1;
+      maybeShowOnboard();
+    },
+    "onboard-skip": () => { S.config.onboardDone = true; touch(); },
     "modal-close": () => closeModal(),
 
     "renda-toggle": (el) => {
@@ -2596,7 +2712,8 @@
       S.chatResposta = null;
       // chat conversa fica (histórico); se quiser limpar: botão no chat
       touch();
-      tab = "mes";
+      tab = "mais";
+      maisSub = "mes";
       render();
       window.scrollTo(0, 0);
     },
@@ -2639,7 +2756,8 @@
         fonte,
         ts: Date.now(),
       });
-      touch();
+      hojePainel = null;
+      touch("Pronto — gasto anotado (" + fmt(valor) + ")");
     },
     "caixa-set": (f) => {
       const agora = Date.now();
@@ -2647,11 +2765,12 @@
       S.caixa = { valor: num(f.valor.value), em: agora };
       if (!S.cedula) S.cedula = { valor: 0 };
       if (f.cedula) S.cedula.valor = Math.max(0, num(f.cedula.value));
-      touch();
+      showCorrigirSaldos = false;
+      touch("Saldos atualizados");
     },
     "conta-add": (f) => {
       S.contas.push({ id: uid(), nome: f.nome.value.trim(), valor: num(f.valor.value), dia: Math.min(31, Math.max(1, parseInt(f.dia.value) || 7)) });
-      touch();
+      touch("Conta adicionada");
     },
     "conta-paga": (f) => {
       const mk = mesKey();
@@ -2662,12 +2781,13 @@
         ts: Date.now(),
       };
       pagandoId = null;
-      touch();
+      touch("Conta paga ✓");
     },
     "hist-cmp": (f) => {
       histCmpA = f.a.value;
       histCmpB = f.b.value;
-      tab = "mes";
+      tab = "mais";
+      maisSub = "mes";
       render();
     },
     "backup-restore": (f) => {
@@ -2680,11 +2800,9 @@
           if (!doc || typeof doc !== "object") throw new Error("invalid");
           if (!confirm("Isso substitui TODOS os dados atuais pelo backup. Continuar?")) return;
           S = hydrate(doc);
-          touch();
+          touch("Backup restaurado");
           tab = "hoje";
-          render();
           window.scrollTo(0, 0);
-          alert("Backup restaurado.");
         } catch (_) {
           alert("Arquivo inválido. Use o JSON baixado em Ajustes.");
         }
@@ -2702,9 +2820,8 @@
       }
       if (!S.entradas) S.entradas = [];
       S.entradas.push({ id: uid(), desc, valor, fonte, ts: Date.now() });
-      touch();
-      tab = "hoje";
-      render();
+      hojePainel = null;
+      touch("Somou " + fmt(valor) + " no " + (fonte === "cedula" ? "papel" : "banco"));
       window.scrollTo(0, 0);
     },
     "pergunte": async (f) => {
