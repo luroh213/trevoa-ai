@@ -2383,7 +2383,12 @@
     },
 
     "gasto-del": (el) => {
-      S.gastos = S.gastos.filter((g) => g.id !== el.dataset.id);
+      const g = S.gastos.find((x) => x.id === el.dataset.id);
+      if (g && g.fonte === "cedula") {
+        if (!S.cedula) S.cedula = { valor: 0 };
+        S.cedula.valor = Math.round((num(S.cedula.valor) + num(g.valor)) * 100) / 100;
+      }
+      S.gastos = S.gastos.filter((x) => x.id !== el.dataset.id);
       touch();
     },
     "entrada-del": (el) => {
