@@ -453,6 +453,9 @@
 
   let tab = "hoje";
   let pagandoId = null;
+  let filtroQuem = "todos"; // todos | eu | ela
+  let histCmpA = "";
+  let histCmpB = "";
   let saveTimer = null;
   let saving = false;
   let logado = false;
@@ -469,6 +472,94 @@
   }
   function mesNome() {
     return new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  }
+  function mesNomeDe(mk) {
+    if (!mk || !/^\d{4}-\d{2}$/.test(mk)) return mk || "";
+    const [y, m] = mk.split("-").map(Number);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+  }
+  function mesesFechadosLista() {
+    return Object.keys(S.mesesFechados || {}).sort().reverse();
+  }
+  function diasAteDiaMes(diaAlvo) {
+    if (!(diaAlvo >= 1 && diaAlvo <= 31)) return null;
+    const h = new Date();
+    const hoje = h.getDate();
+    if (diaAlvo === hoje) return 0;
+    if (diaAlvo > hoje) return diaAlvo - hoje;
+    const ult = new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate();
+    const dia = Math.min(diaAlvo, ult);
+    const alvo = new Date(h.getFullYear(), h.getMonth() + 1, dia);
+    alvo.setHours(0, 0, 0, 0);
+    const hoje0 = new Date(h); hoje0.setHours(0, 0, 0, 0);
+    return Math.max(1, Math.round((alvo - hoje0) / 86400000));
+  }
+  function lembretesSmartCard(c) {
+    const linhas = [];
+    const hoje = new Date().getDate();
+    if (c.prox) {
+      const d = c.diasAte;
+      const nome = c.prox.nome || "salário";
+      if (d === 0) linhas.push({ cls: "warn", txt: `<b>${esc(nome)}</b> cai <b>hoje</b> (~${fmt(c.prox.valor)}). Marca Caiu quando entrar.` });
+      else if (d === 1) linhas.push({ cls: "warn", txt: `Amanhã cai <b>${esc(nome)}</b> (~${fmt(c.prox.valor)}).` });
+      else if (d <= 7) linhas.push({ cls: "ok", txt: `Faltam <b>${d} dias</b> pro salário (~${fmt(c.prox.valor)}) · dia ${c.prox.d.getDate()}.` });
+      else linhas.push({ cls: "ok", txt: `Próximo salário em <b>${d} dias</b> (dia ${c.prox.d.getDate()} · ~${fmt(c.prox.valor)}).` });
+    }
+    const vf = diaFatura();
+    const df = diasAteDiaMes(vf);
+    if (df === 0) linhas.push({ cls: "bad", txt: `Fatura vence <b>hoje</b> (dia ${vf}). Olha Cartão.` });
+    else if (df === 1) linhas.push({ cls: "warn", txt: `Fatura amanhã (dia ${vf}). Separa o valor.` });
+    else if (df != null && df <= 7) linhas.push({ cls: "warn", txt: `Fatura em <b>${df} dias</b> (dia ${vf}).` });
+    const ck = checklistEstado();
+    if (ck && !ck.caiu && ck.modo === "ativo") {
+      linhas.push({ cls: "warn", txt: `Salário do dia ${ck.alvo.dia} já deveria ter caído — falta marcar <b>Caiu</b>.` });
+    }
+    if (ck && ck.caiu && ck.faltam.length) {
+      linhas.push({ cls: "warn", txt: `${ck.faltam.length} conta(s) desta quinzena ainda abertas (~${fmt(ck.totalContas)}).` });
+    }
+    // despensa recorrente perto do dia
+    (S.despensa || []).forEach((d) => {
+      const dia = diaAcabaItem(d);
+      if (!dia) return;
+      const dist = Math.min(Math.abs(dia - hoje), Math.abs(dia - hoje + 30), Math.abs(dia + 30 - hoje));
+      if (dist <= 2 && d.status === "tem") {
+        linhas.push({ cls: "ok", txt: `<b>${esc(d.nome)}</b> costuma acabar ~dia ${dia} — confere a despensa.` });
+      }
+    });
+    if (!linhas.length) return "";
+    return `
+      <div class="sect">Lembretes <span class="mini">hoje</span></div>
+      <div class="card">
+        ${linhas.slice(0, 5).map((l) => `<div class="alerta ${l.cls}" style="margin-bottom:0.45rem;"><span>${l.txt}</span></div>`).join("")}
+      </div>`;
+  }
+  function diaAcabaItem(d) {
+    const manual = num(d.diaAcaba);
+    if (manual >= 1 && manual <= 31) return Math.round(manual);
+    const h = (d.hist || []).slice().sort((a, b) => b.ts - a.ts);
+    const dm = duracaoMedia(d);
+    if (!h.length || !(dm > 0)) return null;
+    const last = h[0];
+    const qtd = Math.max(1, num(last.qtd) || 1);
+    const next = new Date(num(last.ts) + dm * qtd * 86400000);
+    return next.getDate();
+  }
+  function passaFiltroQuem(quem) {
+    if (filtroQuem === "todos") return true;
+    if (filtroQuem === "eu") return quem === "eu";
+    if (filtroQuem === "ela") return quem === "ela";
+    return true;
+  }
+  function htmlFiltroQuem() {
+    const nq = nomesQuem();
+    const btn = (id, label) =>
+      `<button type="button" class="btn small ${filtroQuem === id ? "" : "ghost"}" data-action="filtro-quem" data-quem="${id}" style="flex:1;">${esc(label)}</button>`;
+    return `<div style="display:flex; gap:0.4rem; margin:0.5rem 0 0.7rem;">
+      ${btn("todos", "Todos")}
+      ${btn("eu", nq.eu)}
+      ${btn("ela", nq.ela)}
+    </div>`;
   }
   function dataBR(ts) {
     return new Date(ts).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -1418,7 +1509,11 @@
           <input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required />
         </div>
         <button class="btn small" type="submit" style="min-height:3rem;">Atualizar</button>
-      </form>
+      </form>`;
+
+    html += lembretesSmartCard(c);
+
+    html += `
       <form class="card mt" data-form="entrada-add">
         <label style="margin-top:0;">Entrou dinheiro por fora?</label>
         <div class="dica" style="margin-top:0.2rem;">PIX, bônus, devolução, presente — <b>não</b> é salário (salário = botão Caiu).</div>
@@ -1587,9 +1682,17 @@
 
     // Gastos recentes
     const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
-    const recentes = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts).slice(0, 8);
-    html += `<div class="sect">Gastos do mês <span class="mini">${fmt(c.gastosMes)} no dinheiro</span></div><div class="card">`;
-    if (!recentes.length) html += `<div class="vazio">Nenhum gasto anotado. Bora manter assim 😄</div>`;
+    const recentesAll = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts);
+    const recentes = recentesAll.filter((g) => passaFiltroQuem(g.quem)).slice(0, 12);
+    let totEu = 0, totEla = 0;
+    recentesAll.forEach((g) => {
+      if (g.quem === "eu") totEu += num(g.valor);
+      if (g.quem === "ela") totEla += num(g.valor);
+    });
+    html += `<div class="sect">Gastos do mês <span class="mini">${fmt(c.gastosMes)} no dinheiro</span></div><div class="card">
+      ${htmlFiltroQuem()}
+      <div class="dica" style="margin-top:0;">${esc(nq.eu)} ${fmt(totEu)} · ${esc(nq.ela)} ${fmt(totEla)}</div>`;
+    if (!recentes.length) html += `<div class="vazio">${filtroQuem === "todos" ? "Nenhum gasto anotado. Bora manter assim 😄" : "Nada neste filtro."}</div>`;
     recentes.forEach((g) => {
       const quemLbl = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : (g.quem === "casa" ? "Casa" : "");
       html += `
@@ -1617,10 +1720,13 @@
     const gastosMes = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts);
 
     let detalhePago = "";
+    const nqMes = nomesQuem();
     for (const id in pag) {
       const ct = S.contas.find((x) => x.id === id);
       const nome = ct ? ct.nome : "Conta antiga (apagada)";
-      detalhePago += `<div class="item"><div class="grow"><div class="t">${esc(nome)}</div><div class="s">pago ${dataBR(pag[id].ts)}</div></div><div class="val">${fmt(pag[id].valor)}</div></div>`;
+      const quemP = pag[id].quem === "ela" ? nqMes.ela : pag[id].quem === "eu" ? nqMes.eu : "";
+      if (!passaFiltroQuem(pag[id].quem || "casa")) continue;
+      detalhePago += `<div class="item"><div class="grow"><div class="t">${esc(nome)}</div><div class="s">pago ${dataBR(pag[id].ts)}${quemP ? " · " + esc(quemP) : ""}</div></div><div class="val">${fmt(pag[id].valor)}</div></div>`;
     }
     let detalheEntrou = "";
     for (const id in rec) {
@@ -1629,8 +1735,9 @@
       detalheEntrou += `<div class="item"><div class="grow"><div class="t">${esc(nome)}</div><div class="s">caiu ${dataBR(rec[id].ts)}</div></div><div class="val">${fmt(rec[id].valor)}</div></div>`;
     }
     let detalheGastos = "";
-    gastosMes.forEach((g) => {
-      detalheGastos += `<div class="item"><div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)} · ${dataBR(g.ts)}</div></div><div class="val">${fmt(g.valor)}</div></div>`;
+    gastosMes.filter((g) => passaFiltroQuem(g.quem)).forEach((g) => {
+      const quemLbl = g.quem === "ela" ? nqMes.ela : g.quem === "eu" ? nqMes.eu : (g.quem === "casa" ? "Casa" : "");
+      detalheGastos += `<div class="item"><div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)}${quemLbl ? " · " + esc(quemLbl) : ""} · ${dataBR(g.ts)}</div></div><div class="val">${fmt(g.valor)}</div></div>`;
     });
 
     let html = `
@@ -1639,6 +1746,9 @@
         <div class="v">${fmt(r.saldo)}</div>
         <div class="sub">Entrou ${fmt(c.entrouMes)} · saiu ${fmt(r.saiu)} (contas + dinheiro + fatura paga)</div>
       </div>
+
+      <div class="sect">Ver por pessoa</div>
+      <div class="card">${htmlFiltroQuem()}<div class="dica" style="margin-top:0;">Filtra gastos e contas pagas abaixo.</div></div>
 
       <div class="sect">Fluxo</div>
       <div class="card">
@@ -1737,8 +1847,54 @@
           <div class="s" style="margin-bottom:0.7rem;">Trava um resumo deste mês (previsto × real). Continua podendo anotar depois; o fechamento é a foto.</div>
           <button class="btn full" data-action="mes-fechar">Fechar ${esc(mesNome())}</button>
         `}
-      </div>
+      </div>`;
 
+    const histKeys = mesesFechadosLista();
+    if (histKeys.length) {
+      if (!histCmpA || !S.mesesFechados[histCmpA]) histCmpA = histKeys[0] || "";
+      if (!histCmpB || !S.mesesFechados[histCmpB]) histCmpB = histKeys[1] || histKeys[0] || "";
+      html += `
+      <div class="sect">Histórico fechados <span class="mini">${histKeys.length}</span></div>
+      <div class="card">`;
+      histKeys.slice(0, 8).forEach((k) => {
+        const s = S.mesesFechados[k];
+        html += `<div class="item">
+          <div class="grow">
+            <div class="t">${esc(mesNomeDe(k))}${k === mk ? ' <span class="pill ok">atual</span>' : ""}</div>
+            <div class="s">entrou ${fmt(s.entrou)} · saiu ${fmt(s.saiu)} · sobra ${fmt(s.juntadoEst)}</div>
+          </div>
+          <div class="val">${fmt(s.juntadoEst)}</div>
+        </div>`;
+      });
+      html += `
+        <div class="sect" style="margin:0.8rem 0 0.4rem;">Comparar dois meses</div>
+        <form data-form="hist-cmp">
+          <div class="row2">
+            <div><label>Mês A</label><select name="a">${histKeys.map((k) => `<option value="${k}" ${k === histCmpA ? "selected" : ""}>${esc(mesNomeDe(k))}</option>`).join("")}</select></div>
+            <div><label>Mês B</label><select name="b">${histKeys.map((k) => `<option value="${k}" ${k === histCmpB ? "selected" : ""}>${esc(mesNomeDe(k))}</option>`).join("")}</select></div>
+          </div>
+          <button class="btn full" type="submit">Atualizar comparação</button>
+        </form>`;
+      const a = S.mesesFechados[histCmpA];
+      const b = S.mesesFechados[histCmpB];
+      if (a && b) {
+        const row = (label, va, vb) => {
+          const max = Math.max(num(va), num(vb), 1);
+          return `<div class="bar-legend"><span>${esc(label)}</span><span>${fmt(va)} vs ${fmt(vb)}</span></div>
+            <div class="hbar"><i style="width:${barraPct(va, max)}%"></i></div>
+            <div class="hbar alt"><i style="width:${barraPct(vb, max)}%"></i></div>`;
+        };
+        html += `<div class="dica">${esc(mesNomeDe(histCmpA))} (barra) vs ${esc(mesNomeDe(histCmpB))} (barra clara)</div>
+          ${row("Entrou", a.entrou, b.entrou)}
+          ${row("Saiu", a.saiu, b.saiu)}
+          ${row("Gastos", a.gastos, b.gastos)}
+          ${row("iFood", a.ifood, b.ifood)}
+          ${row("Sobra", a.juntadoEst, b.juntadoEst)}`;
+      }
+      html += `</div>`;
+    }
+
+    html += `
       <div class="sect">Limpar / exportar</div>
       <div class="card">
         <div class="s" style="margin-bottom:0.7rem;">Apaga só os lançamentos de <b>${esc(mesNome())}</b>: salários marcados, contas pagas, gastos no dinheiro e fatura paga do mês. Contas cadastradas, despensa, gatos e saldo do banco <b>ficam</b>.</div>
@@ -1765,13 +1921,15 @@
       <div class="card">`;
 
     if (!S.contas.length) html += `<div class="vazio">Nenhuma conta cadastrada.</div>`;
+    const nqC = nomesQuem();
     S.contas.slice().sort((a, b) => a.dia - b.dia).forEach((x) => {
       const p = pag[x.id];
+      const quemLbl = p && p.quem === "ela" ? nqC.ela : p && p.quem === "eu" ? nqC.eu : "";
       html += `
         <div class="item">
           <div class="grow">
             <div class="t">${esc(x.nome)} <span class="pill neu">dia ${x.dia}</span></div>
-            <div class="s">${p ? "pago " + dataBR(p.ts) : "previsto " + fmt(x.valor)}</div>
+            <div class="s">${p ? "pago " + dataBR(p.ts) + (quemLbl ? " · " + esc(quemLbl) : "") : "previsto " + fmt(x.valor)}</div>
           </div>
           <div class="val">${fmt(p ? p.valor : x.valor)}</div>
           ${p
@@ -1781,11 +1939,15 @@
         </div>`;
       if (!p && pagandoId === x.id) {
         html += `
-        <form class="buyrow" data-form="conta-paga" data-id="${x.id}" style="border-top:none; padding-top:0;">
-          <div class="nome"><span class="s">Valor real deste mês (energia varia, ajusta aqui)</span></div>
+        <form class="buyrow" data-form="conta-paga" data-id="${x.id}" style="border-top:none; padding-top:0; grid-template-columns: 1fr 1fr auto;">
+          <div class="nome" style="grid-column:1/-1;"><span class="s">Valor real + quem pagou</span></div>
           <input name="valor" inputmode="decimal" value="${String(num(x.valor)).replace(".", ",")}" required />
-          <button class="btn small" type="submit">Confirmar</button>
-          <span></span>
+          <select name="quem">
+            <option value="eu">${esc(nqC.eu)}</option>
+            <option value="ela">${esc(nqC.ela)}</option>
+            <option value="casa">Casa</option>
+          </select>
+          <button class="btn small" type="submit">OK</button>
         </form>`;
       }
     });
@@ -1939,11 +2101,13 @@
     S.despensa.slice().sort((a, b) => ord[a.status] - ord[b.status] || a.nome.localeCompare(b.nome)).forEach((d) => {
       const lbl = d.status === "tem" ? "Tem" : d.status === "pouco" ? "Acabando" : "Acabou";
       const dm = duracaoMedia(d);
-      const sub = [d.cat, dm ? `dura ~${Math.round(dm)}d/un` : ""].filter(Boolean).join(" · ");
+      const diaA = diaAcabaItem(d);
+      const sub = [d.cat, dm ? `dura ~${Math.round(dm)}d/un` : "", diaA ? `acaba ~dia ${diaA}` : ""].filter(Boolean).join(" · ");
       html += `
         <div class="item">
           <div class="grow"><div class="t">${esc(d.nome)}</div><div class="s">${esc(sub)}</div></div>
           <button class="statusbtn ${d.status}" data-action="des-status" data-id="${d.id}">${lbl}</button>
+          <button class="statusbtn" data-action="des-dia" data-id="${d.id}" title="Dia que costuma acabar">dia</button>
           <button class="statusbtn" data-action="des-del" data-id="${d.id}">✕</button>
         </div>`;
     });
@@ -1954,6 +2118,9 @@
         <input name="nome" placeholder="Arroz, café, ração dos gatos…" required />
         <label>Categoria</label>
         <select name="cat">${CATS_DESP.map((x) => `<option>${x}</option>`).join("")}</select>
+        <label>Costuma acabar no dia (~) — opcional</label>
+        <input name="diaAcaba" type="number" min="1" max="31" placeholder="ex: 20" />
+        <div class="dica">Se souber: “arroz acaba sempre ~dia 20”. Senão o app estima pelas compras.</div>
         <button class="btn full" type="submit">Adicionar</button>
       </form>`;
     return html;
@@ -2134,7 +2301,13 @@
       </div>
 
       <div class="card">
-        <button class="btn ghost full" style="margin-top:0;" data-action="exportar">Exportar dados (JSON)</button>
+        <button class="btn ghost full" style="margin-top:0;" data-action="exportar">Baixar backup (JSON)</button>
+        <form data-form="backup-restore" class="mt">
+          <label style="margin-top:0;">Restaurar backup</label>
+          <input name="arquivo" type="file" accept="application/json,.json" required />
+          <button class="btn full" type="submit">Restaurar deste arquivo</button>
+          <div class="dica">Substitui os dados atuais pelo JSON. Use o backup baixado acima.</div>
+        </form>
         <button class="btn danger full" data-action="limpar-mes">Limpar lançamentos deste mês</button>
         <button class="btn danger full" data-action="sair">Sair da conta</button>
       </div>`;
@@ -2198,6 +2371,24 @@
     },
     "entrada-del": (el) => {
       S.entradas = (S.entradas || []).filter((e) => e.id !== el.dataset.id);
+      touch();
+    },
+    "filtro-quem": (el) => {
+      filtroQuem = el.dataset.quem || "todos";
+      render();
+    },
+    "des-dia": (el) => {
+      const d = S.despensa.find((x) => x.id === el.dataset.id);
+      if (!d) return;
+      const raw = prompt("Costuma acabar no dia do mês (1–31). Vazio = automático pelo histórico.", d.diaAcaba != null ? String(d.diaAcaba) : "");
+      if (raw === null) return;
+      const t = String(raw).trim();
+      if (t === "") delete d.diaAcaba;
+      else {
+        const n = Math.round(num(t));
+        if (n >= 1 && n <= 31) d.diaAcaba = n;
+        else { alert("Dia inválido."); return; }
+      }
       touch();
     },
 
@@ -2399,9 +2590,40 @@
     "conta-paga": (f) => {
       const mk = mesKey();
       if (!S.pagamentos[mk]) S.pagamentos[mk] = {};
-      S.pagamentos[mk][f.dataset.id] = { valor: num(f.valor.value), ts: Date.now() };
+      S.pagamentos[mk][f.dataset.id] = {
+        valor: num(f.valor.value),
+        quem: f.quem ? f.quem.value : "casa",
+        ts: Date.now(),
+      };
       pagandoId = null;
       touch();
+    },
+    "hist-cmp": (f) => {
+      histCmpA = f.a.value;
+      histCmpB = f.b.value;
+      tab = "mes";
+      render();
+    },
+    "backup-restore": (f) => {
+      const file = f.arquivo && f.arquivo.files && f.arquivo.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const doc = JSON.parse(reader.result);
+          if (!doc || typeof doc !== "object") throw new Error("invalid");
+          if (!confirm("Isso substitui TODOS os dados atuais pelo backup. Continuar?")) return;
+          S = hydrate(doc);
+          touch();
+          tab = "hoje";
+          render();
+          window.scrollTo(0, 0);
+          alert("Backup restaurado.");
+        } catch (_) {
+          alert("Arquivo inválido. Use o JSON baixado em Ajustes.");
+        }
+      };
+      reader.readAsText(file);
     },
     "caixa-set": (f) => {
       const agora = Date.now();
@@ -2499,7 +2721,10 @@
       render();
     },
     "des-add": (f) => {
-      S.despensa.push({ id: uid(), nome: f.nome.value.trim(), cat: f.cat.value, status: "tem" });
+      const item = { id: uid(), nome: f.nome.value.trim(), cat: f.cat.value, status: "tem" };
+      const dia = Math.round(num(f.diaAcaba && f.diaAcaba.value));
+      if (dia >= 1 && dia <= 31) item.diaAcaba = dia;
+      S.despensa.push(item);
       touch();
     },
     "lista-add": (f) => {
