@@ -1509,7 +1509,8 @@
         <div class="sub" style="margin-top:0.55rem; border-top: 1px solid rgba(255,255,255,0.25); padding-top:0.55rem; line-height:1.55;">
           <div>Pode ~<b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${diaProx}</div>
           <div>Lazer do mês: <b>${fmt(c.lazerRest || 0)}</b></div>
-          ${c.obrigAte > 0 ? `<div>Reservado no banco (contas/fatura/meta): <b>${fmt(c.obrigAte)}</b></div>` : ""}
+          ${c.obrigAte > 0 ? `<div>Não gasta isso (contas + fatura + meta do mês): <b>${fmt(c.obrigAte)}</b></div>
+          <div style="opacity:0.9; font-size:0.92em;">↳ meta do mês só: <b>${fmt(c.metaNum)}</b> · emergência é outro potinho (aba Mês)</div>` : ""}
         </div>
       </div>
       <form class="card mt" data-form="caixa-set">
