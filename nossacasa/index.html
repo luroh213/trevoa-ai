@@ -1816,7 +1816,7 @@
       <div class="card">
         <div class="bar"><div class="fill lim" style="width:${meta > 0 ? metaPct : 0}%"></div></div>
         <div class="bar-legend"><span>Estimativa sobra do mês</span><span>${fmt(r.juntadoEst)} / meta ${fmt(meta)}</span></div>
-        <div class="dica">Sobra ≈ entrou − contas − gastos − fatura paga. Caixa real em Hoje é o que manda.</div>
+        <div class="dica">Meta do mês = quanto juntar <b>este mês</b>. Emergência = pote grande. Ordem: 1) contas+fatura 2) meta do mês → soma na emergência 3) lazer.</div>
       </div>
 
       <div class="sect">Fundo de emergência</div>
@@ -1827,7 +1827,7 @@
           <input name="valor" inputmode="decimal" placeholder="Guardei quanto (R$)" required />
           <button class="btn small" type="submit">Somar</button>
         </form>
-        <div class="dica">É a reserva grande pra imprevisto (fora da meta mensal). Meta ajusta em Ajustes.</div>
+        <div class="dica">Quando cumprir a meta do mês, toca Somar aqui. Meta não compete com emergência — a meta <b>alimenta</b> o fundo.</div>
       </div>
 
       <div class="sect">Previsto × real (contas)</div>
