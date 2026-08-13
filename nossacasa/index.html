@@ -459,6 +459,7 @@
   let filtroQuem = "todos"; // todos | eu | ela
   let histCmpA = "";
   let histCmpB = "";
+  let showCorrigirSaldos = false;
   let saveTimer = null;
   let saving = false;
   let logado = false;
@@ -675,6 +676,7 @@
       if (num(r.ts) > emBase) entrou += num(r.valor);
     }
     (S.entradas || []).forEach((e) => {
+      if (e.fonte === "cedula") return; // cédula já soma no potinho, não no banco
       if (num(e.ts) > emBase) entrou += num(e.valor);
     });
     for (const k in S.pagamentos) for (const id in S.pagamentos[k]) {
@@ -1137,7 +1139,7 @@
       `Pagar AGORA (quinzena ativa): ${pagar.map((x) => x.nome + " " + fmt(x.valor)).join(", ") || "nenhuma"}.`,
       `Próxima quinzena (preview): ${prox.map((x) => x.nome + " " + fmt(x.valor)).join(", ") || "nenhuma"}.`,
       `CARTÃO: limite ${fmt(S.config.limiteCartao)}, reserva ${fmt(S.config.reservaCartao)}, ciclo aberto ${fmt(c.comprasCiclo)}, fatura vence dia ${diaFatura()}, fatura pendente ${fmt(valorFaturaPendente())}, fatura já paga este mês ${fmt(c.faturaPaga)}.`,
-      `Entradas por fora (não salário): ${(S.entradas || []).filter((e) => { const i = new Date(); i.setDate(1); i.setHours(0,0,0,0); return num(e.ts) >= i.getTime(); }).map((e) => `${e.desc} ${fmt(e.valor)}`).join(" | ") || "nenhuma"}.`,
+      `Entradas por fora (não salário): ${(S.entradas || []).filter((e) => { const i = new Date(); i.setDate(1); i.setHours(0,0,0,0); return num(e.ts) >= i.getTime(); }).map((e) => `${e.desc} ${fmt(e.valor)} (${e.fonte === "cedula" ? "cédula" : "banco"})`).join(" | ") || "nenhuma"}.`,
       `Mês até agora: entrou ${fmt(c.entrouMes)}, saiu ${fmt(r.saiu)}, gastos dinheiro ${fmt(c.gastosMes)} (iFood ${fmt(r.ifood)}, mercado ${fmt(r.mercado)}, lazer ${fmt(r.lazer)}, imprevisto ${fmt(r.imprevisto)}).`,
       `Gastos recentes: ${gastosTop || "nenhum"}.`,
       `Despensa faltando: ${despensaFalta || "ok"}. Lista compras: ${lista || "vazia"}.`,
@@ -1512,28 +1514,22 @@
           ${c.obrigAte > 0 ? `<div>Não gasta isso (contas + fatura + meta do mês): <b>${fmt(c.obrigAte)}</b></div>
           <div style="opacity:0.9; font-size:0.92em;">↳ meta do mês só: <b>${fmt(c.metaNum)}</b> · emergência é outro potinho (aba Mês)</div>` : ""}
         </div>
-      </div>
-      <form class="card mt" data-form="caixa-set">
-        <label style="margin-top:0;">Atualizar saldos</label>
-        <div class="row2">
-          <div><label>Banco</label><input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required /></div>
-          <div><label>Cédula</label><input name="cedula" inputmode="decimal" value="${String(num((S.cedula || {}).valor)).replace(".", ",")}" /></div>
-        </div>
-        <button class="btn full" type="submit">Atualizar</button>
-        <div class="dica">Banco = app do banco. Cédula = papel na carteira. Contas e fatura saem do banco.</div>
-      </form>`;
-
-    html += lembretesSmartCard(c);
+      </div>`;
 
     html += `
       <form class="card mt" data-form="entrada-add">
-        <label style="margin-top:0;">Entrou dinheiro por fora?</label>
-        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, devolução, presente — <b>não</b> é salário (salário = botão Caiu).</div>
+        <label style="margin-top:0;">Entrou dinheiro?</label>
+        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, presente, papel — <b>não</b> é salário (salário = botão Caiu).</div>
         <div class="row2">
           <div><label>Quanto (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required /></div>
           <div><label>De onde</label><input name="desc" placeholder="PIX da mãe, bônus…" required /></div>
         </div>
-        <button class="btn full" type="submit">Somar na conta</button>
+        <label>Foi pra onde?</label>
+        <select name="fonte">
+          <option value="banco">Banco / PIX</option>
+          <option value="cedula">Cédula (papel)</option>
+        </select>
+        <button class="btn full" type="submit">Somar</button>
       </form>`;
 
     const entradasMesLista = (S.entradas || [])
@@ -1544,18 +1540,35 @@
       .slice()
       .sort((a, b) => num(b.ts) - num(a.ts));
     if (entradasMesLista.length) {
-      html += `<div class="sect">Entradas por fora <span class="mini">este mês</span></div><div class="card">`;
+      html += `<div class="sect">Entradas <span class="mini">este mês</span></div><div class="card">`;
       entradasMesLista.forEach((e) => {
+        const dest = e.fonte === "cedula" ? "cédula" : "banco";
         html += `<div class="chkstep">
           <div class="grow">
             <div class="t">${esc(e.desc || "Entrada")}</div>
-            <div class="s">${fmt(e.valor)}</div>
+            <div class="s">${fmt(e.valor)} · ${dest}</div>
           </div>
           <button class="btn small ghost" data-action="entrada-del" data-id="${esc(e.id)}">Apagar</button>
         </div>`;
       });
       html += `</div>`;
     }
+
+    html += `
+      <div class="card mt">
+        <button type="button" class="btn ghost full" style="margin-top:0;" data-action="toggle-corrigir">${showCorrigirSaldos ? "Esconder correção de saldo" : "Banco/cédula errado? Corrigir"}</button>
+        ${showCorrigirSaldos ? `
+        <form data-form="caixa-set" class="mt">
+          <div class="dica" style="margin-top:0;">Só se o app do banco (ou a carteira) mostrar outro valor — não é pra anotar entrada nova.</div>
+          <div class="row2">
+            <div><label>Banco</label><input name="valor" inputmode="decimal" placeholder="${String(num(S.caixa.valor)).replace(".", ",")}" required /></div>
+            <div><label>Cédula</label><input name="cedula" inputmode="decimal" value="${String(num((S.cedula || {}).valor)).replace(".", ",")}" /></div>
+          </div>
+          <button class="btn full" type="submit">Corrigir saldos</button>
+        </form>` : ""}
+      </div>`;
+
+    html += lembretesSmartCard(c);
 
     html += renderChatConversa();
 
@@ -2393,8 +2406,17 @@
       touch();
     },
     "entrada-del": (el) => {
-      S.entradas = (S.entradas || []).filter((e) => e.id !== el.dataset.id);
+      const e = (S.entradas || []).find((x) => x.id === el.dataset.id);
+      if (e && e.fonte === "cedula") {
+        if (!S.cedula) S.cedula = { valor: 0 };
+        S.cedula.valor = Math.max(0, Math.round((num(S.cedula.valor) - num(e.valor)) * 100) / 100);
+      }
+      S.entradas = (S.entradas || []).filter((x) => x.id !== el.dataset.id);
       touch();
+    },
+    "toggle-corrigir": () => {
+      showCorrigirSaldos = !showCorrigirSaldos;
+      render();
     },
     "filtro-quem": (el) => {
       filtroQuem = el.dataset.quem || "todos";
@@ -2672,9 +2694,14 @@
     "entrada-add": (f) => {
       const valor = num(f.valor.value);
       const desc = String(f.desc.value || "").trim() || "Entrada";
+      const fonte = f.fonte && f.fonte.value === "cedula" ? "cedula" : "banco";
       if (valor <= 0) return;
+      if (fonte === "cedula") {
+        if (!S.cedula) S.cedula = { valor: 0 };
+        S.cedula.valor = Math.round((num(S.cedula.valor) + valor) * 100) / 100;
+      }
       if (!S.entradas) S.entradas = [];
-      S.entradas.push({ id: uid(), desc, valor, ts: Date.now() });
+      S.entradas.push({ id: uid(), desc, valor, fonte, ts: Date.now() });
       touch();
       tab = "hoje";
       render();
