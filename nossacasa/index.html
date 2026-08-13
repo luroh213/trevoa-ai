@@ -1289,18 +1289,23 @@
 
   function simularGasto(valor, c) {
     const v = Math.max(0, num(valor));
-    const lazerRest = Math.max(0, lazerOrcamento() - lazerGastoMes());
+    const lazerDisp = Math.max(0, num(c.lazerRest)); // mesmo número do card Hoje (já limitado se espera salário)
     const meta = metaEfetiva();
     const caixa2 = c.caixa - v;
-    const porDia2 = c.diasAte > 0 ? Math.max(0, (c.livreViver - v) / c.diasAte) : 0;
-    const comeLazer = v > 0 && v <= lazerRest;
-    const comeMeta = v > lazerRest;
+    const dias = Math.max(1, num(c.diasAte) || 1);
+    const livreAgora = Math.max(0, num(c.livreViver));
+    const porDia2 = Math.max(0, (livreAgora - v) / dias);
+    const comeLazer = v > 0 && v <= lazerDisp;
+    const comeMeta = v > lazerDisp;
     let t = "ok";
-    let txt = `Se gastar <b>${fmt(v)}</b> agora:<ul><li>Caixa fica ~<b>${fmt(caixa2)}</b></li><li>Pode/dia ~<b>${fmt(porDia2)}</b> (antes ${fmt(Math.max(0, c.porDia))})</li>`;
-    if (comeLazer) txt += `<li>Cabe no lazer (ainda ${fmt(lazerRest)})</li>`;
-    else if (comeMeta) txt += `<li>Passa do lazer — come meta de juntar (${fmt(meta)})</li>`;
+    let txt = `Se gastar <b>${fmt(v)}</b> agora:<ul>`;
+    txt += `<li>Total fica ~<b>${fmt(caixa2)}</b> (agora ${fmt(c.caixa)})</li>`;
+    txt += `<li>Pode/dia ~<b>${fmt(porDia2)}</b> por ${dias} dia(s) até o salário (antes ${fmt(Math.max(0, c.porDia))})</li>`;
+    if (comeLazer) txt += `<li>Cabe no lazer livre agora (<b>${fmt(lazerDisp)}</b> → sobra ${fmt(lazerDisp - v)})</li>`;
+    else if (comeMeta) txt += `<li>Passa do lazer livre (<b>${fmt(lazerDisp)}</b>) — come da sobra/meta</li>`;
     if (caixa2 < 0) { t = "bad"; txt += `<li><b>Não tem saldo</b> pra isso</li>`; }
     else if (porDia2 < 10 && c.esperandoSalario) { t = "warn"; txt += `<li>Fica apertado até o próximo salário</li>`; }
+    else if (v > livreAgora) { t = "warn"; txt += `<li>Passa do que tava “livre pra viver” (~${fmt(livreAgora)})</li>`; }
     txt += `</ul>`;
     return { t, tit: `E se gastar ${fmt(v)}?`, txt, v, caixa2, porDia2 };
   }
