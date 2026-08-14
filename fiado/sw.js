@@ -1,6 +1,6 @@
 /* Service worker — internet primeiro, cache só como plano B (offline).
    Assim o app salvo na tela inicial sempre pega a versão nova do site. */
-const CACHE = "fiado-v9-layout-restaurado";
+const CACHE = "fiado-v10-ocultar-resumo";
 const ASSETS = [
   "./",
   "./index.html",

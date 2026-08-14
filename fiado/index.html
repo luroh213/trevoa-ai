@@ -454,10 +454,7 @@
     .save-status.ok { color: var(--ok); }
     .save-status.warn { color: var(--warn); }
 
-    body.ocultar-valores .resumo .valor,
-    body.ocultar-valores .cliente .saldo,
-    body.ocultar-valores .saldo-bloco .valor,
-    body.ocultar-valores .mov .valor {
+    body.ocultar-valores .resumo .valor {
       letter-spacing: 0.08em;
     }
 
@@ -2248,15 +2245,13 @@
       return !!lerConfig().ocultarValores;
     }
 
-    function exibirValor(n) {
+    function exibirValorResumo(n) {
       if (valoresOcultos()) return "••••";
       return formatBRL(n);
     }
 
     function exibirTextoDiario(texto) {
-      const safe = escapeHtml(texto || "");
-      if (!valoresOcultos()) return safe;
-      return safe.replace(/R\$&nbsp;[\d.,]+|R\$\s?[\d.,]+/g, "••••");
+      return escapeHtml(texto || "");
     }
 
     function aplicarOcultarValoresUI() {
@@ -2266,8 +2261,8 @@
       btn.classList.toggle("active", valoresOcultos());
       btn.textContent = valoresOcultos() ? "Mostrar" : "Ocultar";
       btn.title = valoresOcultos()
-        ? "Mostrar valores na tela"
-        : "Esconder valores — cliente não vê quanto deve";
+        ? "Mostrar totais do resumo"
+        : "Esconder Total em aberto, Fiado hoje e Recebido hoje";
     }
 
     function toggleOcultarValores() {
