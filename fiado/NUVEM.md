@@ -17,6 +17,8 @@ window.FIADO_CLOUD = {
 
 5. Publique o site (GitHub Pages). Com `enabled: false`, o app continua só no celular (modo antigo).
 
+6. **Diário na nuvem:** se o banco já existia, rode também `patch-diario-nuvem.sql` no SQL Editor. Assim o dono acompanha lançamentos no PC (botão **Diário**, mesmo login do mercado).
+
 ## Contas padrão (depois do SQL)
 
 | Quem | Usuário | Senha |

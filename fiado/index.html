@@ -2009,7 +2009,8 @@
   <div class="confirm-modal" id="diarioModal" role="dialog" aria-modal="true" aria-labelledby="diarioTitulo" hidden>
     <div class="sheet">
       <h2 id="diarioTitulo">Diário do balcão</h2>
-      <p class="subtitle" style="margin-bottom:0.65rem">Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro.</p>
+      <p class="subtitle" id="diarioSubtitulo" style="margin-bottom:0.65rem">Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro.</p>
+      <p class="hint" id="diarioAoVivo" style="margin:-0.35rem 0 0.65rem;text-align:left" hidden><strong>Ao vivo na nuvem</strong> — atualiza a cada 3 segundos. Abra no PC com o mesmo login do mercado.</p>
       <div id="diarioLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
       <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
     </div>
@@ -2241,11 +2242,79 @@
       }
     }
 
-    function registrarDiario(texto) {
+    function registrarDiario(texto, opts) {
+      const entry = { id: uid(), texto, ts: Date.now() };
       const logs = lerDiario();
-      logs.unshift({ id: uid(), texto, ts: Date.now() });
+      logs.unshift(entry);
       localStorage.setItem(journalKey(), JSON.stringify(logs.slice(0, 120)));
       atualizarSaveStatusUI();
+      if (!opts?.skipNuvem) enviarDiarioNuvem(entry);
+    }
+
+    function mesclarDiarioEntradas(local, remoto) {
+      const ids = new Map();
+      const merged = [];
+      for (const e of [...(local || []), ...(remoto || [])]) {
+        if (!e || !e.id || ids.has(e.id)) continue;
+        ids.set(e.id, true);
+        merged.push({ id: e.id, texto: e.texto, ts: Number(e.ts) || Date.now() });
+      }
+      merged.sort((a, b) => b.ts - a.ts);
+      return merged.slice(0, 120);
+    }
+
+    function mesclarDiarioRemoto(remoto) {
+      if (!Array.isArray(remoto) || !remoto.length) return false;
+      const antes = JSON.stringify(lerDiario());
+      const merged = mesclarDiarioEntradas(lerDiario(), remoto);
+      localStorage.setItem(journalKey(), JSON.stringify(merged));
+      return JSON.stringify(merged) !== antes;
+    }
+
+    function diarioNuvemAtivo() {
+      if (!cloudOn() || !FiadoCloud.getToken()) return false;
+      const meta = FiadoCloud.getMeta() || {};
+      if (meta.role === "admin" && !meta.actingMercadoId) return false;
+      return true;
+    }
+
+    function enviarDiarioNuvem(entry) {
+      if (!diarioNuvemAtivo()) return;
+      FiadoCloud.registrarDiarioEvento(entry).catch(() => {});
+    }
+
+    async function puxarDiarioNuvem(silent) {
+      if (!diarioNuvemAtivo()) return false;
+      try {
+        const remoto = await FiadoCloud.listarDiario(120);
+        const mudou = mesclarDiarioRemoto(remoto);
+        if (mudou) {
+          atualizarSaveStatusUI();
+          if (!silent && !$("#diarioModal")?.hidden) renderDiario();
+        }
+        return mudou;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function iniciarDiarioBackground() {
+      pararDiarioBackground();
+      if (!diarioNuvemAtivo()) return;
+      puxarDiarioNuvem(true);
+      iniciarDiarioBackground._iv = setInterval(() => puxarDiarioNuvem(true), 5000);
+    }
+
+    function pararDiarioBackground() {
+      if (iniciarDiarioBackground._iv) clearInterval(iniciarDiarioBackground._iv);
+      iniciarDiarioBackground._iv = null;
+      if (abrirDiario._iv) clearInterval(abrirDiario._iv);
+      abrirDiario._iv = null;
+    }
+
+    function atualizarDiarioAoVivoUI() {
+      const el = $("#diarioAoVivo");
+      if (el) el.hidden = !diarioNuvemAtivo();
     }
 
     function mergeClientes(local, remote) {
@@ -2483,12 +2552,20 @@
 
     function abrirDiario() {
       renderDiario();
+      atualizarDiarioAoVivoUI();
       const modal = $("#diarioModal");
       modal.hidden = false;
       modal.classList.add("show");
+      puxarDiarioNuvem(false);
+      if (abrirDiario._iv) clearInterval(abrirDiario._iv);
+      if (diarioNuvemAtivo()) {
+        abrirDiario._iv = setInterval(() => puxarDiarioNuvem(false), 3000);
+      }
     }
 
     function fecharDiario() {
+      if (abrirDiario._iv) clearInterval(abrirDiario._iv);
+      abrirDiario._iv = null;
       const modal = $("#diarioModal");
       modal.classList.remove("show");
       modal.hidden = true;
@@ -2761,6 +2838,7 @@
     }
 
     function limparSessao() {
+      pararDiarioBackground();
       if (cloudOn()) {
         FiadoCloud.logout();
       }

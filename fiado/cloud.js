@@ -251,6 +251,30 @@
     });
   }
 
+  async function registrarDiarioEvento(entry) {
+    const data = await rpc("fiado_registrar_diario", {
+      p_token: getToken(),
+      p_id: entry.id,
+      p_texto: entry.texto,
+      p_ts: entry.ts,
+    });
+    if (!data || !data.ok) throw new Error("Não deu pra salvar no diário da nuvem");
+    return data;
+  }
+
+  async function listarDiario(limite) {
+    const data = await rpc("fiado_listar_diario", {
+      p_token: getToken(),
+      p_limite: limite || 120,
+    });
+    if (!data || !data.ok) throw new Error("Não deu pra carregar o diário");
+    return (data.eventos || []).map((e) => ({
+      id: e.id,
+      texto: e.texto,
+      ts: Number(e.ts) || Date.now(),
+    }));
+  }
+
   function tokenPermanente() {
     return !!localStorage.getItem(TOKEN_KEY);
   }
@@ -279,5 +303,7 @@
     trocarSenhaAdmin,
     liberarComCodigo,
     mercadoInfo,
+    registrarDiarioEvento,
+    listarDiario,
   };
 })(window);
