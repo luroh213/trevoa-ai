@@ -327,8 +327,8 @@
 
     .cliente {
       display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 0.35rem 0.45rem;
+      grid-template-columns: 1fr auto;
+      gap: 0.45rem 0.5rem;
       align-items: center;
       width: 100%;
       text-align: left;
@@ -336,7 +336,7 @@
       background: var(--cream);
       border: 1.5px solid var(--line);
       border-radius: 0.85rem;
-      padding: 0.65rem 0.75rem;
+      padding: 0.75rem 0.85rem;
       color: inherit;
       -webkit-tap-highlight-color: transparent;
       animation: rise 0.35s ease-out both;
@@ -349,10 +349,12 @@
     .cliente:nth-child(5) { animation-delay: 0.16s; }
 
     .cliente .cliente-main {
-      grid-column: 1;
-      display: block;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      grid-column: 1 / -1;
       width: 100%;
-      min-width: 0;
       text-align: left;
       font: inherit;
       background: transparent;
@@ -377,37 +379,32 @@
     }
 
     .cliente .saldo {
-      grid-column: 2;
       font-family: "Bricolage Grotesque", sans-serif;
       font-weight: 800;
-      font-size: 1rem;
+      font-size: 1.1rem;
       letter-spacing: -0.02em;
       color: var(--debt);
       text-align: right;
-      white-space: nowrap;
-      padding: 0 0.15rem;
     }
 
     .cliente .saldo.zero { color: var(--ok); }
 
     .cliente-atalhos {
-      grid-column: 3;
-      grid-row: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.28rem;
-      min-width: 4.85rem;
-    }
-
-    .cliente-atalhos .btn {
-      padding: 0.38rem 0.45rem;
-      font-size: 0.76rem;
-      min-height: 2.1rem;
-      white-space: nowrap;
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      margin-top: 0.15rem;
     }
 
     .cliente-atalhos.um {
-      justify-content: center;
+      grid-template-columns: 1fr;
+    }
+
+    .cliente-atalhos .btn {
+      padding: 0.45rem 0.55rem;
+      font-size: 0.82rem;
+      min-height: 2.35rem;
     }
 
     .btn-guardar.suave {
@@ -482,12 +479,6 @@
       font-size: 0.85rem;
       padding: 0.25rem 0.45rem;
       cursor: pointer;
-    }
-
-    .cliente-atalhos .btn {
-      padding: 0.45rem 0.55rem;
-      font-size: 0.82rem;
-      min-height: 2.35rem;
     }
 
     .lista-dica {
@@ -1081,53 +1072,50 @@
     }
 
     #viewHome.active {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0 0.65rem;
-      align-items: start;
+      display: flex;
+      flex-direction: column;
       min-height: calc(100dvh - 2.2rem - var(--safe-top) - var(--safe-bottom));
+      padding-bottom: 4.25rem;
     }
 
     .home-main {
       flex: 1 1 auto;
-      min-width: 0;
     }
 
     .home-bar {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      z-index: 40;
+      width: min(28rem, 100%);
+      max-width: 100%;
       display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-      align-items: stretch;
-      position: sticky;
-      top: calc(0.5rem + var(--safe-top));
-      align-self: start;
-      width: 4.75rem;
-      min-width: 4.75rem;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+      justify-content: space-between;
       margin-top: 0;
-      padding: 0.55rem 0.35rem;
-      border-top: none;
-      border-left: 1.5px dashed var(--line);
-      background: rgba(244, 247, 243, 0.92);
-      backdrop-filter: blur(6px);
-      border-radius: 0.85rem 0 0 0.85rem;
-      z-index: 20;
+      padding: 0.55rem 0.75rem calc(0.55rem + var(--safe-bottom));
+      border-top: 1.5px solid var(--line);
+      background: rgba(244, 247, 243, 0.97);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 -6px 24px rgba(26, 46, 31, 0.1);
+      border-radius: 1rem 1rem 0 0;
     }
 
     .home-bar .btn {
-      padding: 0.48rem 0.35rem;
-      font-size: 0.72rem;
-      width: 100%;
-      text-align: center;
-      line-height: 1.15;
+      padding: 0.5rem 0.7rem;
+      font-size: 0.82rem;
     }
 
     .home-bar .trial-pill {
       margin: 0;
+      flex: 1 1 100%;
       text-align: center;
-      font-size: 0.62rem;
-      padding: 0.35rem 0.25rem;
-      line-height: 1.25;
-      order: -1;
+      font-size: 0.72rem;
+      padding: 0.35rem 0.55rem;
+      min-width: 0;
     }
 
     .home-bar .trial-pill:empty {
@@ -1137,67 +1125,21 @@
 
     .home-bar-right {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       gap: 0.35rem;
-      align-items: stretch;
-      margin-left: 0;
+      align-items: center;
+      justify-content: flex-end;
+      margin-left: auto;
       width: 100%;
     }
 
-    .home-bar .save-status {
-      max-width: none;
-      text-align: center;
-      font-size: 0.62rem;
-      padding: 0 0.15rem;
-    }
-
-    @media (max-width: 720px) {
-      #viewHome.active {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
+    @media (min-width: 768px) {
+      .wrap {
+        max-width: 36rem;
       }
 
       .home-bar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        width: auto;
-        min-width: 0;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-end;
-        border-left: none;
-        border-top: 1.5px dashed var(--line);
-        border-radius: 0;
-        padding: 0.45rem 0.55rem calc(0.45rem + var(--safe-bottom));
-      }
-
-      .home-bar .trial-pill {
-        flex: 1 1 100%;
-        order: 0;
-        font-size: 0.68rem;
-      }
-
-      .home-bar-right {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        width: auto;
-        margin-left: auto;
-      }
-
-      .home-bar .btn {
-        width: auto;
-        font-size: 0.82rem;
-        padding: 0.5rem 0.65rem;
-      }
-
-      .home-main {
-        padding-bottom: 4.75rem;
+        width: min(36rem, 100%);
       }
     }
 
@@ -4177,10 +4119,12 @@
           return `
           <div class="cliente${destacar ? " guia" : ""}" data-id="${c.id}">
             <button type="button" class="cliente-main" data-abrir="${c.id}">
-              <div class="nome">${escapeHtml(c.nome)}</div>
-              <div class="meta${estourou ? " limite" : ""}">${meta}</div>
+              <div>
+                <div class="nome">${escapeHtml(c.nome)}</div>
+                <div class="meta${estourou ? " limite" : ""}">${meta}</div>
+              </div>
+              <div class="saldo ${deve ? "" : "zero"}">${exibirValor(saldo)}</div>
             </button>
-            <div class="saldo ${deve ? "" : "zero"}">${exibirValor(saldo)}</div>
             ${atalhos}
           </div>
         `;
