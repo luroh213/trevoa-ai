@@ -4008,7 +4008,7 @@
           return a.c.nome.localeCompare(b.c.nome, "pt-BR");
         });
 
-      $("#totalAberto").textContent = exibirValor(totalAberto());
+      $("#totalAberto").textContent = exibirValorResumo(totalAberto());
       const qtdDevem = state.clientes.filter((c) => saldoCliente(c) > 0.009).length;
       const badgeWrap = $("#qtdBadge");
       if (badgeWrap) {
@@ -4018,8 +4018,8 @@
             : `<strong>${state.clientes.length}</strong> cadastrados`;
       }
       const hoje = totaisHoje();
-      $("#hojeFiado").textContent = exibirValor(hoje.fiado);
-      $("#hojeRecebido").textContent = exibirValor(hoje.recebido);
+      $("#hojeFiado").textContent = exibirValorResumo(hoje.fiado);
+      $("#hojeRecebido").textContent = exibirValorResumo(hoje.recebido);
       renderChecklist();
 
       document.querySelectorAll(".filtros button").forEach((btn) => {
