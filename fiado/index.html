@@ -327,8 +327,8 @@
 
     .cliente {
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.45rem 0.5rem;
+      grid-template-columns: 1fr auto auto;
+      gap: 0.35rem 0.45rem;
       align-items: center;
       width: 100%;
       text-align: left;
@@ -336,7 +336,7 @@
       background: var(--cream);
       border: 1.5px solid var(--line);
       border-radius: 0.85rem;
-      padding: 0.75rem 0.85rem;
+      padding: 0.65rem 0.75rem;
       color: inherit;
       -webkit-tap-highlight-color: transparent;
       animation: rise 0.35s ease-out both;
@@ -349,12 +349,10 @@
     .cliente:nth-child(5) { animation-delay: 0.16s; }
 
     .cliente .cliente-main {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.5rem;
-      align-items: center;
-      grid-column: 1 / -1;
+      grid-column: 1;
+      display: block;
       width: 100%;
+      min-width: 0;
       text-align: left;
       font: inherit;
       background: transparent;
@@ -379,26 +377,37 @@
     }
 
     .cliente .saldo {
+      grid-column: 2;
       font-family: "Bricolage Grotesque", sans-serif;
       font-weight: 800;
-      font-size: 1.1rem;
+      font-size: 1rem;
       letter-spacing: -0.02em;
       color: var(--debt);
       text-align: right;
+      white-space: nowrap;
+      padding: 0 0.15rem;
     }
 
     .cliente .saldo.zero { color: var(--ok); }
 
     .cliente-atalhos {
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.4rem;
-      margin-top: 0.15rem;
+      grid-column: 3;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+      min-width: 4.85rem;
+    }
+
+    .cliente-atalhos .btn {
+      padding: 0.38rem 0.45rem;
+      font-size: 0.76rem;
+      min-height: 2.1rem;
+      white-space: nowrap;
     }
 
     .cliente-atalhos.um {
-      grid-template-columns: 1fr;
+      justify-content: center;
     }
 
     .btn-guardar.suave {
@@ -447,6 +456,19 @@
 
     .save-status.ok { color: var(--ok); }
     .save-status.warn { color: var(--warn); }
+
+    body.ocultar-valores .resumo .valor,
+    body.ocultar-valores .cliente .saldo,
+    body.ocultar-valores .saldo-bloco .valor,
+    body.ocultar-valores .mov .valor {
+      letter-spacing: 0.08em;
+    }
+
+    .home-bar .btn.ghost.active {
+      background: rgba(26, 46, 31, 0.12);
+      color: var(--brand);
+      font-weight: 700;
+    }
 
     .banner-local .btn-fechar-banner {
       position: absolute;
@@ -1059,51 +1081,124 @@
     }
 
     #viewHome.active {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0 0.65rem;
+      align-items: start;
       min-height: calc(100dvh - 2.2rem - var(--safe-top) - var(--safe-bottom));
     }
 
     .home-main {
       flex: 1 1 auto;
+      min-width: 0;
     }
 
     .home-bar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 1.1rem;
-      padding: 0.65rem 0 0.2rem;
-      border-top: 1.5px dashed var(--line);
-      background: transparent;
-      position: static;
+      flex-direction: column;
+      gap: 0.45rem;
+      align-items: stretch;
+      position: sticky;
+      top: calc(0.5rem + var(--safe-top));
+      align-self: start;
+      width: 4.75rem;
+      min-width: 4.75rem;
+      margin-top: 0;
+      padding: 0.55rem 0.35rem;
+      border-top: none;
+      border-left: 1.5px dashed var(--line);
+      background: rgba(244, 247, 243, 0.92);
+      backdrop-filter: blur(6px);
+      border-radius: 0.85rem 0 0 0.85rem;
+      z-index: 20;
     }
 
     .home-bar .btn {
-      padding: 0.5rem 0.7rem;
-      font-size: 0.82rem;
+      padding: 0.48rem 0.35rem;
+      font-size: 0.72rem;
+      width: 100%;
+      text-align: center;
+      line-height: 1.15;
     }
 
     .home-bar .trial-pill {
       margin: 0;
-      flex: 1 1 auto;
       text-align: center;
-      font-size: 0.72rem;
-      padding: 0.35rem 0.55rem;
-      min-width: 0;
+      font-size: 0.62rem;
+      padding: 0.35rem 0.25rem;
+      line-height: 1.25;
+      order: -1;
     }
 
     .home-bar .trial-pill:empty {
       visibility: hidden;
+      display: none;
     }
 
     .home-bar-right {
       display: flex;
+      flex-direction: column;
       gap: 0.35rem;
-      align-items: center;
-      margin-left: auto;
+      align-items: stretch;
+      margin-left: 0;
+      width: 100%;
+    }
+
+    .home-bar .save-status {
+      max-width: none;
+      text-align: center;
+      font-size: 0.62rem;
+      padding: 0 0.15rem;
+    }
+
+    @media (max-width: 720px) {
+      #viewHome.active {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .home-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: auto;
+        min-width: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        border-left: none;
+        border-top: 1.5px dashed var(--line);
+        border-radius: 0;
+        padding: 0.45rem 0.55rem calc(0.45rem + var(--safe-bottom));
+      }
+
+      .home-bar .trial-pill {
+        flex: 1 1 100%;
+        order: 0;
+        font-size: 0.68rem;
+      }
+
+      .home-bar-right {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        width: auto;
+        margin-left: auto;
+      }
+
+      .home-bar .btn {
+        width: auto;
+        font-size: 0.82rem;
+        padding: 0.5rem 0.65rem;
+      }
+
+      .home-main {
+        padding-bottom: 4.75rem;
+      }
     }
 
     .mov-actions {
@@ -1704,9 +1799,10 @@
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
+          <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder valores na tela">Ocultar</button>
           <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
-          <button type="button" class="btn ghost" id="btnInstalarHome" title="Colocar na tela inicial">Ícone</button>
+          <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
           <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
         </div>
       </nav>
@@ -2018,9 +2114,19 @@
 
   <div class="install-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitulo" hidden>
     <div class="sheet">
-      <h2 id="installTitulo">Colocar o Fiado na tela inicial</h2>
-      <p class="subtitle" style="margin-bottom:0.25rem">Assim fica um ícone, igual WhatsApp. Não precisa da Play Store.</p>
-      <p class="ja-instalado" id="installJaOk" hidden>Este celular já está com o Fiado como app. Pode fechar.</p>
+      <h2 id="installTitulo">Instalar o Fiado</h2>
+      <p class="subtitle" style="margin-bottom:0.25rem">Vira app no PC ou celular. Depois da 1ª vez, funciona <strong>offline</strong> também.</p>
+      <p class="ja-instalado" id="installJaOk" hidden>O Fiado já está instalado neste aparelho. Pode fechar.</p>
+
+      <div class="passo" id="installPassoPc">
+        <strong>Computador (Windows / Mac — Chrome ou Edge)</strong>
+        <ol>
+          <li>Abra este link no <strong>Chrome</strong> ou <strong>Edge</strong></li>
+          <li>Na barra de endereço, clique no ícone <strong>Instalar</strong> (⊕) — ou menu <strong>⋮</strong> → <strong>Instalar Fiado…</strong></li>
+          <li>Confirme — o Fiado abre em janela própria, como programa</li>
+          <li>Sem internet depois? Continua abrindo com a última cópia salva</li>
+        </ol>
+      </div>
 
       <div class="passo">
         <strong>Celular Android (Chrome ou Brave)</strong>
@@ -2194,6 +2300,44 @@
 
     function formatBRL(n) {
       return (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function valoresOcultos() {
+      return !!lerConfig().ocultarValores;
+    }
+
+    function exibirValor(n) {
+      if (valoresOcultos()) return "••••";
+      return formatBRL(n);
+    }
+
+    function exibirTextoDiario(texto) {
+      const safe = escapeHtml(texto || "");
+      if (!valoresOcultos()) return safe;
+      return safe.replace(/R\$&nbsp;[\d.,]+|R\$\s?[\d.,]+/g, "••••");
+    }
+
+    function aplicarOcultarValoresUI() {
+      document.body.classList.toggle("ocultar-valores", valoresOcultos());
+      const btn = $("#btnOcultarValores");
+      if (!btn) return;
+      btn.classList.toggle("active", valoresOcultos());
+      btn.textContent = valoresOcultos() ? "Mostrar" : "Ocultar";
+      btn.title = valoresOcultos()
+        ? "Mostrar valores na tela"
+        : "Esconder valores — cliente não vê quanto deve";
+    }
+
+    function toggleOcultarValores() {
+      setOcultarValores(!valoresOcultos());
+    }
+
+    function setOcultarValores(on) {
+      salvarConfig({ ocultarValores: !!on });
+      aplicarOcultarValoresUI();
+      renderHome();
+      if (state.ativoId) abrirDetalhe(state.ativoId);
+      if (!$("#diarioModal")?.hidden) renderDiario();
     }
 
     function formatDataBR(iso) {
@@ -2542,7 +2686,7 @@
         .map(
           (l) => `
           <div class="log-item">
-            <div>${escapeHtml(l.texto)}</div>
+            <div>${exibirTextoDiario(l.texto)}</div>
             <div class="quando">${formatQuandoSegundos(l.ts)}</div>
           </div>
         `
@@ -3030,6 +3174,8 @@
         state.tabId = uid();
       }
       initSincroniaAbas();
+      iniciarDiarioBackground();
+      aplicarOcultarValoresUI();
       atualizarBannerAba();
       atualizarSaveStatusUI();
       atualizarNomeMercadoUI();
@@ -3925,7 +4071,7 @@
           return a.c.nome.localeCompare(b.c.nome, "pt-BR");
         });
 
-      $("#totalAberto").textContent = formatBRL(totalAberto());
+      $("#totalAberto").textContent = exibirValor(totalAberto());
       const qtdDevem = state.clientes.filter((c) => saldoCliente(c) > 0.009).length;
       const badgeWrap = $("#qtdBadge");
       if (badgeWrap) {
@@ -3935,8 +4081,8 @@
             : `<strong>${state.clientes.length}</strong> cadastrados`;
       }
       const hoje = totaisHoje();
-      $("#hojeFiado").textContent = formatBRL(hoje.fiado);
-      $("#hojeRecebido").textContent = formatBRL(hoje.recebido);
+      $("#hojeFiado").textContent = exibirValor(hoje.fiado);
+      $("#hojeRecebido").textContent = exibirValor(hoje.recebido);
       renderChecklist();
 
       document.querySelectorAll(".filtros button").forEach((btn) => {
@@ -4012,7 +4158,7 @@
           const deve = saldo > 0.009;
           let meta = deve ? "Deve" : "Já pagou · toque pra abrir";
           if (estourou) meta = "Acima do limite";
-          else if (lim != null && deve) meta += ` · limite ${formatBRL(lim)}`;
+          else if (lim != null && deve) meta += ` · limite ${exibirValor(lim)}`;
           if (c.fone) meta += " · " + escapeHtml(c.fone);
           const destacar =
             (passoGuia === "fiado" && c.id === idGuia) ||
@@ -4031,12 +4177,10 @@
           return `
           <div class="cliente${destacar ? " guia" : ""}" data-id="${c.id}">
             <button type="button" class="cliente-main" data-abrir="${c.id}">
-              <div>
-                <div class="nome">${escapeHtml(c.nome)}</div>
-                <div class="meta${estourou ? " limite" : ""}">${meta}</div>
-              </div>
-              <div class="saldo ${deve ? "" : "zero"}">${formatBRL(saldo)}</div>
+              <div class="nome">${escapeHtml(c.nome)}</div>
+              <div class="meta${estourou ? " limite" : ""}">${meta}</div>
             </button>
+            <div class="saldo ${deve ? "" : "zero"}">${exibirValor(saldo)}</div>
             ${atalhos}
           </div>
         `;
@@ -4151,7 +4295,7 @@
       const lim = limiteCliente(c);
       $("#detalheNome").textContent = c.nome;
       const elSaldo = $("#detalheSaldo");
-      elSaldo.textContent = formatBRL(saldo);
+      elSaldo.textContent = exibirValor(saldo);
       elSaldo.classList.remove("pop");
       void elSaldo.offsetWidth;
       elSaldo.classList.add("pop");
@@ -4168,10 +4312,10 @@
         const resto = lim - saldo;
         if (saldo > lim + 0.009) {
           elLim.classList.add("estourou");
-          elLim.textContent = `Limite ${formatBRL(lim)} — passou ${formatBRL(saldo - lim)}`;
+          elLim.textContent = `Limite ${exibirValor(lim)} — passou ${exibirValor(saldo - lim)}`;
         } else {
           elLim.classList.remove("estourou");
-          elLim.textContent = `Limite ${formatBRL(lim)} — ainda pode ${formatBRL(Math.max(0, resto))}`;
+          elLim.textContent = `Limite ${exibirValor(lim)} — ainda pode ${exibirValor(Math.max(0, resto))}`;
         }
       }
       $("#painelMov").hidden = true;
@@ -4199,7 +4343,7 @@
               <div class="tipo ${m.tipo}">${m.tipo === "debito" ? "Fiado" : "Pagamento"}${forma}</div>
               <div class="quando">${formatQuando(m.ts)}${m.dataRef ? " · ref. " + formatDataBR(m.dataRef) : ""}</div>
             </div>
-            <div class="valor ${m.tipo}">${m.tipo === "debito" ? "+" : "−"} ${formatBRL(m.valor)}</div>
+            <div class="valor ${m.tipo}">${m.tipo === "debito" ? "+" : "−"} ${exibirValor(m.valor)}</div>
             ${nota}
             <div class="mov-actions">
               <button type="button" class="btn-mini" data-apagar-mov="${m.id}">Apagar</button>
@@ -4266,7 +4410,7 @@
       const blocoSaldo = isDebito
         ? ""
         : `<p class="hint-field" id="movSaldoAtual" style="margin:0 0 0.75rem;font-size:0.88rem;font-weight:600;color:var(--ink)">
-            Deve agora: <strong>${formatBRL(Math.max(0, saldoAtual))}</strong>
+            Deve agora: <strong>${exibirValor(Math.max(0, saldoAtual))}</strong>
           </p>
           <p class="hint-field" id="movPreviaSaldo" style="margin:-0.35rem 0 0.85rem;font-size:0.85rem;color:var(--ink-soft)">
             Digite quanto recebeu — a conta só zera se o valor for o total.
@@ -4286,7 +4430,7 @@
       const btnTudo =
         !isDebito && saldoAtual > 0.009
           ? `<button type="button" class="btn full" id="btnReceberTudo" style="margin-top:0.45rem">
-              Receber tudo (${formatBRL(saldoAtual)})
+              Receber tudo (${exibirValor(saldoAtual)})
             </button>`
           : "";
       painel.innerHTML = `
@@ -4348,11 +4492,11 @@
       if (depois <= 0.009) {
         el.textContent =
           valorOk > saldoAtual + 0.009
-            ? `Atenção: ${formatBRL(valorOk)} é mais do que deve (${formatBRL(saldoAtual)}). A conta vai zerar.`
-            : `Com ${formatBRL(valorOk)} a conta ZERA.`;
+            ? `Atenção: ${exibirValor(valorOk)} é mais do que deve (${exibirValor(saldoAtual)}). A conta vai zerar.`
+            : `Com ${exibirValor(valorOk)} a conta ZERA.`;
         el.style.color = "var(--ok)";
       } else {
-        el.textContent = `Recebendo ${formatBRL(valorOk)} → ainda vai dever ${formatBRL(depois)}.`;
+        el.textContent = `Recebendo ${exibirValor(valorOk)} → ainda vai dever ${exibirValor(depois)}.`;
         el.style.color = "var(--warn)";
       }
     }
@@ -4764,6 +4908,7 @@
     });
     $("#btnDiario")?.addEventListener("click", abrirDiario);
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
+    $("#btnOcultarValores")?.addEventListener("click", toggleOcultarValores);
     $("#diarioModal")?.addEventListener("click", (e) => {
       if (e.target === $("#diarioModal")) fecharDiario();
     });
@@ -4903,8 +5048,16 @@
       if (btnModal) btnModal.hidden = !podeAuto;
       if (btnHome) btnHome.hidden = appJaInstalado();
       const hint = $("#installHint");
-      if (hint && appJaInstalado()) {
-        hint.innerHTML = "<strong>Pronto!</strong> O Fiado já está instalado neste celular.";
+      const jaOk = $("#installJaOk");
+      const instalado = appJaInstalado();
+      if (jaOk) jaOk.hidden = !instalado;
+      if (hint && instalado) {
+        hint.innerHTML = "<strong>Pronto!</strong> O Fiado já está instalado neste aparelho.";
+      }
+      const passoPc = $("#installPassoPc");
+      if (passoPc) {
+        const desktop = window.matchMedia("(pointer: fine)").matches && window.innerWidth >= 768;
+        passoPc.style.order = desktop ? "-1" : "";
       }
     }
 
@@ -4918,10 +5071,17 @@
       deferredInstallPrompt = null;
       atualizarBotoesInstalar();
       if (escolha && escolha.outcome === "accepted") {
-        toast("Ícone do Fiado instalado");
+        toast("Fiado instalado como app");
         fecharGuiaInstalar();
       }
     }
+
+    window.addEventListener("online", () => {
+      if (!cloudOn() || !FiadoCloud.getToken()) return;
+      salvar();
+      puxarDiarioNuvem(true);
+      toast("Internet voltou — sincronizando");
+    });
 
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -4932,7 +5092,7 @@
     window.addEventListener("appinstalled", () => {
       deferredInstallPrompt = null;
       atualizarBotoesInstalar();
-      toast("Fiado na tela inicial");
+      toast("Fiado instalado como app");
       fecharGuiaInstalar();
     });
 
