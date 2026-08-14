@@ -1,9 +1,7 @@
 /* Service worker — internet primeiro, cache só como plano B (offline).
-   Assim o app salvo na tela inicial sempre pega a versão nova do site. */
-const CACHE = "fiado-v10-ocultar-resumo";
+   index.html NÃO vai pro cache: sempre pega versão nova quando online. */
+const CACHE = "fiado-v11-fix-login";
 const ASSETS = [
-  "./",
-  "./index.html",
   "./config.js",
   "./cloud.js",
   "./manifest.webmanifest",
@@ -31,27 +29,18 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const sameOrigin = new URL(req.url).origin === self.location.origin;
 
-  // Páginas (HTML): tenta a internet primeiro — é o que garante a versão nova.
-  // Sem internet, cai pro cache guardado.
   if (req.mode === "navigate" || req.destination === "document") {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok && sameOrigin) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
-          return res;
+          if (res.ok) return res;
+          throw new Error("offline");
         })
-        .catch(() =>
-          caches.match(req).then((cached) => cached || caches.match("./index.html"))
-        )
+        .catch(() => caches.match("./index.html"))
     );
     return;
   }
 
-  // Demais arquivos (js, css, ícones): também internet primeiro quando for do
-  // nosso site, caindo pro cache se estiver offline.
   event.respondWith(
     fetch(req)
       .then((res) => {
