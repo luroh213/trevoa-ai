@@ -1741,7 +1741,7 @@
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
-          <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder valores na tela">Ocultar</button>
+          <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
           <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
@@ -4100,7 +4100,7 @@
           const deve = saldo > 0.009;
           let meta = deve ? "Deve" : "Já pagou · toque pra abrir";
           if (estourou) meta = "Acima do limite";
-          else if (lim != null && deve) meta += ` · limite ${exibirValor(lim)}`;
+          else if (lim != null && deve) meta += ` · limite ${formatBRL(lim)}`;
           if (c.fone) meta += " · " + escapeHtml(c.fone);
           const destacar =
             (passoGuia === "fiado" && c.id === idGuia) ||
@@ -4123,7 +4123,7 @@
                 <div class="nome">${escapeHtml(c.nome)}</div>
                 <div class="meta${estourou ? " limite" : ""}">${meta}</div>
               </div>
-              <div class="saldo ${deve ? "" : "zero"}">${exibirValor(saldo)}</div>
+              <div class="saldo ${deve ? "" : "zero"}">${formatBRL(saldo)}</div>
             </button>
             ${atalhos}
           </div>
@@ -4239,7 +4239,7 @@
       const lim = limiteCliente(c);
       $("#detalheNome").textContent = c.nome;
       const elSaldo = $("#detalheSaldo");
-      elSaldo.textContent = exibirValor(saldo);
+      elSaldo.textContent = formatBRL(saldo);
       elSaldo.classList.remove("pop");
       void elSaldo.offsetWidth;
       elSaldo.classList.add("pop");
@@ -4256,10 +4256,10 @@
         const resto = lim - saldo;
         if (saldo > lim + 0.009) {
           elLim.classList.add("estourou");
-          elLim.textContent = `Limite ${exibirValor(lim)} — passou ${exibirValor(saldo - lim)}`;
+          elLim.textContent = `Limite ${formatBRL(lim)} — passou ${formatBRL(saldo - lim)}`;
         } else {
           elLim.classList.remove("estourou");
-          elLim.textContent = `Limite ${exibirValor(lim)} — ainda pode ${exibirValor(Math.max(0, resto))}`;
+          elLim.textContent = `Limite ${formatBRL(lim)} — ainda pode ${formatBRL(Math.max(0, resto))}`;
         }
       }
       $("#painelMov").hidden = true;
@@ -4287,7 +4287,7 @@
               <div class="tipo ${m.tipo}">${m.tipo === "debito" ? "Fiado" : "Pagamento"}${forma}</div>
               <div class="quando">${formatQuando(m.ts)}${m.dataRef ? " · ref. " + formatDataBR(m.dataRef) : ""}</div>
             </div>
-            <div class="valor ${m.tipo}">${m.tipo === "debito" ? "+" : "−"} ${exibirValor(m.valor)}</div>
+            <div class="valor ${m.tipo}">${m.tipo === "debito" ? "+" : "−"} ${formatBRL(m.valor)}</div>
             ${nota}
             <div class="mov-actions">
               <button type="button" class="btn-mini" data-apagar-mov="${m.id}">Apagar</button>
@@ -4354,7 +4354,7 @@
       const blocoSaldo = isDebito
         ? ""
         : `<p class="hint-field" id="movSaldoAtual" style="margin:0 0 0.75rem;font-size:0.88rem;font-weight:600;color:var(--ink)">
-            Deve agora: <strong>${exibirValor(Math.max(0, saldoAtual))}</strong>
+            Deve agora: <strong>${formatBRL(Math.max(0, saldoAtual))}</strong>
           </p>
           <p class="hint-field" id="movPreviaSaldo" style="margin:-0.35rem 0 0.85rem;font-size:0.85rem;color:var(--ink-soft)">
             Digite quanto recebeu — a conta só zera se o valor for o total.
@@ -4374,7 +4374,7 @@
       const btnTudo =
         !isDebito && saldoAtual > 0.009
           ? `<button type="button" class="btn full" id="btnReceberTudo" style="margin-top:0.45rem">
-              Receber tudo (${exibirValor(saldoAtual)})
+              Receber tudo (${formatBRL(saldoAtual)})
             </button>`
           : "";
       painel.innerHTML = `
@@ -4436,11 +4436,11 @@
       if (depois <= 0.009) {
         el.textContent =
           valorOk > saldoAtual + 0.009
-            ? `Atenção: ${exibirValor(valorOk)} é mais do que deve (${exibirValor(saldoAtual)}). A conta vai zerar.`
-            : `Com ${exibirValor(valorOk)} a conta ZERA.`;
+            ? `Atenção: ${formatBRL(valorOk)} é mais do que deve (${formatBRL(saldoAtual)}). A conta vai zerar.`
+            : `Com ${formatBRL(valorOk)} a conta ZERA.`;
         el.style.color = "var(--ok)";
       } else {
-        el.textContent = `Recebendo ${exibirValor(valorOk)} → ainda vai dever ${exibirValor(depois)}.`;
+        el.textContent = `Recebendo ${formatBRL(valorOk)} → ainda vai dever ${formatBRL(depois)}.`;
         el.style.color = "var(--warn)";
       }
     }
