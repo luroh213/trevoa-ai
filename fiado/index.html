@@ -427,7 +427,26 @@
 
     .banner-local.show { display: block; }
 
+    .banner-local.warn {
+      background: rgba(161, 74, 26, 0.12);
+      border-color: var(--warn);
+      border-style: solid;
+    }
+
     .banner-local strong { color: var(--brand); }
+
+    .save-status {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      white-space: nowrap;
+      max-width: 7.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .save-status.ok { color: var(--ok); }
+    .save-status.warn { color: var(--warn); }
 
     .banner-local .btn-fechar-banner {
       position: absolute;
@@ -1668,6 +1687,10 @@
             <strong>Caderno só neste celular.</strong> Uma vez por semana toque em Guardar caderno e mande pro seu WhatsApp.
           </div>
 
+          <div class="banner-local warn" id="bannerAba">
+            <strong>Fiado aberto em outra aba.</strong> Use só UMA aba por vez — senão um lançamento pode apagar o outro.
+          </div>
+
           <p class="lista-dica" id="listaDica">
             Toque no <strong>nome</strong> pra ver o histórico — ou use <strong>Fiado</strong> / <strong>Receber</strong>.
           </p>
@@ -1680,6 +1703,8 @@
       <nav class="home-bar" aria-label="Ações da conta">
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
+          <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
+          <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Colocar na tela inicial">Ícone</button>
           <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
@@ -1981,6 +2006,15 @@
     </div>
   </div>
 
+  <div class="confirm-modal" id="diarioModal" role="dialog" aria-modal="true" aria-labelledby="diarioTitulo" hidden>
+    <div class="sheet">
+      <h2 id="diarioTitulo">Diário do balcão</h2>
+      <p class="subtitle" style="margin-bottom:0.65rem">Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro.</p>
+      <div id="diarioLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
+      <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
+    </div>
+  </div>
+
   <div class="install-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitulo" hidden>
     <div class="sheet">
       <h2 id="installTitulo">Colocar o Fiado na tela inicial</h2>
@@ -2047,6 +2081,8 @@
     const LICENSE_KEY = "fiado-mercado-license-v1";
     const CONFIG_KEY = "fiado-mercado-config-v1";
     const LOG_KEY = "fiado-mercado-admin-log-v1";
+    const JOURNAL_KEY_PREFIX = "fiado-diario-v1";
+    const TAB_BC_PREFIX = "fiado-tab-sync-v1";
     const ONBOARDING_KEY = "fiado-mercado-onboarding-v1";
     const CHECKLIST_KEY = "fiado-mercado-checklist-v1";
     const $ = (sel) => document.querySelector(sel);
@@ -2062,6 +2098,11 @@
       fromAdmin: false,
       filtro: "aberto",
       onboardStep: 0,
+      tabId: null,
+      outrasAbas: 0,
+      cadernoDesatualizado: false,
+      ultimoSalvoNuvem: null,
+      salvandoNuvem: false,
     };
 
     function lerConfig() {
@@ -2171,6 +2212,288 @@
       });
     }
 
+    function formatQuandoSegundos(ts) {
+      const d = new Date(ts);
+      return d.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    }
+
+    function journalKey() {
+      return JOURNAL_KEY_PREFIX + ":" + cacheKeyCaderno();
+    }
+
+    function tabSyncKey() {
+      return TAB_BC_PREFIX + ":" + cacheKeyCaderno();
+    }
+
+    function lerDiario() {
+      try {
+        const arr = JSON.parse(localStorage.getItem(journalKey()) || "[]");
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function registrarDiario(texto) {
+      const logs = lerDiario();
+      logs.unshift({ id: uid(), texto, ts: Date.now() });
+      localStorage.setItem(journalKey(), JSON.stringify(logs.slice(0, 120)));
+      atualizarSaveStatusUI();
+    }
+
+    function mergeClientes(local, remote) {
+      const map = new Map();
+      for (const c of local || []) {
+        map.set(c.id, { ...c, movs: [...(c.movs || [])] });
+      }
+      for (const rc of remote || []) {
+        const lc = map.get(rc.id);
+        if (!lc) {
+          map.set(rc.id, { ...rc, movs: [...(rc.movs || [])] });
+          continue;
+        }
+        lc.nome = rc.nome || lc.nome;
+        if (rc.fone != null) lc.fone = rc.fone;
+        if (rc.obs != null) lc.obs = rc.obs;
+        if (rc.limite != null) lc.limite = rc.limite;
+        const movIds = new Map();
+        for (const m of [...(lc.movs || []), ...(rc.movs || [])]) {
+          if (!movIds.has(m.id)) movIds.set(m.id, m);
+        }
+        lc.movs = [...movIds.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      }
+      return [...map.values()];
+    }
+
+    function lerClientesDoCacheLocal() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(cacheKeyCaderno()) || "null");
+        return Array.isArray(raw?.clientes) ? raw.clientes : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function mesclarClientesRemotos(remoteClientes) {
+      if (!Array.isArray(remoteClientes)) return false;
+      const antes = JSON.stringify(state.clientes);
+      state.clientes = mergeClientes(state.clientes, remoteClientes);
+      const mudou = JSON.stringify(state.clientes) !== antes;
+      if (mudou) {
+        state.cadernoDesatualizado = false;
+        renderHome();
+        if (state.ativoId) abrirDetalhe(state.ativoId);
+        atualizarBannerAba();
+        atualizarSaveStatusUI();
+      }
+      return mudou;
+    }
+
+    function tentarMesclarCadernoLocal() {
+      const remoto = lerClientesDoCacheLocal();
+      return remoto ? mesclarClientesRemotos(remoto) : false;
+    }
+
+    function onMsgAba(data) {
+      if (!data || data.tabId === state.tabId) return;
+      if (data.t === "oi") {
+        state.outrasAbas = Math.max(state.outrasAbas, 1);
+        window._fiadoTabCh?.postMessage({ t: "oi", tabId: state.tabId, ts: Date.now() });
+        atualizarBannerAba();
+      }
+      if (data.t === "salvou") {
+        if (mesclarClientesRemotos(lerClientesDoCacheLocal())) {
+          registrarDiario("Mesclou lançamentos de outra aba");
+          toast("Outra aba salvou — lançamentos unidos");
+        } else {
+          state.cadernoDesatualizado = true;
+          registrarDiario("Outra aba salvou o caderno — toque Atualizar antes de lançar");
+          atualizarBannerAba();
+          toast("Outra aba alterou o caderno. Toque Atualizar.", true);
+        }
+      }
+    }
+
+    function avisarOutrasAbasSalvou() {
+      const msg = { t: "salvou", tabId: state.tabId, ts: Date.now() };
+      window._fiadoTabCh?.postMessage(msg);
+      try {
+        localStorage.setItem(tabSyncKey() + ":evt", JSON.stringify(msg));
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    function initSincroniaAbas() {
+      if (initSincroniaAbas._done) return;
+      initSincroniaAbas._done = true;
+      const key = tabSyncKey();
+      if ("BroadcastChannel" in window) {
+        const ch = new BroadcastChannel(key);
+        ch.onmessage = (e) => onMsgAba(e.data);
+        window._fiadoTabCh = ch;
+        ch.postMessage({ t: "oi", tabId: state.tabId, ts: Date.now() });
+        if (initSincroniaAbas._iv) clearInterval(initSincroniaAbas._iv);
+        initSincroniaAbas._iv = setInterval(
+          () => ch.postMessage({ t: "oi", tabId: state.tabId, ts: Date.now() }),
+          4000
+        );
+      }
+      window.addEventListener("storage", (e) => {
+        const ck = cacheKeyCaderno();
+        if (e.key === ck && e.newValue) {
+          try {
+            const remote = JSON.parse(e.newValue);
+            if (remote?.clientes && mesclarClientesRemotos(remote.clientes)) {
+              registrarDiario("Mesclou lançamentos de outra aba");
+              toast("Outra aba salvou — lançamentos unidos");
+            }
+          } catch (_) {
+            /* ignore */
+          }
+          return;
+        }
+        if (e.key !== key + ":evt") return;
+        try {
+          onMsgAba(JSON.parse(e.newValue || "{}"));
+        } catch (_) {
+          /* ignore */
+        }
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          enviarNuvemPendente();
+          return;
+        }
+        tentarMesclarCadernoLocal();
+      });
+      window.addEventListener("beforeunload", enviarNuvemPendente);
+    }
+
+    function enviarNuvemPendente() {
+      if (!salvar._cloudT) return;
+      clearTimeout(salvar._cloudT);
+      salvar._cloudT = null;
+      if (!cloudOn() || !FiadoCloud.getToken()) return;
+      const meta = FiadoCloud.getMeta() || {};
+      if (meta.role === "admin" && !meta.actingMercadoId) return;
+      state.salvandoNuvem = true;
+      FiadoCloud.salvarCaderno(state.clientes)
+        .then(() => {
+          state.salvandoNuvem = false;
+          state.ultimoSalvoNuvem = Date.now();
+        })
+        .catch(() => {
+          state.salvandoNuvem = false;
+        });
+    }
+
+    function atualizarBannerAba() {
+      const el = $("#bannerAba");
+      if (!el) return;
+      const show = state.outrasAbas > 0 || state.cadernoDesatualizado;
+      el.classList.toggle("show", show);
+      el.classList.toggle("warn", state.cadernoDesatualizado);
+      if (state.cadernoDesatualizado) {
+        el.innerHTML =
+          '<strong>Caderno desatualizado.</strong> Outra aba salvou por cima. ' +
+          '<button type="button" class="btn primary" id="btnRecarregarCaderno" style="margin-top:0.5rem;width:100%">Atualizar agora</button>';
+        $("#btnRecarregarCaderno")?.addEventListener("click", recarregarCaderno);
+      } else if (state.outrasAbas > 0) {
+        el.innerHTML =
+          '<button type="button" class="btn-fechar-banner" id="btnFecharBannerAba" title="Esconder" aria-label="Esconder aviso">×</button>' +
+          "<strong>Fiado aberto em outra aba.</strong> Use só UMA aba por vez — senão um lançamento pode apagar o outro.";
+        $("#btnFecharBannerAba")?.addEventListener("click", () => el.classList.remove("show"));
+      }
+    }
+
+    function atualizarSaveStatusUI() {
+      const el = $("#saveStatus");
+      if (!el) return;
+      if (state.cadernoDesatualizado) {
+        el.textContent = "Desatualizado";
+        el.className = "save-status warn";
+        return;
+      }
+      if (state.salvandoNuvem) {
+        el.textContent = "Salvando…";
+        el.className = "save-status";
+        return;
+      }
+      if (state.ultimoSalvoNuvem) {
+        const hora = formatQuandoSegundos(state.ultimoSalvoNuvem);
+        el.textContent = "Nuvem " + hora.slice(-8);
+        el.className = "save-status ok";
+        return;
+      }
+      const ultimo = lerDiario()[0];
+      if (ultimo) {
+        el.textContent = formatQuandoSegundos(ultimo.ts).slice(-8);
+        el.className = "save-status";
+      } else {
+        el.textContent = "";
+        el.className = "save-status";
+      }
+    }
+
+    async function recarregarCaderno() {
+      await carregar();
+      state.cadernoDesatualizado = false;
+      renderHome();
+      if (state.ativoId) abrirDetalhe(state.ativoId);
+      toast("Caderno atualizado");
+      registrarDiario("Caderno recarregado");
+      atualizarBannerAba();
+      atualizarSaveStatusUI();
+    }
+
+    function exigirCadernoAtualizado() {
+      if (!state.cadernoDesatualizado) return true;
+      toast("Atualize o caderno primeiro — outra aba salvou por cima", true);
+      atualizarBannerAba();
+      return false;
+    }
+
+    function renderDiario() {
+      const box = $("#diarioLista");
+      if (!box) return;
+      const logs = lerDiario();
+      if (!logs.length) {
+        box.innerHTML = '<div class="vazio" style="padding:0.8rem">Nenhum registro ainda.</div>';
+        return;
+      }
+      box.innerHTML = logs
+        .map(
+          (l) => `
+          <div class="log-item">
+            <div>${escapeHtml(l.texto)}</div>
+            <div class="quando">${formatQuandoSegundos(l.ts)}</div>
+          </div>
+        `
+        )
+        .join("");
+    }
+
+    function abrirDiario() {
+      renderDiario();
+      const modal = $("#diarioModal");
+      modal.hidden = false;
+      modal.classList.add("show");
+    }
+
+    function fecharDiario() {
+      const modal = $("#diarioModal");
+      modal.classList.remove("show");
+      modal.hidden = true;
+    }
+
     function cloudOn() {
       return !!(window.FiadoCloud && FiadoCloud.configured());
     }
@@ -2187,18 +2510,37 @@
     }
 
     function salvar() {
+      if (state.cadernoDesatualizado && !tentarMesclarCadernoLocal()) {
+        toast("Atualize o caderno antes de salvar — outra aba alterou", true);
+        atualizarBannerAba();
+        return;
+      }
       salvarLocalCache();
+      avisarOutrasAbasSalvou();
       if (cloudOn() && FiadoCloud.getToken()) {
         const meta = FiadoCloud.getMeta() || {};
         if (meta.role === "admin" && !meta.actingMercadoId) return;
         clearTimeout(salvar._cloudT);
         salvar._cloudT = setTimeout(() => {
+          state.salvandoNuvem = true;
+          atualizarSaveStatusUI();
           FiadoCloud.salvarCaderno(state.clientes)
             .then(() => {
-              /* ok silencioso */
+              state.salvandoNuvem = false;
+              state.ultimoSalvoNuvem = Date.now();
+              avisarOutrasAbasSalvou();
+              registrarDiario("Caderno salvo na nuvem");
+              atualizarSaveStatusUI();
             })
-            .catch((err) => toast("Nuvem: " + (err.message || "falha ao salvar"), true));
+            .catch((err) => {
+              state.salvandoNuvem = false;
+              atualizarSaveStatusUI();
+              toast("Nuvem: " + (err.message || "falha ao salvar"), true);
+              registrarDiario("Falha ao salvar na nuvem: " + (err.message || "erro"));
+            });
         }, 450);
+      } else {
+        registrarDiario("Caderno salvo neste celular");
       }
     }
 
@@ -2606,6 +2948,12 @@
         return;
       }
       await carregar();
+      if (!state.tabId) {
+        state.tabId = uid();
+      }
+      initSincroniaAbas();
+      atualizarBannerAba();
+      atualizarSaveStatusUI();
       atualizarNomeMercadoUI();
       atualizarPillTrial();
       atualizarBotaoNuvemBackup();
@@ -3626,6 +3974,7 @@
           abrirClienteRapido(btn.dataset.id, btn.dataset.rapido);
         });
       });
+      atualizarSaveStatusUI();
     }
 
     function abrirClienteRapido(id, tipo) {
@@ -3670,6 +4019,7 @@
     }
 
     function salvarCliente() {
+      if (!exigirCadernoAtualizado()) return;
       const nome = $("#cliNome").value.trim();
       const fone = $("#cliFone").value.trim();
       const obs = $("#cliObs").value.trim();
@@ -3696,6 +4046,7 @@
         c.obs = obs;
         c.limite = limite;
         salvar();
+        registrarDiario(`Cliente editado — ${nome}`);
         toast("Cliente atualizado");
         abrirDetalhe(c.id);
         return;
@@ -3704,6 +4055,7 @@
       const novo = { id: uid(), nome, fone, obs, limite, criadoEm: Date.now(), movs: [] };
       state.clientes.push(novo);
       salvar();
+      registrarDiario(`Cliente novo — ${nome}`);
       toast("Cliente salvo");
       abrirDetalhe(novo.id);
     }
@@ -3803,12 +4155,14 @@
       if (!confirm(`Apagar este ${tipo} de ${formatBRL(mov.valor)}?`)) return;
       c.movs = c.movs.filter((m) => m.id !== movId);
       salvar();
+      registrarDiario(`Apagou ${tipo} ${formatBRL(mov.valor)} — ${c.nome}`);
       toast("Lançamento apagado — saldo atualizado");
       abrirDetalhe(c.id);
     }
 
     function desfazerUltimo() {
       if (!exigirAcesso()) return;
+      if (!exigirCadernoAtualizado()) return;
       const c = clienteAtivo();
       if (!c || !(c.movs || []).length) return;
       const ultimo = [...c.movs].sort((a, b) => b.ts - a.ts)[0];
@@ -3816,11 +4170,13 @@
       if (!confirm(`Desfazer o último ${tipo} de ${formatBRL(ultimo.valor)}?\nO valor volta pro saldo.`)) return;
       c.movs = c.movs.filter((m) => m.id !== ultimo.id);
       salvar();
+      registrarDiario(`Desfez ${tipo} ${formatBRL(ultimo.valor)} — ${c.nome}`);
       toast("Desfeito — saldo voltou");
       abrirDetalhe(c.id);
     }
 
     function abrirPainel(tipo) {
+      if (!exigirCadernoAtualizado()) return;
       state.tipoMov = tipo;
       state.formaPagamento = null;
       const isDebito = tipo === "debito";
@@ -3954,6 +4310,7 @@
 
     async function confirmarMov(receberTudo) {
       if (!exigirAcesso()) return;
+      if (!exigirCadernoAtualizado()) return;
       const c = clienteAtivo();
       if (!c) return;
       const tipo = state.tipoMov;
@@ -4048,8 +4405,10 @@
             ? `Recebido ${formatBRL(valorOk)} (${rotuloForma(forma)}) — zerou. Errou? use Desfazer`
             : `Recebido ${formatBRL(valorOk)} (${rotuloForma(forma)}) — ainda deve ${formatBRL(resto)}`
         );
+        registrarDiario(`Recebeu ${formatBRL(valorOk)} (${rotuloForma(forma)}) — ${c.nome}`);
       } else {
         toast("Fiado lançado");
+        registrarDiario(`Fiado ${formatBRL(valorOk)} — ${c.nome}${nota ? " · " + nota : ""}`);
       }
       abrirDetalhe(c.id);
     }
@@ -4127,6 +4486,7 @@
       state.clientes = state.clientes.filter((x) => x.id !== c.id);
       state.ativoId = null;
       salvar();
+      registrarDiario(`Apagou cliente — ${c.nome}`);
       toast("Cliente apagado");
       mostrar("#viewHome");
       renderHome();
@@ -4324,6 +4684,11 @@
       salvarChecklistMeta({ bannerDismissed: true });
       renderChecklist();
     });
+    $("#btnDiario")?.addEventListener("click", abrirDiario);
+    $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
+    $("#diarioModal")?.addEventListener("click", (e) => {
+      if (e.target === $("#diarioModal")) fecharDiario();
+    });
 
     $("#btnNovoCliente").addEventListener("click", () => {
       if (!acessoLiberado()) return entrarNoApp();
@@ -4504,6 +4869,12 @@
         })
         .catch(() => {});
     }
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && state.cadernoDesatualizado) {
+        toast("Caderno desatualizado — toque Atualizar", true);
+      }
+    });
 
     $("#btnComoInstalar")?.addEventListener("click", abrirGuiaInstalar);
     $("#btnInstalarApp")?.addEventListener("click", dispararInstalarNativo);
