@@ -64,9 +64,11 @@ test("dois salários: plano ensina teto de lazer + falta da meta, não R$ 40", (
   assert.ok(c.caixa >= 1600, "caixa depois do salário 15");
   assert.equal(NC.genioModo(), "gestor");
   const depoisContas = Math.max(0, c.caixa - (plano.pagarAgora || 0) - (plano.separarFatura || 0) - (plano.separarContas || 0));
-  assert.equal(plano.guardarUsa, Math.min(g.faltaMeta, depoisContas));
+  const reserva = Math.min(80, depoisContas);
+  assert.equal(plano.reservaUsa, reserva);
+  assert.equal(plano.guardarUsa, Math.min(g.faltaMeta, depoisContas - reserva));
   assert.ok(plano.guardarUsa > 50, "guardar deste caixa > passo de hábito, veio " + plano.guardarUsa);
-  assert.equal(plano.lazerUsa, Math.min(200, Math.max(0, depoisContas - plano.guardarUsa)));
+  assert.equal(plano.lazerUsa, Math.min(200, Math.max(0, depoisContas - reserva - plano.guardarUsa)));
   assert.ok(g.renda >= 3200, "soma os dois salários");
   assert.ok(g.ja >= 40);
 });
@@ -265,11 +267,11 @@ test("card O gênio diz usa os dois salários e o caixa atual", () => {
   salarioCaiu(15, 0);
   const html = NC.viewHoje();
   assert.match(html, /O gênio diz/);
-  assert.match(html, /Os dois salários/);
+  assert.match(html, /Deste salário/);
   assert.equal(/O gestor /i.test(html), false);
 });
 
-test("sobra 156 depois de pagar tudo: cofre 156, iFood 0", () => {
+test("sobra 156 depois de pagar tudo: reserva PIX 80 + cofre 76, iFood 0", () => {
   casaLimpa();
   pagaConta("Aluguel");
   pagaConta("Energia");
@@ -282,15 +284,83 @@ test("sobra 156 depois de pagar tudo: cofre 156, iFood 0", () => {
   const c = NC.calc();
   const plano = NC.planoDoCaixa(c);
   assert.equal(Math.round(c.caixa), 156);
-  assert.equal(plano.guardarUsa, 156);
+  assert.equal(plano.reservaUsa, 80);
+  assert.equal(plano.guardarUsa, 76);
   assert.equal(plano.lazerUsa, 0);
   const html = NC.viewHoje();
   assert.match(html, /156/);
   assert.match(html, /guardar/i);
   const idle = NC.genioIdleTip();
-  assert.match(idle.txt, /cofre|não é iFood|nao e ifood/i);
+  assert.match(idle.txt, /guarda|cofre|não iFood/i);
   assert.equal(idle.go.mais, "mes");
   NC.genioNavegarTip(idle);
   assert.equal(NC.nav().tab, "mais");
   assert.equal(NC.nav().maisSub, "mes");
+});
+
+test("salário 15 isolado 1620−360−1200: livres 60, reserva 60, cofre 0", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+  });
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.caixa = { valor: 1620, em: Date.now() };
+  S.cedula = { valor: 0 };
+  const c = NC.calc();
+  const plano = NC.planoDoCaixa(c);
+  const d = NC.leituraQuinzena(c);
+  assert.equal(d.valorSalario, 1620);
+  assert.equal(d.contas, 360);
+  assert.equal(d.fatura, 1200);
+  assert.equal(d.livreSalario, 60);
+  assert.equal(d.saldoVelho, 0);
+  assert.equal(plano.reservaUsa, 60);
+  assert.equal(plano.guardarUsa, 0);
+  assert.equal(plano.lazerUsa, 0);
+  const html = NC.viewHoje();
+  assert.match(html, /Margem apertada/);
+  const idle = NC.genioIdleTip();
+  assert.match(idle.txt, /60|apertada|cartão/i);
+});
+
+test("salário 15 + saldo velho 400: reserva 80, guarda o resto, não iFood", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+  });
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.caixa = { valor: 2020, em: Date.now() };
+  S.cedula = { valor: 0 };
+  const c = NC.calc();
+  const plano = NC.planoDoCaixa(c);
+  const d = NC.leituraQuinzena(c);
+  assert.equal(d.saldoVelho, 400);
+  assert.equal(d.livreSalario, 60);
+  assert.equal(plano.reservaUsa, 80);
+  assert.ok(plano.guardarUsa >= 300, "guarda o saldo velho, veio " + plano.guardarUsa);
+  assert.equal(plano.lazerUsa, 0);
+});
+
+test("compras do cartão lançadas: fatura = ciclo, não chute 1200", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+    S.cartao.compras = [{ id: "c1", desc: "mercado", valor: 800, ts: Date.now() }];
+  });
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.caixa = { valor: 1620, em: Date.now() };
+  const c = NC.calc();
+  const d = NC.leituraQuinzena(c);
+  assert.equal(d.fatura, 800);
+  assert.equal(d.chute, false);
+  assert.equal(d.livreSalario, 460);
 });

@@ -2232,11 +2232,17 @@
         : (precisa > 0 ? { tab: "contas" } : { tab: "hoje" });
       highlight = { anchor: precisa > 0 && go.tab === "cartao" ? "fatura" : (precisa > 0 ? "dividas" : "pagar"), tit: sem.msg, txt: sem.sub };
     } else if (num(plano.guardarUsa) > 0) {
-      const g = planoGestorMes();
-      txt = "Sobrou " + fmt(plano.guardarUsa) + " depois das contas. Isso é cofre, não iFood. Falta " + fmt(g.faltaMeta) + " da meta " + fmt(g.meta) + " este mês.";
-      highlight = { anchor: "cofre", tit: "Guarda agora", txt: "Separa " + fmt(plano.guardarUsa) + " no cofre. Lazer só com o que restar depois da meta." };
+      const d = plano.disc || leituraQuinzena(c);
+      txt = "Deste salário sobram " + fmt(d.livreSalario) + ". Caixa tem " + fmt(d.caixa) + " (já tinha " + fmt(d.saldoVelho) + "). Guarda " + fmt(plano.guardarUsa) + " — o resto no banco é reserva até o dia " + d.proxDia + ", não iFood.";
+      highlight = { anchor: "cofre", tit: "Guarda agora", txt: "Separa " + fmt(plano.guardarUsa) + " no cofre. Reserva PIX fica na conta." };
       btn = "Ir guardar";
       go = { tab: "mais", mais: "mes" };
+    } else if (plano.disc && plano.disc.livreSalario <= 80 && plano.disc.fatura > 0) {
+      const d = plano.disc;
+      txt = "Salário dia " + (d.janela && d.janela.dia) + ": " + fmt(d.valorSalario) + " − contas " + fmt(d.contas) + " − fatura " + fmt(d.fatura) + " = " + fmt(d.livreSalario) + " livres. Margem apertada. Deixa no banco. Cartão é pra viver até o dia " + d.proxDia + " — não estoura a próxima fatura.";
+      highlight = { anchor: "genio-plano", tit: "Margem apertada", txt: d.chute ? "Fatura ainda é chute. Lança as compras em Cartão." : "Fatura = mês passado no crédito. Compra nova = próxima fatura." };
+      btn = d.chute ? "Ver cartão" : "Ver o plano";
+      go = d.chute ? { tab: "cartao" } : { tab: "hoje" };
     } else if (num(plano.lazerUsa) > 0) {
       txt = "Meta do mês ok. Lazer deste caixa: até " + fmt(plano.lazerUsa) + " — teto, não pra queimar o caixa.";
       highlight = { anchor: "lazer", tit: "Lazer no teto", txt: "Só isso de iFood/lazer agora. O resto do caixa não é pra gastar." };
@@ -2600,7 +2606,7 @@
     const messages = [
       {
         role: "system",
-        content: "Você é o Gênio do Nossa Casa — o conselheiro financeiro do casal. Use os números reais do contexto, nunca invente. Português do Brasil, NO MÁXIMO 2 frases, UMA ideia. Sem markdown. REGRAS: (1) Caixa vermelho = urgência. (2) Ordem: pagar/separar → GUARDAR a meta do mês → lazer só com o que restar, no teto. Sobra depois das contas NÃO é iFood. (3) Se já tem o item na despensa, não compra de novo. (4) Uma ideia por balão. Nunca contradiga guardarUsa/lazerUsa do contexto." + tomExtra + (urg ? (" Urgência atual do app: " + urg + ".") : ""),
+        content: "Você é o Gênio do Nossa Casa. Números reais do contexto, nunca invente. PT-BR, no máx. 2 frases, UMA ideia. REGRAS: (1) Caixa vermelho = urgência. (2) Dois montes: salário desta quinzena (ex. 1620−contas−fatura=livres) vs saldo que já tinha na conta. Não misture os dois num único 'pode gastar'. (3) Fatura do cartão = o mês que JÁ viveu no crédito, não é dinheiro pra gastar de novo. Compra nova no cartão vira a PRÓXIMA fatura. (4) Ordem: pagar/separar → deixar reserva PIX (~80) até o próximo salário → guardar a meta → lazer no teto. Livres apertados (tipo R$ 60) não são iFood. (5) Despensa: se já tem, não compra." + tomExtra + (urg ? (" Urgência atual do app: " + urg + ".") : ""),
       },
       {
         role: "user",
@@ -2869,7 +2875,7 @@
     return est > 0 ? est : 1200;
   }
   function faturaEstimativaEhChute() {
-    return false;
+    return cicloCartaoAberto() <= 0 && !faturaPagaEsteMes();
   }
 
   function diasSalarioOrdenados() {
@@ -2931,6 +2937,41 @@
   function faturaNaJanela(salarioDia) {
     return salarioPagaDia(diaFatura()) === salarioDia;
   }
+  function cicloCartaoAberto() {
+    return (S.cartao.compras || []).reduce((a, x) => a + num(x.valor), 0);
+  }
+  const RESERVA_PIX = 80; // PIX/imprevisto até o próximo salário — não vai no cartão
+  function leituraQuinzena(c) {
+    c = c || calc();
+    const janela = janelaSalarioAtiva();
+    const valorSalario = janela ? num(janela.valor) : 0;
+    const contasCad = janela
+      ? contasDaJanela(janela.dia).reduce((a, ct) => a + num(ct.valor), 0)
+      : 0;
+    const fatDesta = janela ? faturaNaJanela(janela.dia) : false;
+    const ciclo = cicloCartaoAberto();
+    const est = num(S.config.faturaEstimada) > 0 ? num(S.config.faturaEstimada) : 1200;
+    const faturaTeoria = fatDesta ? (ciclo > 0 ? ciclo : est) : 0;
+    const livreSalario = Math.round((valorSalario - contasCad - faturaTeoria) * 100) / 100;
+    const salarioNoCaixa = janela && janela.caiu ? valorSalario : 0;
+    const saldoVelho = Math.max(0, Math.round((num(c.caixa) - salarioNoCaixa) * 100) / 100);
+    const prox = c.prox || proxRenda();
+    return {
+      janela,
+      valorSalario,
+      contas: contasCad,
+      fatura: faturaTeoria,
+      livreSalario,
+      saldoVelho,
+      caixa: num(c.caixa),
+      chute: fatDesta && ciclo <= 0 && !faturaPagaEsteMes(),
+      ciclo,
+      proxDia: prox && prox.d ? prox.d.getDate() : 7,
+      diasAte: num(c.diasAte) || 0,
+      reservaAlvo: RESERVA_PIX,
+      cedula: num(c.cedula),
+    };
+  }
 
   /** Plano por janela de salário + caixa (banco+cédula). */
   function planoDoCaixa(c) {
@@ -2990,7 +3031,7 @@
         cls: "warn",
         n: passos.length + 1,
         tit: fatCobrando ? "Pagar fatura do cartão" : "Separar fatura do cartão",
-        gs: fmt(fatValor) + " · vence " + dataBRFull(fat.venc) + (dias >= 0 ? " · em " + dias + "d" : "") + " · salário dia " + salarioPagaDia(diaFatura()) + " · não gasta",
+        gs: fmt(fatValor) + " · vence " + dataBRFull(fat.venc) + (dias >= 0 ? " · em " + dias + "d" : "") + " · salário dia " + salarioPagaDia(diaFatura()) + " · isso já foi vivido no cartão, não gasta de novo" + (chute ? " · chute " + fmt(fatValor) + " — lança as compras em Cartão" : ""),
         valor: separarFatura,
       });
       resto = Math.max(0, resto - separarFatura);
@@ -3010,20 +3051,31 @@
       passos.push({ cls: "ok", n: 1, tit: "Nada vencido nesta janela", gs: "Pode seguir guardar e lazer", valor: 0 });
     }
 
-    // Paga/separa primeiro. Depois GUARDA a meta. Lazer só com o que sobrar, no teto.
-    // Iniciante: passo 10–50, depois lazer.
+    // Paga/separa. Deixa reserva PIX. Guarda a meta. Lazer só com o resto, no teto.
     const gMes = planoGestorMes();
+    const disc = leituraQuinzena(c);
+    const reservaFalta = Math.max(0, RESERVA_PIX - num(c.cedula));
+    const reservaUsa = Math.min(reservaFalta, resto);
+    resto = Math.max(0, resto - reservaUsa);
     let guardarUsa = 0;
     let lazerUsa = 0;
     if (genioModo() === "iniciante") {
-      const passo = passoGuardarMes();
-      guardarUsa = Math.min(passo, resto);
+      guardarUsa = Math.min(passoGuardarMes(), resto);
     } else {
       guardarUsa = Math.min(gMes.faltaMeta, resto);
     }
     resto = Math.max(0, resto - guardarUsa);
     lazerUsa = Math.min(lazerDisp, resto);
     resto = Math.max(0, resto - lazerUsa);
+    if (reservaUsa > 0) {
+      passos.push({
+        cls: "",
+        n: passos.length + 1,
+        tit: "Deixa no banco (imprevisto)",
+        gs: "Até o salário dia " + disc.proxDia + ": PIX que não cabe no cartão. Os " + fmt(disc.livreSalario) + " livres deste salário são margem apertada — não é iFood.",
+        valor: reservaUsa,
+      });
+    }
     passos.push({
       cls: guardarUsa > 0 ? "" : "skip",
       n: passos.length + 1,
@@ -3033,7 +3085,9 @@
           ? ("Passo " + fmt(guardarUsa) + " · meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja))
           : ("Falta " + fmt(gMes.faltaMeta) + " da meta " + fmt(meta) + " este mês · já " + fmt(gMes.ja) + " · cofre " + fmt(emergenciaGuardado())))
         : (gMes.faltaMeta > 0
-          ? ("Meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja) + " · deste caixa não sobra depois das contas. Próximo salário.")
+          ? (reservaUsa > 0
+            ? ("Meta " + fmt(meta) + " · livre deste salário " + fmt(disc.livreSalario) + " · margem apertada, os " + fmt(reservaUsa) + " ficam no banco até o dia " + disc.proxDia + ".")
+            : ("Meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja) + " · deste caixa não sobra depois das contas. Próximo salário."))
           : (meta > 0 ? ("Meta do mês " + fmt(meta) + " já coberta.") : "Sem meta")),
       valor: guardarUsa,
       skipCheck: guardarUsa <= 0,
@@ -3060,6 +3114,8 @@
       chute,
       lazerUsa,
       guardarUsa,
+      reservaUsa,
+      disc,
       janela,
       rotuloJanela,
       subJanela,
@@ -3325,12 +3381,20 @@
 
       ${(() => {
         const g = planoGestorMes();
+        const d = plano.disc || leituraQuinzena(c);
+        const fatTxt = d.fatura > 0
+          ? (d.chute
+            ? ("Fatura chute " + fmt(d.fatura) + " (lança as compras em Cartão pra número real). Isso é o mês que já viveu no crédito — não gasta de novo.")
+            : ("Fatura " + fmt(d.fatura) + " = o que já passou no cartão. Até o dia " + d.proxDia + " o mercado vai no cartão e vira a próxima fatura."))
+          : "Fatura desta quinzena ok.";
         return `<div class="card" data-genio-anchor="genio-plano" style="margin-top:12px;">
         <div class="t">O gênio diz</div>
-        <div class="s" style="margin-top:0.45rem;">Os dois salários somam <b>${fmt(g.renda)}</b>. Contas ${fmt(g.contas)} + fatura ${fmt(g.fatura)} = ${fmt(g.comprometido)}. Sobra real do mês: <b>${fmt(g.sobraReal)}</b>.</div>
-        <div class="s" style="margin-top:0.45rem;"><b>Este mês:</b> gastar no máximo ${fmt(g.lazerTeto)} de lazer (já ${fmt(g.lazerGasto)}, resta ${fmt(g.lazerRest)}). Guardar ${fmt(g.meta)} (já ${fmt(g.ja)}, falta ${fmt(g.faltaMeta)}). ${g.folga > 0 ? "Folga " + fmt(g.folga) + " — não queima em iFood." : "Sem folga extra neste mês."}</div>
-        <div class="s" style="margin-top:0.45rem;"><b>Deste caixa:</b> pagar/separar ${fmt(precisaAgora)}, guardar ${fmt(plano.guardarUsa || 0)}, lazer até ${fmt(plano.lazerUsa || 0)}.</div>
-        <div class="dica">${genioModo() === "iniciante" ? "Passo pequeno (R$ 10–50). Troca em Mais → Ajustes." : "Número real, não hábito de R$ 40. Passo pequeno fica em Mais → Ajustes."}</div>
+        <div class="s" style="margin-top:0.45rem;"><b>Deste salário${d.janela ? " dia " + d.janela.dia : ""}:</b> ${fmt(d.valorSalario)} − contas ${fmt(d.contas)} − fatura ${fmt(d.fatura)} = <b>${fmt(d.livreSalario)}</b> livres. ${d.livreSalario <= 80 && d.fatura > 0 ? "Margem apertada." : ""}</div>
+        <div class="s" style="margin-top:0.45rem;">Na conta agora: <b>${fmt(d.caixa)}</b> (já tinha ${fmt(d.saldoVelho)} fora deste salário · cédula ${fmt(d.cedula)}).</div>
+        <div class="s" style="margin-top:0.45rem;">${esc(fatTxt)}</div>
+        <div class="s" style="margin-top:0.45rem;"><b>Este mês:</b> lazer no máx. ${fmt(g.lazerTeto)} (já ${fmt(g.lazerGasto)}). Guardar ${fmt(g.meta)} (já ${fmt(g.ja)}, falta ${fmt(g.faltaMeta)}).</div>
+        <div class="s" style="margin-top:0.45rem;"><b>Deste caixa:</b> pagar/separar ${fmt(precisaAgora)}, deixa ${fmt(plano.reservaUsa || 0)} no banco, guardar ${fmt(plano.guardarUsa || 0)}, lazer até ${fmt(plano.lazerUsa || 0)}.</div>
+        <div class="dica">${d.livreSalario <= 80 && d.valorSalario > 0 ? "Os livres deste salário não são iFood. Reserva PIX até o próximo salário; cofre só com o que passa disso." : (genioModo() === "iniciante" ? "Passo pequeno (R$ 10–50). Troca em Mais → Ajustes." : "Paga → reserva PIX → cofre → lazer no teto.")}</div>
       </div>`;
       })()}
 
@@ -5267,6 +5331,7 @@
         caixaMudanca = null;
       },
       calc,
+      leituraQuinzena,
       planoDoCaixa,
       planoGestorMes,
       genioPickTip,
