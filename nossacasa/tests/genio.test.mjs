@@ -42,9 +42,9 @@ test("nome único: UI não chama gestor como outra pessoa", () => {
   const hoje = NC.viewHoje();
   const ajustes = NC.viewAjustes();
   assert.equal(/O gestor diz/i.test(hoje), false);
+  assert.equal(/O gênio diz/i.test(hoje), false);
   assert.equal(/Gênio \(gestor\)/i.test(ajustes), false);
   assert.equal(/Modo gestor/i.test(hoje + ajustes), false);
-  assert.match(hoje, /O gênio diz/);
   assert.match(ajustes, />Gênio</);
   assert.match(ajustes, /Números reais/);
 });
@@ -258,7 +258,7 @@ test("e se gastar 40: responde com caixa depois", () => {
   assert.ok(r.txt.includes("40") || /gastar/i.test(r.tit));
 });
 
-test("card O gênio diz usa os dois salários e o caixa atual", () => {
+test("Hoje não tem novela do gênio — números nos potes", () => {
   casaLimpa((S) => { S.caixa.valor = 1716; });
   pagaConta("Aluguel");
   pagaConta("Energia");
@@ -266,9 +266,10 @@ test("card O gênio diz usa os dois salários e o caixa atual", () => {
   salarioCaiu(7, 0);
   salarioCaiu(15, 0);
   const html = NC.viewHoje();
-  assert.match(html, /O gênio diz/);
-  assert.match(html, /Deste salário/);
-  assert.equal(/O gestor /i.test(html), false);
+  assert.equal(/O gênio diz/i.test(html), false);
+  assert.match(html, /Guardar agora/);
+  const d = NC.leituraQuinzena(NC.calc());
+  assert.ok(d.valorSalario > 0);
 });
 
 test("sobra 156 depois de pagar tudo: reserva PIX 80 + cofre 76, iFood 0", () => {
@@ -296,6 +297,9 @@ test("sobra 156 depois de pagar tudo: reserva PIX 80 + cofre 76, iFood 0", () =>
   NC.genioNavegarTip(idle);
   assert.equal(NC.nav().tab, "mais");
   assert.equal(NC.nav().maisSub, "mes");
+  const { tip } = tipEFala(c, plano);
+  assert.equal(tip.tipo, "guardar-agora");
+  assert.equal(tip.go.mais, "mes");
 });
 
 test("salário 15 isolado 1620−360−1200: livres 60, reserva 60, cofre 0", () => {
@@ -320,10 +324,9 @@ test("salário 15 isolado 1620−360−1200: livres 60, reserva 60, cofre 0", ()
   assert.equal(plano.reservaUsa, 60);
   assert.equal(plano.guardarUsa, 0);
   assert.equal(plano.lazerUsa, 0);
-  const html = NC.viewHoje();
-  assert.match(html, /Margem apertada/);
   const idle = NC.genioIdleTip();
-  assert.match(idle.txt, /60|apertada|cartão/i);
+  assert.match(idle.txt, /60|banco|cartão/i);
+  assert.ok(idle.go.tab === "cartao" || idle.go.tab === "contas");
 });
 
 test("salário 15 + saldo velho 400: reserva 80, guarda o resto, não iFood", () => {
