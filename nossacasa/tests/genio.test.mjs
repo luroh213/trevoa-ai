@@ -63,9 +63,10 @@ test("dois salários: plano ensina teto de lazer + falta da meta, não R$ 40", (
   const g = NC.planoGestorMes();
   assert.ok(c.caixa >= 1600, "caixa depois do salário 15");
   assert.equal(NC.genioModo(), "gestor");
+  const depoisContas = Math.max(0, c.caixa - (plano.pagarAgora || 0) - (plano.separarFatura || 0) - (plano.separarContas || 0));
+  assert.equal(plano.guardarUsa, Math.min(g.faltaMeta, depoisContas));
   assert.ok(plano.guardarUsa > 50, "guardar deste caixa > passo de hábito, veio " + plano.guardarUsa);
-  assert.equal(plano.guardarUsa, Math.min(g.faltaMeta, Math.max(0, c.caixa - (plano.pagarAgora || 0) - (plano.separarFatura || 0) - (plano.separarContas || 0) - (plano.lazerUsa || 0))));
-  assert.ok(plano.lazerUsa <= 200 + 0.009, "lazer não passa do teto");
+  assert.equal(plano.lazerUsa, Math.min(200, Math.max(0, depoisContas - plano.guardarUsa)));
   assert.ok(g.renda >= 3200, "soma os dois salários");
   assert.ok(g.ja >= 40);
 });
@@ -266,4 +267,30 @@ test("card O gênio diz usa os dois salários e o caixa atual", () => {
   assert.match(html, /O gênio diz/);
   assert.match(html, /Os dois salários/);
   assert.equal(/O gestor /i.test(html), false);
+});
+
+test("sobra 156 depois de pagar tudo: cofre 156, iFood 0", () => {
+  casaLimpa();
+  pagaConta("Aluguel");
+  pagaConta("Energia");
+  pagaConta("Internet");
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.cartao.faturas[NC.mesKey()] = { ts: Date.now() - 1000, valor: 1200 };
+  S.caixa = { valor: 156, em: Date.now() };
+  S.cedula = { valor: 0 };
+  const c = NC.calc();
+  const plano = NC.planoDoCaixa(c);
+  assert.equal(Math.round(c.caixa), 156);
+  assert.equal(plano.guardarUsa, 156);
+  assert.equal(plano.lazerUsa, 0);
+  const html = NC.viewHoje();
+  assert.match(html, /156/);
+  assert.match(html, /guardar/i);
+  const idle = NC.genioIdleTip();
+  assert.match(idle.txt, /cofre|não é iFood|nao e ifood/i);
+  assert.equal(idle.go.mais, "mes");
+  NC.genioNavegarTip(idle);
+  assert.equal(NC.nav().tab, "mais");
+  assert.equal(NC.nav().maisSub, "mes");
 });

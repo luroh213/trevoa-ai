@@ -2106,7 +2106,7 @@
     "Sem urgência agora. Guardar R$10 já conta. Hábito > valor.",
     "Dica: separar assim que o salário cai é mais fácil que tentar sobrar no fim do mês.",
     "Caixa calmo. Bom momento pra olhar o pote Guardar — mesmo se for pouquinho.",
-    "Sem cobrança hoje. Só lembra: pagar → lazer no teto → um trocado pro cofre.",
+    "Sem cobrança hoje. Só lembra: pagar → guardar a meta → lazer no teto.",
     "Se der, marca um valor bem pequeno pra guardar no próximo salário. Sem drama.",
   ];
   const GENIO_EDUCA_DICAS = [
@@ -2195,11 +2195,11 @@
     if (tipo === "coach-sobrou") {
       return { txt: "Contas em ordem! Sobrou " + fmt(ctx.sobrou || 0) + ". Próximo: ver quanto dá pra guardar.", btn: "Continuar" };
     }
-    if (tipo === "coach-lazer") {
-      return { txt: "Lazer deste caixa: até " + fmt(ctx.lazer || 0) + " (teto do mês). O resto que couber vai pro cofre.", btn: "Beleza" };
-    }
     if (tipo === "coach-guardar") {
-      return { txt: "Pra fechar a meta deste mês, guarda " + fmt(ctx.Z || 0) + " agora. Não é hábito de R$ 40 — é o que o caixa aguenta.", btn: "Guardar " + fmt(ctx.Z || 0) + " agora" };
+      return { txt: "Sobrou " + fmt(ctx.Z || 0) + " depois das contas. Isso vai pro cofre — não é iFood. Quer separar agora?", btn: "Guardar " + fmt(ctx.Z || 0) + " agora" };
+    }
+    if (tipo === "coach-lazer") {
+      return { txt: "Meta deste caixa ok. Lazer no teto: até " + fmt(ctx.lazer || 0) + ".", btn: "Beleza" };
     }
     if (tipo === "coach-guardar-zero") {
       return { txt: "Desta vez não sobrou pra guardar — tudo bem. No próximo salário a gente tenta um valor bem pequeno.", btn: "Ok" };
@@ -2231,16 +2231,16 @@
         ? { tab: "cartao" }
         : (precisa > 0 ? { tab: "contas" } : { tab: "hoje" });
       highlight = { anchor: precisa > 0 && go.tab === "cartao" ? "fatura" : (precisa > 0 ? "dividas" : "pagar"), tit: sem.msg, txt: sem.sub };
-    } else if (num(plano.guardarUsa) > 0 || num(plano.lazerUsa) > 0) {
+    } else if (num(plano.guardarUsa) > 0) {
       const g = planoGestorMes();
-      if (genioModo() === "iniciante") {
-        txt = "Dá pra guardar " + fmt(plano.guardarUsa) + " agora — passo pequeno. Lazer até " + fmt(plano.lazerUsa) + ".";
-        highlight = { anchor: "cofre", tit: "Passo de hábito", txt: "Separa " + fmt(plano.guardarUsa) + " pro cofre. Lazer fica com o teto." };
-      } else {
-        txt = "Deste caixa: lazer até " + fmt(plano.lazerUsa) + ", guardar " + fmt(plano.guardarUsa) + " (falta " + fmt(g.faltaMeta) + " da meta " + fmt(g.meta) + " este mês).";
-        highlight = { anchor: "genio-plano", tit: "O gênio diz", txt: "Lazer no teto " + fmt(g.lazerTeto) + ". Guarda " + fmt(plano.guardarUsa) + " agora — não é passo de R$ 40 se a sobra é grande." };
-      }
-      btn = "Ver o plano";
+      txt = "Sobrou " + fmt(plano.guardarUsa) + " depois das contas. Isso é cofre, não iFood. Falta " + fmt(g.faltaMeta) + " da meta " + fmt(g.meta) + " este mês.";
+      highlight = { anchor: "cofre", tit: "Guarda agora", txt: "Separa " + fmt(plano.guardarUsa) + " no cofre. Lazer só com o que restar depois da meta." };
+      btn = "Ir guardar";
+      go = { tab: "mais", mais: "mes" };
+    } else if (num(plano.lazerUsa) > 0) {
+      txt = "Meta do mês ok. Lazer deste caixa: até " + fmt(plano.lazerUsa) + " — teto, não pra queimar o caixa.";
+      highlight = { anchor: "lazer", tit: "Lazer no teto", txt: "Só isso de iFood/lazer agora. O resto do caixa não é pra gastar." };
+      btn = "Ver Hoje";
       go = { tab: "hoje" };
     } else if (precisa > 0) {
       txt = "Ainda tem " + fmt(precisa) + " pra pagar ou separar nesta janela.";
@@ -2360,7 +2360,7 @@
           highlight: {
             anchor: "pagar",
             tit: "Salário caiu — ordem do dia",
-            txt: "Primeiro separa/paga o da janela (" + fmt(precisa) + "). Depois lazer no teto e guarda a meta. Guia embaixo mostra o passo a passo.",
+            txt: "Primeiro separa/paga o da janela (" + fmt(precisa) + "). Depois guarda a meta. Lazer só com o que restar.",
           },
         });
       }
@@ -2448,7 +2448,7 @@
       highlight: {
         anchor: "guia",
         tit: "Resumo do dia",
-        txt: "Caixa " + fmt(c.caixa) + ". Paga/separa, lazer no teto, guarda a meta do mês.",
+        txt: "Caixa " + fmt(c.caixa) + ". Paga/separa, guarda a meta, lazer no teto.",
       },
     });
 
@@ -2479,35 +2479,34 @@
     if (!logado || !S.caixa) return;
     const c = calc();
     const plano = planoDoCaixa(c);
-    const prog = metaProgressiva();
     const lazer = Math.max(0, num(plano.lazerUsa));
-    const sobrou = Math.max(0, num(plano.guardarUsa) + lazer + num(plano.livre));
     const Z = Math.max(0, num(plano.guardarUsa));
-
     const steps = [];
-    steps.push({
-      tipo: "coach-sobrou",
-      chave: "coach-sobrou:" + Date.now(),
-      ephemeral: true,
-      skipVisto: true,
-      coach: true,
-      ctx: { sobrou },
-      go: { tab: "hoje" },
-      highlight: { anchor: "guia", tit: "Depois de pagar", txt: "Sobrou " + fmt(sobrou) + ". Lazer no teto, o resto da meta vai pro cofre." },
-      coachNext: true,
-    });
     if (Z > 0) {
       steps.push({
         tipo: "coach-guardar",
         chave: "coach-guardar:" + Date.now(),
         ephemeral: true,
         skipVisto: true,
+        skipIA: true,
         coach: true,
         ctx: { Z, antes: emergenciaGuardado() },
         valor: Z,
         action: "guardar",
         go: { tab: "mais", mais: "mes" },
-        highlight: { anchor: "cofre", tit: "Guardar agora", txt: "Separa " + fmt(Z) + " pro cofre — o que falta da meta deste mês neste caixa." },
+        highlight: { anchor: "cofre", tit: "Guarda agora", txt: "Sobrou " + fmt(Z) + " depois das contas. Cofre, não iFood." },
+      });
+    } else if (lazer > 0) {
+      steps.push({
+        tipo: "coach-lazer",
+        chave: "coach-lazer:" + Date.now(),
+        ephemeral: true,
+        skipVisto: true,
+        skipIA: true,
+        coach: true,
+        ctx: { lazer },
+        go: { tab: "hoje" },
+        highlight: { anchor: "lazer", tit: "Lazer no teto", txt: "Meta já coberta neste caixa. Lazer até " + fmt(lazer) + "." },
       });
     } else {
       steps.push({
@@ -2515,29 +2514,15 @@
         chave: "coach-zero:" + Date.now(),
         ephemeral: true,
         skipVisto: true,
+        skipIA: true,
         coach: true,
         ctx: {},
         go: { tab: "hoje" },
-        highlight: { anchor: "guardar", tit: "Sem folga agora", txt: "Tudo bem não guardar neste caixa. No próximo salário tentamos " + fmt(prog.metaAgora) + "." },
-        coachNext: true,
-      });
-    }
-    if (lazer > 0) {
-      steps.push({
-        tipo: "coach-lazer",
-        chave: "coach-lazer:" + Date.now(),
-        ephemeral: true,
-        skipVisto: true,
-        coach: true,
-        ctx: { lazer },
-        go: { tab: "hoje" },
-        highlight: { anchor: "lazer", tit: "Teto de lazer", txt: "Depois de guardar: até " + fmt(lazer) + " de lazer agora." },
-        coachNext: true,
+        highlight: { anchor: "guardar", tit: "Sem folga agora", txt: "Tudo foi em conta. No próximo salário a gente guarda." },
       });
     }
     genioCoach = { steps, i: 0 };
     genioApplyTip(steps[0]);
-    enrichGenioTipIA(steps[0]);
   }
   function genioAvancarCoach() {
     if (!genioCoach) return;
@@ -2615,7 +2600,7 @@
     const messages = [
       {
         role: "system",
-        content: "Você é o Gênio do Nossa Casa — o conselheiro financeiro do casal (não existe outro 'gestor': você é o gênio). Você conhece as contas, o cartão, os gastos, as entradas e a despensa em tempo real. Avise curto, claro, quando algo importa agora. Use os números reais do contexto, nunca invente valores. Português do Brasil, NO MÁXIMO 2 frases, UMA ideia. Sem markdown, sem aspas, sem botão no texto. REGRAS: (1) Caixa vermelho/'falta no caixa' = urgência, nunca dica relaxada. (2) Ordem: pagar/separar → lazer no teto do mês → guardar o que falta da meta. Não fale em passo de R$ 40 se a sobra for grande. (3) Se já tem o item na despensa, diga pra não comprar de novo. (4) Uma informação por balão." + tomExtra + (urg ? (" Urgência atual do app: " + urg + ".") : ""),
+        content: "Você é o Gênio do Nossa Casa — o conselheiro financeiro do casal. Use os números reais do contexto, nunca invente. Português do Brasil, NO MÁXIMO 2 frases, UMA ideia. Sem markdown. REGRAS: (1) Caixa vermelho = urgência. (2) Ordem: pagar/separar → GUARDAR a meta do mês → lazer só com o que restar, no teto. Sobra depois das contas NÃO é iFood. (3) Se já tem o item na despensa, não compra de novo. (4) Uma ideia por balão. Nunca contradiga guardarUsa/lazerUsa do contexto." + tomExtra + (urg ? (" Urgência atual do app: " + urg + ".") : ""),
       },
       {
         role: "user",
@@ -2634,7 +2619,7 @@
     return String(txt).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() || fb.txt;
   }
   async function enrichGenioTipIA(tip) {
-    if (!tip || tip.skipIA) return;
+    if (!tip || tip.skipIA || tip.coach) return;
     genioEnsure();
     if (!S.genio.falaCache || typeof S.genio.falaCache !== "object") S.genio.falaCache = {};
     const falaKey = tip.tipo + ":" + JSON.stringify(tip.ctx || {});
@@ -3025,23 +3010,20 @@
       passos.push({ cls: "ok", n: 1, tit: "Nada vencido nesta janela", gs: "Pode seguir guardar e lazer", valor: 0 });
     }
 
-    // Gestor: lazer no teto, depois guarda o que falta da meta do mês.
-    // Iniciante: só um passo pequeno (10–50) pra criar hábito.
+    // Paga/separa primeiro. Depois GUARDA a meta. Lazer só com o que sobrar, no teto.
+    // Iniciante: passo 10–50, depois lazer.
     const gMes = planoGestorMes();
     let guardarUsa = 0;
     let lazerUsa = 0;
     if (genioModo() === "iniciante") {
       const passo = passoGuardarMes();
       guardarUsa = Math.min(passo, resto);
-      resto = Math.max(0, resto - guardarUsa);
-      lazerUsa = Math.min(lazerDisp, resto);
-      resto = Math.max(0, resto - lazerUsa);
     } else {
-      lazerUsa = Math.min(lazerDisp, resto);
-      resto = Math.max(0, resto - lazerUsa);
       guardarUsa = Math.min(gMes.faltaMeta, resto);
-      resto = Math.max(0, resto - guardarUsa);
     }
+    resto = Math.max(0, resto - guardarUsa);
+    lazerUsa = Math.min(lazerDisp, resto);
+    resto = Math.max(0, resto - lazerUsa);
     passos.push({
       cls: guardarUsa > 0 ? "" : "skip",
       n: passos.length + 1,
@@ -3051,7 +3033,7 @@
           ? ("Passo " + fmt(guardarUsa) + " · meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja))
           : ("Falta " + fmt(gMes.faltaMeta) + " da meta " + fmt(meta) + " este mês · já " + fmt(gMes.ja) + " · cofre " + fmt(emergenciaGuardado())))
         : (gMes.faltaMeta > 0
-          ? ("Meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja) + " · deste caixa não cabe. Próximo salário.")
+          ? ("Meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja) + " · deste caixa não sobra depois das contas. Próximo salário.")
           : (meta > 0 ? ("Meta do mês " + fmt(meta) + " já coberta.") : "Sem meta")),
       valor: guardarUsa,
       skipCheck: guardarUsa <= 0,
@@ -3061,8 +3043,8 @@
       n: passos.length + 1,
       tit: "Lazer / iFood",
       gs: lazerUsa > 0
-        ? ("Teto do mês " + fmt(gMes.lazerTeto) + " · já foi " + fmt(gMes.lazerGasto) + " · agora até " + fmt(lazerUsa))
-        : "Sem folga pra lazer nesta conta",
+        ? ("Teto do mês " + fmt(gMes.lazerTeto) + " · já foi " + fmt(gMes.lazerGasto) + " · agora até " + fmt(lazerUsa) + " — só depois de guardar")
+        : (gMes.faltaMeta > 0 ? "Sem lazer agora: o que sobrou foi pro cofre" : "Sem folga pra lazer nesta conta"),
       valor: lazerUsa,
       skipCheck: lazerUsa <= 0,
     });
@@ -3347,7 +3329,7 @@
         <div class="t">O gênio diz</div>
         <div class="s" style="margin-top:0.45rem;">Os dois salários somam <b>${fmt(g.renda)}</b>. Contas ${fmt(g.contas)} + fatura ${fmt(g.fatura)} = ${fmt(g.comprometido)}. Sobra real do mês: <b>${fmt(g.sobraReal)}</b>.</div>
         <div class="s" style="margin-top:0.45rem;"><b>Este mês:</b> gastar no máximo ${fmt(g.lazerTeto)} de lazer (já ${fmt(g.lazerGasto)}, resta ${fmt(g.lazerRest)}). Guardar ${fmt(g.meta)} (já ${fmt(g.ja)}, falta ${fmt(g.faltaMeta)}). ${g.folga > 0 ? "Folga " + fmt(g.folga) + " — não queima em iFood." : "Sem folga extra neste mês."}</div>
-        <div class="s" style="margin-top:0.45rem;"><b>Deste caixa:</b> pagar/separar ${fmt(precisaAgora)}, lazer até ${fmt(plano.lazerUsa || 0)}, guardar ${fmt(plano.guardarUsa || 0)}.</div>
+        <div class="s" style="margin-top:0.45rem;"><b>Deste caixa:</b> pagar/separar ${fmt(precisaAgora)}, guardar ${fmt(plano.guardarUsa || 0)}, lazer até ${fmt(plano.lazerUsa || 0)}.</div>
         <div class="dica">${genioModo() === "iniciante" ? "Passo pequeno (R$ 10–50). Troca em Mais → Ajustes." : "Número real, não hábito de R$ 40. Passo pequeno fica em Mais → Ajustes."}</div>
       </div>`;
       })()}
@@ -3360,19 +3342,19 @@
             ? `Contas ${fmt((plano.pagarAgora || 0) + (plano.separarContas || 0))}${plano.separarFatura ? " · fatura " + fmt(plano.separarFatura) : ""}`
             : (pagar <= 0 ? "Nada pra separar nesta quinzena" : "Contas " + fmt(pagar))}</div>
         </div>
-        <div class="pote n2" data-genio-anchor="lazer">
-          <div class="pk">2 · Lazer agora (teto)</div>
-          <div class="pv">${fmt(plano.lazerUsa || 0)}</div>
-          <div class="ps">teto do mês ${fmt(lazerOrc)} · já ${fmt(lazerGastoMes())} · resta ${fmt(lazerTetoMes)}</div>
-        </div>
-        <div class="pote n3" data-genio-anchor="guardar">
-          <div class="pk">3 · Guardar agora</div>
+        <div class="pote n2" data-genio-anchor="guardar">
+          <div class="pk">2 · Guardar agora</div>
           <div class="pv">${fmt(plano.guardarUsa || 0)}</div>
           <div class="ps">${(plano.guardarUsa || 0) > 0
             ? (genioModo() === "iniciante"
               ? `passo ${fmt(plano.guardarUsa)} · meta mês ${fmt(c.metaNum)} · já ${fmt(guardarNoMes())}`
               : `falta ${fmt(Math.max(0, c.metaNum - guardarNoMes()))} da meta ${fmt(c.metaNum)} · já ${fmt(guardarNoMes())} · cofre ${fmt(emergenciaGuardado())}`)
             : `não dá agora · meta mês ${fmt(c.metaNum)} · já ${fmt(guardarNoMes())}`}</div>
+        </div>
+        <div class="pote n3" data-genio-anchor="lazer">
+          <div class="pk">3 · Lazer agora (teto)</div>
+          <div class="pv">${fmt(plano.lazerUsa || 0)}</div>
+          <div class="ps">depois de guardar · teto ${fmt(lazerOrc)} · já ${fmt(lazerGastoMes())} · resta ${fmt(lazerTetoMes)}</div>
         </div>
       </div>
 
@@ -3400,7 +3382,7 @@
         </div>
       </div>
 
-      <div class="ordem-fix">Quinzena: paga/separa · lazer no teto · guarda a meta</div>
+      <div class="ordem-fix">Quinzena: paga/separa · guarda a meta · lazer no teto</div>
 
       <div class="acao-grid">
         <button type="button" class="acao-btn ${hojePainel === "entrou" ? "on" : ""}" data-action="hoje-painel" data-painel="entrou">
@@ -3428,7 +3410,7 @@
           <option value="banco">Banco / PIX</option>
           <option value="cedula">Cédula (papel)</option>
         </select>
-        <div class="dica">Só local do dinheiro — não escolhe pote. Ordem: pagar → lazer → guardar.</div>
+        <div class="dica">Só local do dinheiro — não escolhe pote. Ordem: pagar → guardar → lazer.</div>
         <button class="btn full" type="submit">Somar no caixa</button>
       </form>`;
     }
@@ -3614,7 +3596,7 @@
     if (old) old.remove();
     if (!logado || !S.caixa || S.config.onboardDone) return;
     const steps = [
-      { t: "3 potes no Hoje", p: "1 Pagar dívidas · 2 Lazer (teto) · 3 Guardar. App calcula. Você só anota." },
+      { t: "3 potes no Hoje", p: "1 Pagar dívidas · 2 Guardar a meta · 3 Lazer no teto. App calcula. Você só anota." },
       { t: "Dívidas e Cartão", p: "Aba Dívidas = contas da casa. Cartão = fatura. Casa (despensa/gatos) fica em Mais." },
       { t: "Um cofre só", p: "Quando puder guardar, Mais → Mês → Guardei. Meta do mês alimenta o cofre. Sem bingo." },
     ];
@@ -3735,7 +3717,7 @@
           <button class="btn small" type="submit">Guardei</button>
         </form>
         ${emergenciaGuardado() > 0 ? `<button type="button" class="btn ghost full" data-action="cofre-reset" style="margin-top:10px;">Zerar cofre</button>` : ""}
-        <div class="dica">Paga dívidas, lazer no teto, Guardei soma no cofre. Sem segundo pote. Ajuste do gênio em Mais → Ajustes.</div>
+        <div class="dica">Paga dívidas, Guardei no cofre, lazer no teto. Sem segundo pote. Ajuste do gênio em Mais → Ajustes.</div>
       </div>
 
       <div class="sect">Previsto × real (contas)</div>
@@ -4248,7 +4230,7 @@
         <label>Cofre — meta total (R$)</label>
         <input name="emergencia" inputmode="decimal" value="${String(emergenciaMeta()).replace(".", ",")}" />
         <button class="btn full" type="submit">Salvar potes</button>
-        <div class="dica">Ordem: pagar · lazer · guardar. Meta automática agora: <b>${fmt(metaSugerida())}</b>. Cofre: <b>${fmt(emergenciaGuardado())}</b>.</div>
+        <div class="dica">Ordem: pagar · guardar · lazer. Meta automática agora: <b>${fmt(metaSugerida())}</b>. Cofre: <b>${fmt(emergenciaGuardado())}</b>.</div>
       </form>
 
       <div class="sect">Gênio</div>
