@@ -834,15 +834,20 @@
     if (window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey) out.config.aiOn = true;
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
     out.chat = Array.isArray(doc.chat) ? doc.chat : [];
-    out.emergencia = Object.assign({ guardado: 0, aportes: [] }, doc.emergencia || {});
+    out.emergencia = Object.assign({ guardado: 0, aportes: [], ts: 0 }, doc.emergencia || {});
     if (!Array.isArray(out.emergencia.aportes)) out.emergencia.aportes = [];
+    if (!(num(out.emergencia.ts) > 0)) {
+      const maxA = out.emergencia.aportes.reduce((m, a) => Math.max(m, num(a.ts)), 0);
+      out.emergencia.ts = maxA || 0;
+    }
     out.mesesFechados = doc.mesesFechados && typeof doc.mesesFechados === "object" ? doc.mesesFechados : {};
     out.desafio100 = Object.assign({ feitos: {} }, doc.desafio100 || {});
     if (!out.desafio100.feitos || typeof out.desafio100.feitos !== "object") out.desafio100.feitos = {};
     out.desafio500 = Object.assign({ feitos: {} }, doc.desafio500 || {});
     if (!out.desafio500.feitos || typeof out.desafio500.feitos !== "object") out.desafio500.feitos = {};
-    out.genio = Object.assign({ avisosVistos: {} }, doc.genio || {});
+    out.genio = Object.assign({ avisosVistos: {}, falaCache: {}, passoLock: null }, doc.genio || {});
     if (!out.genio.avisosVistos || typeof out.genio.avisosVistos !== "object") out.genio.avisosVistos = {};
+    if (!out.genio.falaCache || typeof out.genio.falaCache !== "object") out.genio.falaCache = {};
     return out;
   }
 
@@ -1155,12 +1160,44 @@
     }
   }
 
+  function emergenciaTs(e) {
+    if (!e || typeof e !== "object") return 0;
+    const maxA = (Array.isArray(e.aportes) ? e.aportes : []).reduce((m, a) => Math.max(m, num(a.ts)), 0);
+    return Math.max(num(e.ts), maxA);
+  }
+
+  function mergeCloudDoc(local, remote) {
+    if (!local || !remote) return remote || local;
+    if (emergenciaTs(local.emergencia) >= emergenciaTs(remote.emergencia)) {
+      remote.emergencia = local.emergencia;
+    }
+    if (local.config && remote.config) {
+      const lm = local.config.metaMesLock;
+      const rm = remote.config.metaMesLock;
+      if (lm && lm.mk === mesKey() && (!rm || rm.mk !== lm.mk)) remote.config.metaMesLock = lm;
+    }
+    if (local.genio && remote.genio) {
+      const lp = local.genio.passoLock;
+      const rp = remote.genio.passoLock;
+      if (lp && lp.mk === mesKey() && (!rp || rp.mk !== lp.mk)) remote.genio.passoLock = lp;
+      remote.genio.avisosVistos = Object.assign({}, remote.genio.avisosVistos || {}, local.genio.avisosVistos || {});
+      remote.genio.falaCache = Object.assign({}, remote.genio.falaCache || {}, local.genio.falaCache || {});
+    }
+    return remote;
+  }
+
   async function cloudLoad() {
     setSync("busy");
     try {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        await cloudSave();
+      }
+      const local = S;
       const r = await NCCloud.carregar();
       if (r.doc) {
-        S = hydrate(r.doc);
+        S = mergeCloudDoc(local, hydrate(r.doc));
         saveLocal();
       }
       if (r.nome) $("#h-nome").textContent = r.nome;
@@ -1517,7 +1554,13 @@
   function metaEfetiva() {
     const m = num(S.config.metaGuardar);
     if (m > 0) return m;
-    return metaSugerida();
+    const mk = mesKey();
+    const lock = S.config.metaMesLock;
+    if (lock && lock.mk === mk && num(lock.valor) >= 0) return num(lock.valor);
+    const v = metaSugerida();
+    S.config.metaMesLock = { mk, valor: v };
+    saveLocal();
+    return v;
   }
 
   function emergenciaMeta() {
@@ -1922,11 +1965,29 @@
   function registrarAporte(v, motivo) {
     const valor = Math.round(num(v) * 100) / 100;
     if (!(valor > 0)) return 0;
-    if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [] };
+    if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [], ts: 0 };
     if (!Array.isArray(S.emergencia.aportes)) S.emergencia.aportes = [];
-    S.emergencia.aportes.push({ ts: Date.now(), valor, motivo: motivo || "" });
+    const agora = Date.now();
+    S.emergencia.aportes.push({ ts: agora, valor, motivo: motivo || "" });
     S.emergencia.guardado = Math.round((emergenciaGuardado() + valor) * 100) / 100;
+    S.emergencia.ts = agora;
+    saveLocal();
+    if (logado && NCCloud.configured()) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(cloudSave, 200);
+    }
     return valor;
+  }
+  function passoGuardarMes() {
+    const mk = mesKey();
+    if (!S.genio || typeof S.genio !== "object") S.genio = { avisosVistos: {} };
+    const lock = S.genio.passoLock;
+    if (lock && lock.mk === mk && num(lock.valor) > 0) return num(lock.valor);
+    const p = metaProgressiva();
+    const v = Math.min(50, Math.max(10, num(p.metaAgora) || 10));
+    S.genio.passoLock = { mk, valor: v };
+    saveLocal();
+    return v;
   }
   function metaProgressiva() {
     const din = metaDinamica();
@@ -2049,7 +2110,7 @@
     if (tipo === "guardar") {
       return { txt: (ctx.iniciante
         ? ("Bora tentar um valor bem pequeno esse mês? Tipo " + fmt(ctx.metaAgora || 10) + " — sem culpa, só hábito.")
-        : ("Esse mês o cofre não andou muito — meta do momento " + fmt(ctx.metaAgora || 0) + ". Quer ver?")) + genioDicaExtra(), btn: "Ver guardar" };
+        : ("Esse mês o cofre não andou muito — meta do momento " + fmt(ctx.metaAgora || 0) + ". Quer ver?")), btn: "Ver guardar" };
     }
     if (tipo === "ritmo") {
       return { txt: "Nesse ritmo de gasto (~" + fmt(ctx.gastoPorDia || 0) + "/dia) a projeção fecha em " + fmt(ctx.projecaoFinal || 0) + " — dá pra ajustar agora, antes de apertar.", btn: "Ver Hoje" };
@@ -2064,7 +2125,7 @@
       return { txt: "Lazer deste caixa: até " + fmt(ctx.lazer || 0) + " — só depois de guardar o que der.", btn: "Beleza" };
     }
     if (tipo === "coach-guardar") {
-      return { txt: "E olha: dá pra guardar " + fmt(ctx.Z || 0) + " agora mesmo, sem sentir falta. Quer separar?" + genioDicaExtra(), btn: "Guardar " + fmt(ctx.Z || 0) + " agora" };
+      return { txt: "E olha: dá pra guardar " + fmt(ctx.Z || 0) + " agora mesmo, sem sentir falta. Quer separar?", btn: "Guardar " + fmt(ctx.Z || 0) + " agora" };
     }
     if (tipo === "coach-guardar-zero") {
       return { txt: "Desta vez não sobrou pra guardar — tudo bem. No próximo salário a gente tenta um valor bem pequeno.", btn: "Ok" };
@@ -2083,7 +2144,6 @@
     const sem = semaforoPlano(c, plano);
     const prog = metaProgressiva();
     const precisa = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
-    genioIdleIdx++;
 
     let txt;
     let btn;
@@ -2098,20 +2158,21 @@
         : (precisa > 0 ? { tab: "contas" } : { tab: "hoje" });
       highlight = { anchor: precisa > 0 && go.tab === "cartao" ? "fatura" : (precisa > 0 ? "dividas" : "pagar"), tit: sem.msg, txt: sem.sub };
     } else if (num(plano.guardarUsa) > 0) {
-      txt = "Dá pra guardar " + fmt(plano.guardarUsa) + " agora — um passo pequeno já conta." + genioDicaExtra();
+      txt = "Dá pra guardar " + fmt(plano.guardarUsa) + " agora — um passo pequeno, o resto fica pro lazer.";
       btn = "Ver guardar";
       go = { tab: "mais", mais: "mes" };
-      highlight = { anchor: "cofre", tit: "Guardar primeiro", txt: "Sobra no caixa: separa " + fmt(plano.guardarUsa) + " pro cofre antes do lazer." };
+      highlight = { anchor: "cofre", tit: "Guardar primeiro", txt: "Separa " + fmt(plano.guardarUsa) + " pro cofre. Lazer fica com o que sobrar depois." };
     } else if (precisa > 0) {
       txt = "Ainda tem " + fmt(precisa) + " pra pagar ou separar nesta janela.";
       btn = "Ver dívidas";
       go = { tab: "contas" };
       highlight = { anchor: "dividas", tit: "Separar/pagar", txt: "Resolve isso antes de pensar em lazer." };
     } else {
+      genioIdleIdx++;
       const frase = GENIO_IDLE_FRASES[genioIdleIdx % GENIO_IDLE_FRASES.length];
       txt = frase;
       btn = "Ver Hoje";
-      highlight = { anchor: "guia", tit: "Caixa ok", txt: "Caixa " + fmt(c.caixa) + " · cofre " + fmt(emergenciaGuardado()) + (prog.metaAgora ? (" · meta leve " + fmt(prog.metaAgora)) : "") + "." };
+      highlight = { anchor: "guia", tit: "Caixa ok", txt: "Caixa " + fmt(c.caixa) + " · cofre " + fmt(emergenciaGuardado()) + "." };
     }
 
     return {
@@ -2317,13 +2378,9 @@
     const c = calc();
     const plano = planoDoCaixa(c);
     const prog = metaProgressiva();
-    const sobrou = Math.max(0, num(plano.lazerUsa) + num(plano.guardarUsa) + num(plano.livre));
     const lazer = Math.max(0, num(plano.lazerUsa));
-    let Z = 0;
-    if (num(plano.guardarUsa) > 0) Z = Math.min(prog.metaAgora, plano.guardarUsa);
-    else if (sobrou >= 10) Z = Math.min(prog.metaAgora, Math.max(10, Math.floor(sobrou * 0.1 / 5) * 5 || 10));
-    if (Z > sobrou && sobrou > 0) Z = Math.floor(sobrou / 5) * 5;
-    if (Z > 0 && Z < 10) Z = Math.min(10, sobrou);
+    const sobrou = Math.max(0, num(plano.guardarUsa) + lazer + num(plano.livre));
+    const Z = Math.min(passoGuardarMes(), Math.max(0, num(plano.guardarUsa)));
 
     const steps = [];
     steps.push({
@@ -2476,12 +2533,27 @@
   }
   async function enrichGenioTipIA(tip) {
     if (!tip || tip.skipIA) return;
+    genioEnsure();
+    if (!S.genio.falaCache || typeof S.genio.falaCache !== "object") S.genio.falaCache = {};
+    const falaKey = tip.tipo + ":" + JSON.stringify(tip.ctx || {});
+    if (S.genio.falaCache[falaKey]) {
+      if (genioUI.tip && genioUI.tip.chave === tip.chave) {
+        genioUI.tip.txt = S.genio.falaCache[falaKey];
+        genioUI.loading = false;
+        paintGenio();
+      }
+      return;
+    }
     const chave = tip.chave;
     genioUI.loading = true;
     paintGenio();
     try {
       const ai = await genioTextoIA(tip, calc());
-      if (ai && genioUI.tip && genioUI.tip.chave === chave) genioUI.tip.txt = ai;
+      if (ai) {
+        S.genio.falaCache[falaKey] = ai;
+        saveLocal();
+        if (genioUI.tip && genioUI.tip.chave === chave) genioUI.tip.txt = ai;
+      }
     } catch (_) { /* fallback */ }
     if (genioUI.tip && genioUI.tip.chave === chave) genioUI.loading = false;
     paintGenio();
@@ -2827,14 +2899,15 @@
       passos.push({ cls: "ok", n: 1, tit: "Nada vencido nesta janela", gs: "Pode seguir guardar e lazer", valor: 0 });
     }
 
-    // Guardar ANTES do lazer: sobra prioriza hábito no cofre
-    const guardarUsa = Math.min(meta, resto);
+    // Guardar ANTES do lazer: passo pequeno (10–50), não come a sobra inteira
+    const passo = passoGuardarMes();
+    const guardarUsa = Math.min(passo, resto);
     passos.push({
       cls: guardarUsa > 0 ? "" : "skip",
       n: passos.length + 1,
       tit: guardarUsa > 0 ? "Guardar no cofre" : "Não dá pra guardar agora",
       gs: guardarUsa > 0
-        ? ("Meta " + fmt(meta) + " · cofre " + fmt(emergenciaGuardado()) + " · Mais → Mês → Guardei")
+        ? ("Passo de agora " + fmt(passo) + " (não é a meta cheia " + fmt(meta) + ") · cofre " + fmt(emergenciaGuardado()))
         : (meta > 0
           ? ("Deste caixa não sobra. Guarda no próximo salário. Meta do mês " + fmt(meta) + ".")
           : "Sem meta"),
@@ -3142,7 +3215,7 @@
           <div class="pk">2 · Guardar agora</div>
           <div class="pv">${fmt(plano.guardarUsa || 0)}</div>
           <div class="ps">${(plano.guardarUsa || 0) > 0
-            ? `deste caixa · meta mês ${fmt(c.metaNum)} · cofre ${fmt(emergenciaGuardado())}`
+            ? `passo ${fmt(plano.guardarUsa)} · meta mês ${fmt(c.metaNum)} · cofre ${fmt(emergenciaGuardado())}`
             : `não dá agora · meta mês ${fmt(c.metaNum)} · cofre ${fmt(emergenciaGuardado())}`}</div>
         </div>
         <div class="pote n3" data-genio-anchor="lazer">
@@ -3501,6 +3574,7 @@
       <div class="card">
         <div class="bar-legend"><span>Meta deste mês</span><span>${fmt(meta)}</span></div>
         <div class="bar"><div class="fill lim" style="width:${meta > 0 ? metaPct : 0}%"></div></div>
+        <div class="bar-legend"><span>Passo de agora (hábito)</span><span>${fmt(passoGuardarMes())}</span></div>
         <div class="bar-legend"><span>Sobra estimada</span><span>${fmt(r.juntadoEst)}</span></div>
         <div class="bar" style="margin-top:0.85rem;"><div class="fill lim" style="width:${barraPct(emergenciaGuardado(), emergenciaMeta())}%"></div></div>
         <div class="bar-legend"><span>Cofre</span><span>${fmt(emergenciaGuardado())} / ${fmt(emergenciaMeta())}</span></div>
@@ -4561,9 +4635,10 @@
       const atual = emergenciaGuardado();
       if (!(atual > 0)) { toast("Cofre já está zerado"); return; }
       if (!confirm("Zerar o cofre (" + fmt(atual) + ")? Isso só apaga o valor guardado no app — não mexe no banco.")) return;
-      if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [] };
+      if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [], ts: 0 };
       S.emergencia.guardado = 0;
       S.emergencia.aportes = [];
+      S.emergencia.ts = Date.now();
       maisSub = "mes";
       tab = "mais";
       touch("Cofre zerado");
@@ -4766,11 +4841,9 @@
         } else {
           S.cedula.valor = Math.round((num(S.cedula.valor) - n) * 100) / 100;
         }
-        if (!S.emergencia) S.emergencia = { guardado: 0 };
-        S.emergencia.guardado = emergenciaGuardado() + n;
+        registrarAporte(n, "desafio100-cedula");
       } else if (fonte === "emergencia") {
-        if (!S.emergencia) S.emergencia = { guardado: 0 };
-        S.emergencia.guardado = emergenciaGuardado() + n;
+        registrarAporte(n, "desafio100");
       }
       S.desafio100.feitos[String(n)] = { em: Date.now(), fonte };
       if (envHint === n) envHint = null;
