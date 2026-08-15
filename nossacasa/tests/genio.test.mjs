@@ -429,3 +429,36 @@ test("Caiu atualiza balão: some o caixa antigo", async () => {
     assert.ok(Math.abs(NC.ui().tip.ctx.caixa - 1716) < 0.01);
   }
 });
+
+test("resetar pra testar: saldo informado fica, marcas e cofre saem, caixa não vai negativo", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+    S.caixa = { valor: 1643, em: Date.now() - 86400000 };
+    S.cedula = { valor: 73 };
+    S.despensa = [{ id: "arroz", nome: "Arroz", tem: true }];
+  });
+  salarioCaiu(15, 0);
+  pagaConta("Vanuza");
+  NC.registrarAporte(298, "teste");
+  const rendas = NC.getS().config.rendas.map((r) => r.dia).slice().sort((a, b) => a - b);
+  NC.resetarPraTestar();
+  const S = NC.getS();
+  const c = NC.calc();
+  assert.equal(Math.round(S.caixa.valor), 1643);
+  assert.equal(Math.round(S.cedula.valor), 73);
+  assert.equal(Math.round(c.caixa), 1716);
+  assert.ok(c.caixa > 0);
+  assert.equal(S.emergencia.guardado, 0);
+  assert.equal(S.emergencia.aportes.length, 0);
+  assert.equal(Object.keys(S.recebidos).length, 0);
+  assert.equal(Object.keys(S.pagamentos).length, 0);
+  assert.equal(S.contas.length, 2);
+  assert.deepEqual(S.config.rendas.map((r) => r.dia).slice().sort((a, b) => a - b), rendas);
+  assert.equal(S.config.faturaEstimada, 1200);
+  assert.equal(S.despensa.length, 1);
+  const html = NC.viewAjustes() + NC.viewMes();
+  assert.match(html, /Resetar pra testar/);
+});

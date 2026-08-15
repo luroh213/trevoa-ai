@@ -3933,9 +3933,11 @@
     html += `
       <div class="sect">Limpar / exportar</div>
       <div class="card">
-        <div class="s" style="margin-bottom:0.7rem;">Apaga só os lançamentos de <b>${esc(mesNome())}</b>: salários marcados, contas pagas, gastos no dinheiro e fatura paga do mês. Contas cadastradas, despensa, gatos e saldo do banco <b>ficam</b>.</div>
+        <div class="s" style="margin-bottom:0.7rem;">Apaga só os lançamentos de <b>${esc(mesNome())}</b>: salários marcados, contas pagas, gastos no dinheiro e fatura paga do mês. Contas cadastradas, despensa, gatos e saldo informado do banco <b>ficam</b>.</div>
         <button class="btn ghost full" data-action="exportar-mes">Baixar resumo do mês (.txt)</button>
         <button class="btn danger full" data-action="limpar-mes">Limpar lançamentos deste mês</button>
+        <button class="btn danger full" data-action="resetar-teste" style="margin-top:8px;">Resetar pra testar</button>
+        <div class="dica">Teste do zero: some Caiu, pago, gastos e cofre. Ficam contas, salários, cartão e o saldo que você informou no banco/cédula.</div>
       </div>`;
     return html;
   }
@@ -4431,6 +4433,8 @@
           <div class="dica">Substitui os dados atuais pelo JSON. Use o backup baixado acima.</div>
         </form>
         <button class="btn danger full" data-action="limpar-mes">Limpar lançamentos deste mês</button>
+        <button class="btn danger full" data-action="resetar-teste">Resetar pra testar</button>
+        <div class="dica">Zera marcas de teste (Caiu, pago, cofre, gastos). Mantém contas fixas, salários, cartão e o saldo informado.</div>
         <button class="btn danger full" data-action="sair">Sair da conta</button>
       </div>`;
     return html;
@@ -4440,6 +4444,34 @@
   function closeModal() {
     $("#modalbk").hidden = true;
     $("#modal").innerHTML = "";
+  }
+
+  function resetarPraTestar() {
+    const banco = S.caixa ? num(S.caixa.valor) : 0;
+    const cedula = Math.max(0, num((S.cedula || {}).valor));
+    const agora = Date.now();
+    S.caixa = S.caixa ? { valor: banco, em: agora } : { valor: banco, em: agora };
+    S.cedula = { valor: cedula };
+    S.pagamentos = {};
+    S.recebidos = {};
+    S.entradas = [];
+    S.gastos = [];
+    S.checklist = {};
+    S.chat = [];
+    S.chatResposta = null;
+    S.ultimaCompra = null;
+    S.emergencia = { guardado: 0, aportes: [], ts: agora };
+    S.mesesFechados = {};
+    S.desafio100 = { feitos: {} };
+    S.desafio500 = { feitos: {} };
+    S.genio = Object.assign({}, S.genio || {}, { avisosVistos: {}, passoLock: null, falaCache: {} });
+    if (!S.cartao) S.cartao = { compras: [], faturas: {}, parcelas: [] };
+    S.cartao.faturas = {};
+    genioUI = { open: false, tip: null, loading: false };
+    genioHighlight = null;
+    genioCoach = null;
+    lastCaixaSnap = null;
+    caixaMudanca = null;
   }
 
   const A = {
@@ -4866,7 +4898,7 @@
 
     "limpar-mes": () => {
       const nome = mesNome();
-      if (!confirm(`Limpar lançamentos de ${nome}?\n\nApaga: salários marcados, entradas por fora, contas pagas, gastos no dinheiro e fatura paga deste mês.\n\nNÃO apaga: contas cadastradas, despensa, gatos, compras do cartão em aberto, saldo do banco.`)) return;
+      if (!confirm(`Limpar lançamentos de ${nome}?\n\nApaga: salários marcados, entradas por fora, contas pagas, gastos no dinheiro e fatura paga deste mês.\n\nNÃO apaga: contas cadastradas, despensa, gatos, compras do cartão em aberto, saldo informado do banco.`)) return;
       const mk = mesKey();
       const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
       if (S.pagamentos) delete S.pagamentos[mk];
@@ -4875,13 +4907,30 @@
       if (S.cartao && S.cartao.faturas) delete S.cartao.faturas[mk];
       S.gastos = (S.gastos || []).filter((g) => num(g.ts) < ini.getTime());
       S.entradas = (S.entradas || []).filter((e) => num(e.ts) < ini.getTime());
+      if (S.emergencia && Array.isArray(S.emergencia.aportes)) {
+        const keep = S.emergencia.aportes.filter((a) => num(a.ts) < ini.getTime());
+        const saiu = S.emergencia.aportes.filter((a) => num(a.ts) >= ini.getTime());
+        const delta = saiu.reduce((s, a) => s + num(a.valor), 0);
+        S.emergencia.aportes = keep;
+        S.emergencia.guardado = Math.max(0, num(S.emergencia.guardado) - delta);
+        S.emergencia.ts = Date.now();
+      }
+      if (S.caixa) S.caixa.em = Date.now();
       S.ultimaCompra = null;
       S.chatResposta = null;
-      // chat conversa fica (histórico); se quiser limpar: botão no chat
       touch();
       tab = "mais";
       maisSub = "mes";
       render();
+      window.scrollTo(0, 0);
+    },
+    "resetar-teste": () => {
+      const banco = S.caixa ? num(S.caixa.valor) : 0;
+      const cedula = Math.max(0, num((S.cedula || {}).valor));
+      if (!confirm("Resetar pra testar?\n\nZera: Caiu, contas pagas, gastos, cofre, fatura paga, gênio.\nMantém: contas fixas, salários, cartão (limite/fatura), despensa, e o saldo informado — banco " + fmt(banco) + " + cédula " + fmt(cedula) + ".\n\nNão marca Caiu de novo se esse saldo já inclui o salário.")) return;
+      resetarPraTestar();
+      tab = "hoje";
+      touch("Pronto pra testar · caixa " + fmt(calc().caixa));
       window.scrollTo(0, 0);
     },
 
@@ -5411,6 +5460,7 @@
       tickGenio,
       genioMarcar,
       registrarAporte,
+      resetarPraTestar,
       viewHoje,
       viewAjustes,
       viewMes,
