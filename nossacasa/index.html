@@ -1733,6 +1733,26 @@
     };
   }
 
+  function conselhoDespensa() {
+    const tem = (S.despensa || []).filter((d) => d.status === "tem").map((d) => d.nome);
+    const falta = (S.despensa || []).filter((d) => d.status && d.status !== "tem").map((d) => d.nome);
+    const txt = falta.length
+      ? ("Falta: " + falta.join(", ") + "." + (tem.length ? (" Já tem: " + tem.join(", ") + " — não compra de novo.") : ""))
+      : (tem.length ? ("Já tem em casa: " + tem.join(", ") + ". Não compra isso agora.") : "");
+    return { tem, falta, txt };
+  }
+  function conselhoCompra(nome) {
+    const n = String(nome || "").toLowerCase().trim();
+    const itens = S.despensa || [];
+    if (!n) return conselhoDespensa();
+    const hit = itens.find((d) => {
+      const dn = String(d.nome || "").toLowerCase();
+      return dn && (n === dn || n.indexOf(dn) >= 0 || dn.indexOf(n) >= 0);
+    });
+    if (!hit) return { acao: "desconhecido", item: nome, tem: conselhoDespensa().tem, falta: conselhoDespensa().falta };
+    if (hit.status === "tem") return { acao: "nao-compra", item: hit.nome, status: hit.status };
+    return { acao: "compra", item: hit.nome, status: hit.status };
+  }
   function aconselharCaixaVsContas(c) {
     const proximas = (!rendaRecenteCaiu() ? contasProximas() : contasPagarAgora());
     const totalP = proximas.reduce((a, x) => a + num(x.valor), 0);
@@ -2158,7 +2178,19 @@
       return { txt: "Nesse ritmo de gasto (~" + fmt(ctx.gastoPorDia || 0) + "/dia) a projeção fecha em " + fmt(ctx.projecaoFinal || 0) + " — dá pra ajustar agora, antes de apertar.", btn: "Ver Hoje" };
     }
     if (tipo === "fechado") {
-      return { txt: "Mês " + (ctx.mk || "") + " fechou: lazer " + fmt(ctx.lazerGasto || 0) + " de " + fmt(ctx.lazerTeto || 0) + ", guardado " + fmt(ctx.guardadoMes || 0) + ". Quer o comparativo?", btn: "Ver resumo" };
+      return { txt: ctx.estourou
+        ? ("Mês passado iFood+lazer passou do teto. Este mês o teto é " + fmt(ctx.lazerTeto || 0) + " — não repete.")
+        : ("Mês " + (ctx.mk || "") + " fechou: lazer " + fmt(ctx.lazerGasto || 0) + " de " + fmt(ctx.lazerTeto || 0) + ", guardado " + fmt(ctx.guardadoMes || 0) + ". Quer o comparativo?"), btn: ctx.estourou ? "Ver lazer" : "Ver resumo" };
+    }
+    if (tipo === "despensa") {
+      const falta = (ctx.falta || []).join(", ");
+      const tem = (ctx.tem || []).join(", ");
+      return {
+        txt: falta
+          ? ("Falta em casa: " + falta + "." + (tem ? (" Já tem " + tem + " — não compra de novo.") : ""))
+          : ("Despensa ok: já tem " + (tem || "o essencial") + ". Não enche o carrinho."),
+        btn: "Ver despensa",
+      };
     }
     if (tipo === "coach-sobrou") {
       return { txt: "Contas em ordem! Sobrou " + fmt(ctx.sobrou || 0) + ". Próximo: ver quanto dá pra guardar.", btn: "Continuar" };
@@ -2206,7 +2238,7 @@
         highlight = { anchor: "cofre", tit: "Passo de hábito", txt: "Separa " + fmt(plano.guardarUsa) + " pro cofre. Lazer fica com o teto." };
       } else {
         txt = "Deste caixa: lazer até " + fmt(plano.lazerUsa) + ", guardar " + fmt(plano.guardarUsa) + " (falta " + fmt(g.faltaMeta) + " da meta " + fmt(g.meta) + " este mês).";
-        highlight = { anchor: "gestor", tit: "O gestor diz", txt: "Lazer no teto " + fmt(g.lazerTeto) + ". Guarda " + fmt(plano.guardarUsa) + " agora — não é passo de R$ 40 se a sobra é grande." };
+        highlight = { anchor: "genio-plano", tit: "O gênio diz", txt: "Lazer no teto " + fmt(g.lazerTeto) + ". Guarda " + fmt(plano.guardarUsa) + " agora — não é passo de R$ 40 se a sobra é grande." };
       }
       btn = "Ver o plano";
       go = { tab: "hoje" };
@@ -2328,7 +2360,7 @@
           highlight: {
             anchor: "pagar",
             tit: "Salário caiu — ordem do dia",
-            txt: "Primeiro separa/paga o da janela (" + fmt(precisa) + "). Depois lazer com o que sobrar. Guia embaixo mostra o passo a passo.",
+            txt: "Primeiro separa/paga o da janela (" + fmt(precisa) + "). Depois lazer no teto e guarda a meta. Guia embaixo mostra o passo a passo.",
           },
         });
       }
@@ -2337,16 +2369,22 @@
     const prevMk = mesKeyOffset(-1);
     if (S.mesesFechados && S.mesesFechados[prevMk]) {
       const rm = resumoMes(prevMk);
+      const snap = S.mesesFechados[prevMk];
+      const ifoodPass = num(snap.ifood) + num(snap.lazer);
+      const teto = num(rm.lazerTeto) || lazerOrcamento();
+      const estourou = teto > 0 && ifoodPass > teto + 0.009;
       candidatos.push({
         pri: 33,
         tipo: "fechado",
         chave: "fechado:" + prevMk,
-        ctx: { mk: prevMk, lazerGasto: rm.lazerGasto, lazerTeto: rm.lazerTeto, guardadoMes: rm.guardadoMes },
-        go: { tab: "mais", mais: "mes" },
+        ctx: { mk: prevMk, lazerGasto: rm.lazerGasto, lazerTeto: rm.lazerTeto, guardadoMes: rm.guardadoMes, ifood: num(snap.ifood), mercado: num(snap.mercado), estourou },
+        go: estourou ? { tab: "hoje" } : { tab: "mais", mais: "mes" },
         highlight: {
-          anchor: "cofre",
-          tit: "Resumo do mês fechado",
-          txt: "Lazer " + fmt(rm.lazerGasto) + "/" + fmt(rm.lazerTeto) + " · guardado ~" + fmt(rm.guardadoMes) + " (meta " + fmt(rm.metaMes) + ")" + (rm.vsAnterior ? (" · gastos " + (rm.vsAnterior.gastosDelta >= 0 ? "+" : "") + fmt(rm.vsAnterior.gastosDelta) + " vs mês anterior") : "") + ".",
+          anchor: estourou ? "lazer" : "cofre",
+          tit: estourou ? "Mês passado estourou lazer" : "Resumo do mês fechado",
+          txt: estourou
+            ? ("Mês passado iFood+lazer " + fmt(ifoodPass) + " passou do teto " + fmt(teto) + ". Este mês para em " + fmt(teto) + ". Não repete.")
+            : ("Lazer " + fmt(rm.lazerGasto) + "/" + fmt(rm.lazerTeto) + " · guardado ~" + fmt(rm.guardadoMes) + " (meta " + fmt(rm.metaMes) + ")" + (rm.vsAnterior ? (" · gastos " + (rm.vsAnterior.gastosDelta >= 0 ? "+" : "") + fmt(rm.vsAnterior.gastosDelta) + " vs mês anterior") : "") + "."),
         },
       });
     }
@@ -2364,6 +2402,22 @@
           anchor: "lazer",
           tit: "Lazer quase no teto",
           txt: "Já foi " + fmt(lazerGasto) + " de " + fmt(lazerOrc) + " neste mês. O número do pote é o que ainda dá pra gastar AGORA com o caixa.",
+        },
+      });
+    }
+
+    const cons = conselhoDespensa();
+    if (cons.falta.length || cons.tem.length) {
+      candidatos.push({
+        pri: 44,
+        tipo: "despensa",
+        chave: "despensa:" + mk,
+        ctx: { falta: cons.falta, tem: cons.tem },
+        go: { tab: "mais", mais: "casa", casa: "despensa" },
+        highlight: {
+          anchor: "despensa",
+          tit: cons.falta.length ? "Compra só o que falta" : "Despensa ok",
+          txt: cons.txt,
         },
       });
     }
@@ -2561,7 +2615,7 @@
     const messages = [
       {
         role: "system",
-        content: "Você é o Gênio do Nossa Casa, o conselheiro financeiro proativo do casal. Você conhece as contas, o cartão, os gastos e as entradas deles em tempo real. Sua função é avisar, de forma curta, animada e simpática (como um amigo genial dando um toque), quando algo importa agora — nunca dar sermão, nunca usar economês. Use os números reais fornecidos no contexto, nunca invente valores. Responda em português do Brasil com NO MÁXIMO 2 frases curtas e UMA ideia só. Sem markdown, sem aspas, sem botão no texto. REGRAS FIXAS: (1) Se o hero/caixa estiver vermelho ou 'falta no caixa', sua fala reflete essa urgência — nunca dica neutra/relaxada. (2) Se houver sobra, diga primeiro que dá pra GUARDAR um valor; só depois, se couber, mencione lazer. Nunca incentive gastar a sobra sem falar de guardar. (3) Uma informação principal por balão." + tomExtra + (urg ? (" Urgência atual do app: " + urg + ".") : ""),
+        content: "Você é o Gênio do Nossa Casa — o conselheiro financeiro do casal (não existe outro 'gestor': você é o gênio). Você conhece as contas, o cartão, os gastos, as entradas e a despensa em tempo real. Avise curto, claro, quando algo importa agora. Use os números reais do contexto, nunca invente valores. Português do Brasil, NO MÁXIMO 2 frases, UMA ideia. Sem markdown, sem aspas, sem botão no texto. REGRAS: (1) Caixa vermelho/'falta no caixa' = urgência, nunca dica relaxada. (2) Ordem: pagar/separar → lazer no teto do mês → guardar o que falta da meta. Não fale em passo de R$ 40 se a sobra for grande. (3) Se já tem o item na despensa, diga pra não comprar de novo. (4) Uma informação por balão." + tomExtra + (urg ? (" Urgência atual do app: " + urg + ".") : ""),
       },
       {
         role: "user",
@@ -2698,6 +2752,7 @@
     }
   }
   function scheduleGenio() {
+    if (globalThis.NC_TEST) return;
     clearTimeout(genioTickTimer);
     genioTickTimer = setTimeout(() => {
       tickGenio(false).then(() => applyGenioHighlight()).catch(() => paintGenio());
@@ -2705,6 +2760,7 @@
   }
   function genioNavegarTip(tip) {
     if (!tip) return;
+    if (tip.go && tip.go.casa) casaSub = tip.go.casa;
     if (tip.go && tip.go.mais) {
       tab = "mais";
       maisSub = tip.go.mais;
@@ -2712,6 +2768,7 @@
       tab = (tip.go && tip.go.tab) || "hoje";
     }
     genioHighlight = tip.highlight || null;
+    if (globalThis.NC_TEST) return;
     closeModal();
     render();
     window.scrollTo(0, 0);
@@ -2767,6 +2824,19 @@
     }
     if (/ifood|lazer/.test(q)) {
       return { t: lazerRest > 0 ? "ok" : "bad", tit: "Lazer", txt: lazerRest > 0 ? `Pode até <b>${fmt(lazerRest)}</b> de lazer este mês.` : `Lazer acabou. Próximo gasto de lazer come a meta.` };
+    }
+    if (/despensa|mercado|comprar|já tem|tem em casa|arroz|ração|café/.test(q)) {
+      const nome = (q.match(/(?:comprar|compra)\s+([a-záàâãéêíóôõúç\s]{2,20})/i) || [])[1];
+      const item = conselhoCompra(nome);
+      if (item.acao === "nao-compra") {
+        return { t: "ok", tit: "Não compra", txt: `<b>${esc(item.item)}</b> já tem em casa. Não gasta com isso agora.` };
+      }
+      if (item.acao === "compra") {
+        return { t: "warn", tit: "Pode repor", txt: `<b>${esc(item.item)}</b> está ${item.status === "pouco" ? "acabando" : "acabou"}. Compra só isso. ${item.tem && item.tem.length ? "Já tem: " + item.tem.map(esc).join(", ") + "." : ""}` };
+      }
+      const d = conselhoDespensa();
+      if (!d.txt) return { t: "ok", tit: "Despensa", txt: "Despensa ainda não cadastrada. Em Mais → Casa anota o que tem em casa." };
+      return { t: "ok", tit: "Despensa", txt: esc(d.txt) };
     }
     if (/fatura|cart[aã]o/.test(q)) {
       return { t: faturaPagaEsteMes() ? "ok" : "warn", tit: "Fatura", txt: faturaPagaEsteMes() ? "Fatura já paga." : `Vence dia <b>${vf}</b>. ${valorFaturaPendente() > 0 ? `Guarda <b>${fmt(valorFaturaPendente())}</b>.` : "Valor ainda não saiu."}` };
@@ -3273,12 +3343,12 @@
 
       ${(() => {
         const g = planoGestorMes();
-        return `<div class="card" data-genio-anchor="gestor" style="margin-top:12px;">
-        <div class="t">O gestor diz</div>
+        return `<div class="card" data-genio-anchor="genio-plano" style="margin-top:12px;">
+        <div class="t">O gênio diz</div>
         <div class="s" style="margin-top:0.45rem;">Os dois salários somam <b>${fmt(g.renda)}</b>. Contas ${fmt(g.contas)} + fatura ${fmt(g.fatura)} = ${fmt(g.comprometido)}. Sobra real do mês: <b>${fmt(g.sobraReal)}</b>.</div>
         <div class="s" style="margin-top:0.45rem;"><b>Este mês:</b> gastar no máximo ${fmt(g.lazerTeto)} de lazer (já ${fmt(g.lazerGasto)}, resta ${fmt(g.lazerRest)}). Guardar ${fmt(g.meta)} (já ${fmt(g.ja)}, falta ${fmt(g.faltaMeta)}). ${g.folga > 0 ? "Folga " + fmt(g.folga) + " — não queima em iFood." : "Sem folga extra neste mês."}</div>
         <div class="s" style="margin-top:0.45rem;"><b>Deste caixa:</b> pagar/separar ${fmt(precisaAgora)}, lazer até ${fmt(plano.lazerUsa || 0)}, guardar ${fmt(plano.guardarUsa || 0)}.</div>
-        <div class="dica">${genioModo() === "iniciante" ? "Modo iniciante: passo pequeno (R$ 10–50). Troca em Mais → Ajustes." : "Modo gestor: número real, não hábito de R$ 40. Passo pequeno fica em Mais → Ajustes."}</div>
+        <div class="dica">${genioModo() === "iniciante" ? "Passo pequeno (R$ 10–50). Troca em Mais → Ajustes." : "Número real, não hábito de R$ 40. Passo pequeno fica em Mais → Ajustes."}</div>
       </div>`;
       })()}
 
@@ -3665,7 +3735,7 @@
           <button class="btn small" type="submit">Guardei</button>
         </form>
         ${emergenciaGuardado() > 0 ? `<button type="button" class="btn ghost full" data-action="cofre-reset" style="margin-top:10px;">Zerar cofre</button>` : ""}
-        <div class="dica">Paga dívidas, lazer no teto, Guardei soma no cofre. Sem segundo pote. Gestor em Mais → Ajustes.</div>
+        <div class="dica">Paga dívidas, lazer no teto, Guardei soma no cofre. Sem segundo pote. Ajuste do gênio em Mais → Ajustes.</div>
       </div>
 
       <div class="sect">Previsto × real (contas)</div>
@@ -4021,7 +4091,7 @@
       </div>
 
       <div class="sect">Tem em casa <span class="mini">toque no status p/ mudar</span></div>
-      <div class="card">`;
+      <div class="card" data-genio-anchor="despensa">`;
     if (!S.despensa.length) html += `<div class="vazio">Despensa vazia. Cadastre o que vocês costumam ter em casa.</div>`;
     const ord = { acabou: 0, pouco: 1, tem: 2 };
     S.despensa.slice().sort((a, b) => ord[a.status] - ord[b.status] || a.nome.localeCompare(b.nome)).forEach((d) => {
@@ -4181,12 +4251,12 @@
         <div class="dica">Ordem: pagar · lazer · guardar. Meta automática agora: <b>${fmt(metaSugerida())}</b>. Cofre: <b>${fmt(emergenciaGuardado())}</b>.</div>
       </form>
 
-      <div class="sect">Gênio (gestor)</div>
+      <div class="sect">Gênio</div>
       <form class="card" data-form="cfg-genio">
-        <label>Como ele calcula</label>
+        <label>Como o gênio calcula</label>
         <select name="genioModo">
-          <option value="gestor" ${genioModo() === "gestor" ? "selected" : ""}>Gestor — quanto gastar e guardar de verdade</option>
-          <option value="iniciante" ${genioModo() === "iniciante" ? "selected" : ""}>Iniciante — passo pequeno (R$ 10–50)</option>
+          <option value="gestor" ${genioModo() === "gestor" ? "selected" : ""}>Números reais — quanto gastar e guardar</option>
+          <option value="iniciante" ${genioModo() === "iniciante" ? "selected" : ""}>Passo pequeno (R$ 10–50)</option>
         </select>
         <label>Quando fala sozinho</label>
         <select name="genioFala">
@@ -4195,7 +4265,7 @@
           <option value="tudo" ${genioFala() === "tudo" ? "selected" : ""}>Tudo (repete mais)</option>
         </select>
         <button class="btn full" type="submit">Salvar gênio</button>
-        <div class="dica">Padrão: gestor + só urgente. Balão não reabre a cada tela. Toque no gênio quando quiser o plano.</div>
+        <div class="dica">Padrão: números reais + só urgente. Balão não reabre a cada tela. Toque no gênio quando quiser o plano.</div>
       </form>
 
       <div class="sect">Casal, lembretes e IA</div>
@@ -5163,6 +5233,7 @@
   }
 
   (async function boot() {
+    if (globalThis.NC_TEST) return;
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
@@ -5186,6 +5257,66 @@
       $("#gate").hidden = false;
     }
   })();
+
+  if (globalThis.NC_TEST) {
+    globalThis.__NC__ = {
+      getS: () => S,
+      hydrate,
+      defaultState,
+      reset(patch) {
+        S = hydrate(defaultState());
+        logado = true;
+        S.caixa = { valor: 100, em: Date.now() - 86400000 * 20 };
+        S.inicio = Date.now() - 86400000 * 20;
+        S.cedula = { valor: 0 };
+        S.config.genioModo = "gestor";
+        S.config.genioFala = "urgente";
+        S.config.aiOn = false;
+        S.config.onboardDone = true;
+        S.emergencia = { guardado: 0, aportes: [], ts: 0 };
+        if (typeof patch === "function") patch(S);
+        genioUI = { open: false, tip: null, loading: false };
+        genioHighlight = null;
+        genioCoach = null;
+        tab = "hoje";
+        maisSub = "mes";
+        casaSub = "despensa";
+        lastCaixaSnap = null;
+        caixaMudanca = null;
+      },
+      calc,
+      planoDoCaixa,
+      planoGestorMes,
+      genioPickTip,
+      genioIdleTip,
+      genioFallbacks,
+      genioNavegarTip,
+      genioFala,
+      genioModo,
+      guardarNoMes,
+      metaEfetiva,
+      metaSugerida,
+      simularGasto,
+      responderPergunta,
+      dicas,
+      semaforoPlano,
+      conselhoCompra,
+      conselhoDespensa,
+      tickGenio,
+      genioMarcar,
+      registrarAporte,
+      viewHoje,
+      viewAjustes,
+      viewMes,
+      fmt,
+      mesKey,
+      mesKeyOffset,
+      nav: () => ({ tab, maisSub, casaSub, highlight: genioHighlight, open: genioUI.open, tipo: genioUI.tip && genioUI.tip.tipo, chave: genioUI.tip && genioUI.tip.chave, pri: genioUI.tip && genioUI.tip.pri }),
+      ui: () => genioUI,
+      rendaId: (dia) => ((S.config.rendas.find((r) => Math.round(num(r.dia)) === dia) || {}).id),
+      contaId: (nome) => ((S.contas.find((c) => c.nome === nome) || {}).id),
+    };
+  }
   </script>
 </body>
 </html>
