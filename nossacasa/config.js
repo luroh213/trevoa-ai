@@ -12,7 +12,7 @@ window.NC_CLOUD = {
 };
 
 window.NC_AI = window.NC_AI || {
-  enabled: false,
+  enabled: true,
   provider: "groq",
   apiKey: "",
 };

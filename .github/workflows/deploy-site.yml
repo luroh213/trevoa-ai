@@ -35,6 +35,23 @@ jobs:
           # evita publicar lixo de agent/skills se existir
           rm -rf _site/.agents _site/.github || true
 
+      - name: Injetar chave Groq no Nossa Casa
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "Sem GROQ_API_KEY no repo — IA só liga se colar em Ajustes no aparelho."
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os, json
+          k = os.environ["GROQ_API_KEY"]
+          path = "_site/nossacasa/config.secrets.js"
+          body = "window.NC_AI = {\n  enabled: true,\n  provider: \"groq\",\n  apiKey: %s,\n};\n" % json.dumps(k)
+          open(path, "w", encoding="utf-8").write(body)
+          print("config.secrets.js escrito (chave nao aparece no log).")
+          PY
+
       - uses: actions/configure-pages@v5
 
       - name: Upload artifact
