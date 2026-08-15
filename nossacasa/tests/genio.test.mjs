@@ -367,3 +367,65 @@ test("compras do cartão lançadas: fatura = ciclo, não chute 1200", () => {
   assert.equal(d.chute, false);
   assert.equal(d.livreSalario, 460);
 });
+
+test("Guardei tira do caixa; segundo 149 some do plano", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+  });
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.caixa = { valor: 1643, em: Date.now() };
+  S.cedula = { valor: 73 };
+  const c0 = NC.calc();
+  const p0 = NC.planoDoCaixa(c0);
+  const precisa = (p0.pagarAgora || 0) + (p0.separarFatura || 0) + (p0.separarContas || 0);
+  assert.equal(Math.round(c0.caixa), 1716);
+  assert.equal(precisa, 1560);
+  assert.ok(p0.guardarUsa > 0, "sobra depois de earmark, veio " + p0.guardarUsa);
+  const g1 = p0.guardarUsa;
+  assert.equal(NC.registrarAporte(g1, "teste"), g1);
+  const c1 = NC.calc();
+  assert.equal(Math.round(c1.caixa * 100) / 100, Math.round((1716 - g1) * 100) / 100);
+  const p1 = NC.planoDoCaixa(c1);
+  assert.equal(p1.guardarUsa, 0);
+  const idle = NC.genioIdleTip();
+  assert.equal(/Guarda R\$/.test(idle.txt), false);
+  NC.registrarAporte(g1, "teste2");
+  const c2 = NC.calc();
+  const p2 = NC.planoDoCaixa(c2);
+  const precisa2 = (p2.pagarAgora || 0) + (p2.separarFatura || 0) + (p2.separarContas || 0);
+  const sem = NC.semaforoPlano(c2, p2);
+  assert.ok(c2.caixa + 0.009 < precisa2);
+  assert.equal(sem.cls, "vermelho");
+});
+
+test("Caiu atualiza balão: some o caixa antigo", async () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+    S.caixa = { valor: 96, em: Date.now() };
+  });
+  const ui = NC.ui();
+  ui.tip = {
+    tipo: "ocioso",
+    ephemeral: true,
+    chave: "ocioso:stale",
+    skipIA: true,
+    ctx: { caixa: 96 },
+    txt: "Falta no caixa — Plano pede R$ 1.560,00 e tem R$ 96,00.",
+  };
+  ui.open = true;
+  const S = NC.getS();
+  S.caixa = { valor: 1716, em: Date.now() };
+  await NC.tickGenio(false);
+  const txt = (NC.ui().tip && NC.ui().tip.txt) || "";
+  assert.equal(/tem R\$ 96/.test(txt), false);
+  if (NC.ui().tip && NC.ui().tip.ctx) {
+    assert.ok(Math.abs(NC.ui().tip.ctx.caixa - 1716) < 0.01);
+  }
+});

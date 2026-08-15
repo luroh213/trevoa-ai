@@ -1232,6 +1232,18 @@
     return best;
   }
 
+  function aportesBancoApos(emBase) {
+    const list = (S.emergencia && S.emergencia.aportes) || [];
+    let s = 0;
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      if (num(a.ts) <= emBase) continue;
+      if (a.skipCaixa || a.fonte === "cedula" || String(a.motivo || "") === "desafio100-cedula") continue;
+      s += a.fromBanco != null ? num(a.fromBanco) : num(a.valor);
+    }
+    return s;
+  }
+
   function calc() {
     const mk = mesKey();
     const cfg = S.config;
@@ -1261,7 +1273,8 @@
     const gastosPos = S.gastos
       .filter((g) => g.ts > emBase && g.fonte !== "cedula")
       .reduce((a, g) => a + num(g.valor), 0);
-    const banco = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas;
+    const cofreBancoPos = aportesBancoApos(emBase);
+    const banco = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas - cofreBancoPos;
     const cedula = Math.max(0, num((S.cedula || {}).valor));
     const caixa = banco + cedula; // total na mão + banco
 
@@ -2024,13 +2037,35 @@
       fechado: !!snap,
     };
   }
-  function registrarAporte(v, motivo) {
+  function registrarAporte(v, motivo, opts) {
+    opts = opts || {};
     const valor = Math.round(num(v) * 100) / 100;
     if (!(valor > 0)) return 0;
     if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [], ts: 0 };
     if (!Array.isArray(S.emergencia.aportes)) S.emergencia.aportes = [];
+    const skipCaixa = !!opts.skipCaixa || String(motivo || "") === "desafio100-cedula";
+    let fromBanco = 0;
+    let fromCedula = 0;
+    if (!skipCaixa) {
+      const c = calc();
+      if (valor > num(c.caixa) + 0.009) return 0;
+      fromBanco = Math.min(Math.max(0, num(c.banco)), valor);
+      fromCedula = Math.round((valor - fromBanco) * 100) / 100;
+      if (fromCedula > 0) {
+        if (!S.cedula) S.cedula = { valor: 0 };
+        S.cedula.valor = Math.round((num(S.cedula.valor) - fromCedula) * 100) / 100;
+        if (S.cedula.valor < 0) S.cedula.valor = 0;
+      }
+    }
     const agora = Date.now();
-    S.emergencia.aportes.push({ ts: agora, valor, motivo: motivo || "" });
+    S.emergencia.aportes.push({
+      ts: agora,
+      valor,
+      motivo: motivo || "",
+      fromBanco,
+      fromCedula,
+      skipCaixa: skipCaixa || undefined,
+    });
     S.emergencia.guardado = Math.round((emergenciaGuardado() + valor) * 100) / 100;
     S.emergencia.ts = agora;
     saveLocal();
@@ -2208,6 +2243,9 @@
       return { txt: "Desta vez não sobrou pra guardar — tudo bem. No próximo salário a gente tenta um valor bem pequeno.", btn: "Ok" };
     }
     if (tipo === "coach-celebra" || tipo === "celebra-aporte") {
+      if (num(ctx.precisa) > 0) {
+        return { txt: "Cofre agora em " + fmt(ctx.depois || 0) + ". Ainda falta separar " + fmt(ctx.precisa) + " (contas/fatura). Isso primeiro.", btn: "Ver o que falta" };
+      }
       return { txt: "Boa! Isso já é história — cofre agora em " + fmt(ctx.depois || 0) + (ctx.streak > 1 ? (" · " + ctx.streak + " meses seguidos guardando") : "") + ". Sem falar em falta hoje.", btn: "Ver cofre" };
     }
     if (tipo === "ocioso") {
@@ -2234,6 +2272,11 @@
         ? { tab: "cartao" }
         : (precisa > 0 ? { tab: "contas" } : { tab: "hoje" });
       highlight = { anchor: precisa > 0 && go.tab === "cartao" ? "fatura" : (precisa > 0 ? "dividas" : "pagar"), tit: sem.msg, txt: sem.sub };
+    } else if (precisa > 0 && num(plano.guardarUsa) > 0) {
+      txt = "Primeiro paga/separa " + fmt(precisa) + ". Só depois guarda " + fmt(plano.guardarUsa) + ".";
+      btn = "Ver o que falta";
+      go = num(plano.separarFatura) > 0 && num(plano.pagarAgora) <= 0 ? { tab: "cartao" } : { tab: "contas" };
+      highlight = { anchor: go.tab === "cartao" ? "fatura" : "dividas", tit: "Pagar/separar primeiro", txt: "Contas e fatura entram antes do cofre." };
     } else if (num(plano.guardarUsa) > 0) {
       txt = "Guarda " + fmt(plano.guardarUsa) + " agora. Não é iFood.";
       highlight = { anchor: "cofre", tit: "Guardei", txt: "Este valor. Um toque." };
@@ -2345,7 +2388,7 @@
       candidatos.push({
         pri: 21,
         tipo: "guardar-agora",
-        chave: "guardar-agora:" + mk,
+        chave: "guardar-agora:" + mk + ":" + Math.round(num(plano.guardarUsa) * 100),
         skipIA: true,
         ctx: { Z: plano.guardarUsa },
         txt: "Guarda " + fmt(plano.guardarUsa) + " agora. Não é iFood.",
@@ -2566,13 +2609,14 @@
     const streak = metaProgressiva().streak;
     const c = calc();
     const plano = planoDoCaixa(c);
+    const precisa = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
     const lazer = Math.max(0, num(plano.lazerUsa));
     const tip = {
       tipo: "celebra-aporte",
       chave: "celebra:" + Date.now(),
       ephemeral: true,
       skipVisto: true,
-      ctx: { valor, antes, depois, streak },
+      ctx: { valor, antes, depois, streak, precisa },
       go: { tab: "mais", mais: "mes" },
       highlight: {
         anchor: "cofre",
@@ -2580,6 +2624,17 @@
         txt: "+" + fmt(valor) + " · total " + fmt(depois) + (streak > 1 ? (" · " + streak + " meses seguidos") : "") + ". Hoje a gente só celebra.",
       },
     };
+    if (precisa > 0.009) {
+      genioCoach = null;
+      tip.go = num(plano.separarFatura) > 0 && num(plano.pagarAgora) <= 0 ? { tab: "cartao" } : { tab: "contas" };
+      tip.highlight = {
+        anchor: tip.go.tab === "cartao" ? "fatura" : "dividas",
+        tit: "Ainda falta separar",
+        txt: "Cofre +" + fmt(valor) + ". Ainda " + fmt(precisa) + " de contas/fatura. Isso primeiro.",
+      };
+      genioApplyTip(tip);
+      return;
+    }
     if (lazer > 0) {
       genioCoach = {
         steps: [
@@ -2721,10 +2776,14 @@
       paintGenio();
       return;
     }
-    // Celebração / ocioso aberto pelo usuário
+    // Celebração / ocioso aberto: só segura se o caixa ainda é o mesmo
     if (genioUI.tip && genioUI.tip.ephemeral && genioUI.open && !forceOpen) {
-      paintGenio();
-      return;
+      const caixaTip = genioUI.tip.ctx != null ? num(genioUI.tip.ctx.caixa) : NaN;
+      const caixaNow = num(calc().caixa);
+      if (caixaTip === caixaTip && Math.abs(caixaTip - caixaNow) <= 0.009) {
+        paintGenio();
+        return;
+      }
     }
     const fala = genioFala();
     if (fala === "off" && !forceOpen) {
@@ -2737,13 +2796,16 @@
     const plano = planoDoCaixa(c);
     const tip = genioPickTip(c, plano);
     if (!tip) {
-      if (!(genioUI.tip && genioUI.tip.ephemeral && genioUI.open)) {
-        genioUI.tip = null;
-        genioUI.open = false;
-      }
-      if (forceOpen) {
+      const staleOpen = !!(genioUI.tip && genioUI.tip.ephemeral && genioUI.open);
+      const caixaTip = genioUI.tip && genioUI.tip.ctx != null ? num(genioUI.tip.ctx.caixa) : NaN;
+      const caixaBate = caixaTip === caixaTip && Math.abs(caixaTip - num(c.caixa)) <= 0.009;
+      if (forceOpen || (staleOpen && !caixaBate)) {
         genioApplyTip(genioIdleTip(), { open: true });
         return;
+      }
+      if (!staleOpen) {
+        genioUI.tip = null;
+        genioUI.open = false;
       }
       paintGenio();
       return;
@@ -2751,8 +2813,10 @@
     const same = genioUI.tip && genioUI.tip.chave === tip.chave;
     const urgente = num(tip.pri) > 0 && num(tip.pri) <= 22;
     const autoAbre = fala === "tudo" || (fala === "urgente" && urgente);
-    if (!same) {
-      genioApplyTip(tip, { open: !!(forceOpen || autoAbre) });
+    const caixaTip = genioUI.tip && genioUI.tip.ctx != null ? num(genioUI.tip.ctx.caixa) : NaN;
+    const caixaBate = caixaTip === caixaTip && Math.abs(caixaTip - num(c.caixa)) <= 0.009;
+    if (!same || !caixaBate) {
+      genioApplyTip(tip, { open: !!(forceOpen || autoAbre || (same && genioUI.open)) });
       if (forceOpen || autoAbre) enrichGenioTipIA(tip);
     } else {
       if (forceOpen) genioUI.open = true;
@@ -4418,25 +4482,6 @@
       if (!tip) return;
       if (tip.chave && !tip.skipVisto) genioMarcar(tip.chave);
 
-      if (tip.action === "guardar" && num(tip.valor) > 0) {
-        const antes = emergenciaGuardado();
-        const v = registrarAporte(tip.valor, "genio-coach");
-        genioCelebrarAporte(v, antes);
-        saveLocal();
-        if (logado && NCCloud.configured()) {
-          clearTimeout(saveTimer);
-          saveTimer = setTimeout(cloudSave, 900);
-        }
-        genioNavegarTip(Object.assign({}, tip, {
-          highlight: {
-            anchor: "cofre",
-            tit: "Vitória no cofre",
-            txt: "+" + fmt(v) + " · total " + fmt(emergenciaGuardado()) + ". Hoje só celebra.",
-          },
-        }));
-        return;
-      }
-
       if (tip.coachNext || (tip.coach && tip.tipo !== "coach-guardar")) {
         genioNavegarTip(tip);
         setTimeout(() => genioAvancarCoach(), 220);
@@ -5034,12 +5079,26 @@
     "emergencia-add": (f) => {
       const v = num(f.valor.value);
       if (v <= 0) return;
+      const c = calc();
+      const plano = planoDoCaixa(c);
+      const precisa = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
+      if (v > num(c.caixa) + 0.009) {
+        alert("Caixa tem só " + fmt(c.caixa) + ". Não dá pra guardar " + fmt(v) + ".");
+        return;
+      }
+      if (precisa > 0.009 && v > Math.max(0, num(c.caixa) - precisa) + 0.009) {
+        if (!confirm("Guardar " + fmt(v) + " deixa o caixa curto pra contas/fatura (" + fmt(precisa) + "). Continuar?")) return;
+      }
       const antes = emergenciaGuardado();
-      registrarAporte(v, "mes-guardei");
+      const got = registrarAporte(v, "mes-guardei");
+      if (!got) {
+        alert("Não deu pra guardar. Confere o caixa.");
+        return;
+      }
       maisSub = "mes";
       tab = "mais";
-      touch("✓ +" + fmt(v) + " no cofre");
-      setTimeout(() => genioCelebrarAporte(v, antes), 280);
+      touch("✓ +" + fmt(got) + " no cofre · caixa " + fmt(calc().caixa));
+      setTimeout(() => genioCelebrarAporte(got, antes), 280);
     },
     "env-guardar": (f) => {
       const n = Math.round(num(f.dataset.n));
@@ -5056,9 +5115,9 @@
         } else {
           S.cedula.valor = Math.round((num(S.cedula.valor) - n) * 100) / 100;
         }
-        registrarAporte(n, "desafio100-cedula");
+        registrarAporte(n, "desafio100-cedula", { skipCaixa: true });
       } else if (fonte === "emergencia") {
-        registrarAporte(n, "desafio100");
+        registrarAporte(n, "desafio100", { skipCaixa: true });
       }
       S.desafio100.feitos[String(n)] = { em: Date.now(), fonte };
       if (envHint === n) envHint = null;
