@@ -206,6 +206,61 @@
       font-size: 0.85rem; font-weight: 500; opacity: 0.92;
       line-height: 1.4;
     }
+    .potes {
+      display: grid; grid-template-columns: 1fr; gap: 10px;
+      margin: var(--space-4) 0 var(--space-3);
+    }
+    .pote {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius-md); padding: 14px 16px;
+      box-shadow: var(--shadow-soft);
+    }
+    .pote .pk {
+      font-size: 0.7rem; font-weight: 700; color: var(--ink-soft);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .pote .pv {
+      font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em;
+      color: var(--ink); margin-top: 2px; line-height: 1.15;
+    }
+    .pote .ps { font-size: 0.8rem; color: var(--ink-soft); font-weight: 500; margin-top: 4px; }
+    .pote.n1 { border-color: #e8c9c4; }
+    .pote.n1 .pv { color: var(--bad); }
+    .pote.n2 .pv { color: var(--brand); }
+    .ordem-fix {
+      font-size: 0.9rem; font-weight: 700; color: var(--ink);
+      text-align: center; margin: 0 0 var(--space-4);
+      letter-spacing: -0.01em;
+    }
+    .guia {
+      background: var(--surface); border: 1.5px solid var(--brand);
+      border-radius: var(--radius-md); padding: 14px 16px;
+      margin: 0 0 var(--space-4); box-shadow: var(--shadow-soft);
+    }
+    .guia .gh {
+      font-size: 0.7rem; font-weight: 800; color: var(--brand);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
+    }
+    .guia-step {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 0; border-top: 1px solid var(--line);
+    }
+    .guia-step:first-of-type { border-top: none; padding-top: 0; }
+    .guia-step .gn {
+      flex: 0 0 1.6rem; height: 1.6rem; border-radius: 999px;
+      background: var(--brand-soft); color: var(--brand);
+      font-weight: 800; font-size: 0.8rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .guia-step.ok .gn { background: var(--ok-soft); color: var(--ok); }
+    .guia-step.warn .gn { background: var(--warn-soft); color: var(--warn); }
+    .guia-step .gt { font-weight: 800; font-size: 0.95rem; }
+    .guia-step .gs { font-size: 0.8rem; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
+    .guia-step .gv { font-weight: 800; white-space: nowrap; margin-left: auto; padding-left: 8px; }
+    .guia .resumo-livre {
+      margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line);
+      font-weight: 700; font-size: 0.9rem;
+    }
 
     .sect {
       margin: var(--space-6) 0 var(--space-3);
@@ -472,8 +527,121 @@
     }
     .add-trigger:hover { background: var(--brand-soft); border-color: var(--brand); }
 
+    .env-grid {
+      display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px;
+    }
+    .env-cell {
+      aspect-ratio: 1; border: none; border-radius: 8px; cursor: pointer;
+      font: inherit; font-weight: 800; font-size: 0.68rem; letter-spacing: -0.02em;
+      background: var(--bg-deep); color: var(--ink); padding: 0;
+      transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+    }
+    .env-grid.tab500 { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .env-grid.tab500 .env-cell { font-size: 0.85rem; border-radius: 10px; min-height: 48px; aspect-ratio: auto; padding: 12px 4px; }
+    .env-cell.done { background: var(--brand); color: #fff; }
+    .env-cell.hint { box-shadow: 0 0 0 2px var(--brand), 0 0 0 4px var(--brand-soft); }
+    .env-stats {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: var(--space-3);
+    }
+    .env-stats .k { font-size: 0.68rem; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+    .env-stats .v { font-size: 0.95rem; font-weight: 800; margin-top: 2px; letter-spacing: -0.02em; }
+
     @media (min-width: 480px) {
       body { padding-left: var(--space-6); padding-right: var(--space-6); }
+    }
+
+    /* ─── Gênio Nossa Casa ─── */
+    @keyframes genio-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes genio-blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      96% { transform: scaleY(0.12); }
+    }
+    @keyframes genio-pop {
+      from { opacity: 0; transform: translateY(8px) scale(0.96); }
+      to { opacity: 1; transform: none; }
+    }
+    #genio-root {
+      position: fixed;
+      right: max(12px, env(safe-area-inset-right));
+      bottom: calc(4.85rem + var(--safe-bottom));
+      z-index: 35;
+      width: min(20.5rem, calc(100vw - 1.5rem));
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    #genio-root[hidden] { display: none !important; }
+    .genio-balao {
+      pointer-events: auto;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 16px 16px 4px 16px;
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      animation: genio-pop 0.28s ease both;
+      max-width: 100%;
+    }
+    .genio-balao .gtit {
+      font-size: 0.72rem; font-weight: 800; color: var(--brand);
+      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;
+    }
+    .genio-balao .gtxt {
+      font-size: 0.92rem; font-weight: 600; color: var(--ink); line-height: 1.35;
+    }
+    .genio-balao .gacts {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center;
+    }
+    .genio-balao .gacts .btn { margin: 0; flex: 1 1 auto; min-height: 40px; font-size: 0.82rem; }
+    .genio-balao .gacts .ghostx {
+      border: 0; background: transparent; color: var(--ink-mute);
+      font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; padding: 6px 4px;
+    }
+    .genio-ava {
+      pointer-events: auto;
+      width: 56px; height: 56px; border-radius: 50%;
+      border: 2px solid var(--brand);
+      background: linear-gradient(160deg, #2f8f5c 0%, var(--brand-deep) 100%);
+      box-shadow: 0 4px 14px rgba(31, 107, 69, 0.28);
+      display: grid; place-items: center;
+      cursor: pointer; padding: 0;
+      animation: genio-float 3.2s ease-in-out infinite;
+      position: relative;
+    }
+    .genio-ava svg { width: 34px; height: 34px; display: block; }
+    .genio-ava .olho { transform-origin: center; animation: genio-blink 4.5s infinite; }
+    .genio-ava.has-tip::after {
+      content: "";
+      position: absolute; top: 2px; right: 2px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #f0c14a; border: 2px solid #fff;
+    }
+    .genio-ava.sleep { opacity: 0.88; filter: saturate(0.85); }
+    .genio-hl {
+      outline: 2px solid var(--brand);
+      outline-offset: 3px;
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 0 6px var(--brand-soft);
+      scroll-margin-top: 1rem;
+    }
+    .genio-callout {
+      margin: 10px 0 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      background: var(--warn-soft);
+      color: var(--warn);
+      border: 1px dashed #e0c789;
+      animation: genio-pop 0.3s ease both;
+    }
+    .genio-callout strong { color: var(--ink); display: block; margin-bottom: 4px; font-size: 0.95rem; }
+    .genio-callout p { margin: 0; font-size: 0.88rem; font-weight: 600; line-height: 1.35; }
+    .genio-callout button {
+      margin-top: 8px; border: 0; background: transparent;
+      color: var(--brand-deep); font: inherit; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0;
     }
   </style>
 </head>
@@ -526,15 +694,11 @@
         </button>
         <button data-action="tab" data-tab="contas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
-          Contas
+          Dívidas
         </button>
         <button data-action="tab" data-tab="cartao">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           Cartão
-        </button>
-        <button data-action="tab" data-tab="casa">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
-          Casa
         </button>
         <button data-action="tab" data-tab="mais">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
@@ -549,6 +713,8 @@
   <div id="modalbk" class="modalbk" hidden>
     <div class="modal" id="modal"></div>
   </div>
+
+  <div id="genio-root" hidden aria-live="polite"></div>
 
   <script src="./config.js"></script>
   <script src="./config.secrets.js"></script>
@@ -571,13 +737,13 @@
       cedula: { valor: 0 }, // dinheiro em papel na mão (não passa no banco)
       config: {
         rendas: [
-          { id: uid(), nome: "Salário 1", dia: 7, valor: 738, pessoas: 2 },
-          { id: uid(), nome: "Salário 2", dia: 15, valor: 810, pessoas: 2 },
+          { id: uid(), nome: "Salário dia 7", dia: 7, valor: 1676, pessoas: 1 },
+          { id: uid(), nome: "Salário dia 15", dia: 15, valor: 1620, pessoas: 1 },
         ],
-        limiteCartao: 800,
-        reservaCartao: 400,
+        limiteCartao: 1200,
+        reservaCartao: 0, // não usam reserva/limite garantido
         diaVencFatura: 19, // dia que a fatura vence / vocês pagam
-        faturaEstimada: 0, // se ainda não lançou compras, chute opcional
+        faturaEstimada: 1200, // fatura real do casal
         lazerMes: 200, // orçamento de lazer/iFood sem culpa
         metaGuardar: 0,
         emergenciaMeta: 2000, // fundo emergência (meta alvo)
@@ -602,8 +768,11 @@
       gatos: [],
       checklist: {},
       chat: [],
-      emergencia: { guardado: 0 }, // quanto já juntou no fundo
+      emergencia: { guardado: 0, aportes: [] }, // cofre + histórico de aportes
       mesesFechados: {}, // "AAAA-MM": { ts, snap }
+      desafio100: { feitos: {} }, // "N": { em, fonte } — 1+…+100 = 5050
+      desafio500: { feitos: {} }, // "i": { em } — índices da tabela R$ 500
+      genio: { avisosVistos: {} }, // avisos do mascote por tipo+dia/mês
     };
   }
 
@@ -638,6 +807,21 @@
     if (!(num(out.cedula.valor) >= 0)) out.cedula.valor = 0;
     if (!(num(out.config.lazerMes) > 0)) out.config.lazerMes = 200;
     if (out.config.diaVencFatura == null) out.config.diaVencFatura = 19;
+    // Casal não usa reserva de cartão
+    out.config.reservaCartao = 0;
+    if (num(out.config.limiteCartao) === 800) out.config.limiteCartao = 1200;
+    if (!(num(out.config.faturaEstimada) > 0)) out.config.faturaEstimada = 1200;
+    // Migra salários antigos (738×2 / 810×2) → totais reais do casal
+    if (Array.isArray(out.config.rendas)) {
+      out.config.rendas.forEach((r) => {
+        if (num(r.dia) === 7 && num(r.valor) === 738 && (num(r.pessoas) || 1) === 2) {
+          r.valor = 1676; r.pessoas = 1; if (!r.nome || /salário 1/i.test(r.nome)) r.nome = "Salário dia 7";
+        }
+        if (num(r.dia) === 15 && num(r.valor) === 810 && (num(r.pessoas) || 1) === 2) {
+          r.valor = 1620; r.pessoas = 1; if (!r.nome || /salário 2/i.test(r.nome)) r.nome = "Salário dia 15";
+        }
+      });
+    }
     if (!(num(out.config.emergenciaMeta) >= 0)) out.config.emergenciaMeta = 2000;
     if (!out.config.quemEu || out.config.quemEu === "Die") out.config.quemEu = "Luiz";
     if (!out.config.quemEla) out.config.quemEla = "Esposa";
@@ -648,8 +832,15 @@
     if (window.NC_AI && window.NC_AI.enabled && window.NC_AI.apiKey) out.config.aiOn = true;
     out.checklist = doc.checklist && typeof doc.checklist === "object" ? doc.checklist : {};
     out.chat = Array.isArray(doc.chat) ? doc.chat : [];
-    out.emergencia = Object.assign({ guardado: 0 }, doc.emergencia || {});
+    out.emergencia = Object.assign({ guardado: 0, aportes: [] }, doc.emergencia || {});
+    if (!Array.isArray(out.emergencia.aportes)) out.emergencia.aportes = [];
     out.mesesFechados = doc.mesesFechados && typeof doc.mesesFechados === "object" ? doc.mesesFechados : {};
+    out.desafio100 = Object.assign({ feitos: {} }, doc.desafio100 || {});
+    if (!out.desafio100.feitos || typeof out.desafio100.feitos !== "object") out.desafio100.feitos = {};
+    out.desafio500 = Object.assign({ feitos: {} }, doc.desafio500 || {});
+    if (!out.desafio500.feitos || typeof out.desafio500.feitos !== "object") out.desafio500.feitos = {};
+    out.genio = Object.assign({ avisosVistos: {} }, doc.genio || {});
+    if (!out.genio.avisosVistos || typeof out.genio.avisosVistos !== "object") out.genio.avisosVistos = {};
     return out;
   }
 
@@ -665,11 +856,19 @@
   let showMaisHoje = false;
   let casaSub = "despensa";
   let maisSub = "mes";
+  let envFiltro = "todos"; // todos | faltam | feitos
+  let envHint = null; // número sorteado pra destacar
+  let envModo = "500"; // 500 tabela | 100 envelopes
   let onboardStep = 0;
   let toastTimer = null;
   let saveTimer = null;
   let saving = false;
   let logado = false;
+  let genioUI = { open: false, tip: null, loading: false };
+  let genioHighlight = null; // { anchor, tit, txt }
+  let genioTickTimer = null;
+  let genioCoach = null; // { steps: [], i: 0 } — fluxo pós-pagamento
+  let genioIdleIdx = 0;
 
   /* ═══════════════════════ HELPERS ═══════════════════════ */
   const $ = (sel) => document.querySelector(sel);
@@ -774,6 +973,85 @@
   }
   function dataBR(ts) {
     return new Date(ts).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  }
+  function dataBRFull(ts) {
+    return new Date(ts).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  /** Dia de vencimento num mês (clampa 31 em fev etc). */
+  function dataNoMes(ano, mes0, dia) {
+    const ultimo = new Date(ano, mes0 + 1, 0).getDate();
+    const d = new Date(ano, mes0, Math.min(Math.max(1, Math.round(num(dia)) || 1), ultimo));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  /**
+   * Conta fixa mensal: próxima cobrança com data cheia.
+   * cobrando = vencimento já chegou e ainda não paga naquele mês.
+   * Atraso do mês passado continua cobrando até marcar pago.
+   * Se já pagou o mês, próxima data = mesmo dia no mês seguinte (sozinho).
+   */
+  function estadoConta(ct, agora) {
+    const hoje = agora ? new Date(agora) : new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const y = hoje.getFullYear();
+    const m = hoje.getMonth();
+    const dia = Math.min(31, Math.max(1, Math.round(num(ct.dia)) || 1));
+    const inicio = S.inicio ? new Date(S.inicio) : null;
+    if (inicio) inicio.setHours(0, 0, 0, 0);
+
+    const vencAnt = dataNoMes(y, m - 1, dia);
+    const mkAnt = mesKey(vencAnt.getTime());
+    const pagoAnt = !!(S.pagamentos[mkAnt] && S.pagamentos[mkAnt][ct.id]);
+    if (!pagoAnt && hoje.getTime() >= vencAnt.getTime() && (!inicio || vencAnt.getTime() >= inicio.getTime())) {
+      return { venc: vencAnt, mk: mkAnt, status: "atrasada", cobrando: true, pago: false, valor: num(ct.valor) };
+    }
+
+    const vencEste = dataNoMes(y, m, dia);
+    const mkEste = mesKey(vencEste.getTime());
+    const pagoEste = !!(S.pagamentos[mkEste] && S.pagamentos[mkEste][ct.id]);
+
+    if (inicio && !pagoEste && vencEste.getTime() < inicio.getTime()) {
+      const vencProx = dataNoMes(y, m + 1, dia);
+      return { venc: vencProx, mk: mesKey(vencProx.getTime()), status: "proxima", cobrando: false, pago: false, valor: num(ct.valor) };
+    }
+
+    if (!pagoEste && hoje.getTime() >= vencEste.getTime()) {
+      const status = hoje.getTime() === vencEste.getTime() ? "hoje" : "atrasada";
+      return { venc: vencEste, mk: mkEste, status, cobrando: true, pago: false, valor: num(ct.valor) };
+    }
+    if (!pagoEste && hoje.getTime() < vencEste.getTime()) {
+      return { venc: vencEste, mk: mkEste, status: "proxima", cobrando: false, pago: false, valor: num(ct.valor) };
+    }
+    const vencProx = dataNoMes(y, m + 1, dia);
+    return { venc: vencProx, mk: mesKey(vencProx.getTime()), mkPago: mkEste, status: "proxima", cobrando: false, pago: true, valor: num(ct.valor) };
+  }
+  function estadoFatura(agora) {
+    const hoje = agora ? new Date(agora) : new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dia = Math.min(31, Math.max(1, Math.round(num(S.config.diaVencFatura)) || 19));
+    const y = hoje.getFullYear();
+    const m = hoje.getMonth();
+    const vencEste = dataNoMes(y, m, dia);
+    const mkEste = mesKey(vencEste.getTime());
+    const paga = !!(S.cartao.faturas && S.cartao.faturas[mkEste]);
+    const valor = valorFaturaPrevista();
+    if (paga) {
+      const vencProx = dataNoMes(y, m + 1, dia);
+      return { venc: vencProx, mk: mesKey(vencProx.getTime()), status: "proxima", cobrando: false, pago: true, valor: 0 };
+    }
+    if (hoje.getTime() >= vencEste.getTime() && valor > 0) {
+      const status = hoje.getTime() === vencEste.getTime() ? "hoje" : "atrasada";
+      return { venc: vencEste, mk: mkEste, status, cobrando: true, pago: false, valor };
+    }
+    return { venc: vencEste, mk: mkEste, status: "proxima", cobrando: false, pago: false, valor };
+  }
+  function contasCobrandoAgora() {
+    return S.contas.map((ct) => ({ ct, st: estadoConta(ct) })).filter((x) => x.st.cobrando);
+  }
+  function diasAteDate(d) {
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const alvo = new Date(d); alvo.setHours(0, 0, 0, 0);
+    return Math.round((alvo - hoje) / 86400000);
   }
   function diasAteFimDoMes() {
     const h = new Date();
@@ -918,7 +1196,11 @@
     const previstoMes = cfg.rendas.reduce((a, r) => a + num(r.valor) * (num(r.pessoas) || 1), 0);
     let contasPagas = 0;
     for (const k in pag) contasPagas += num(pag[k].valor);
-    const contasFaltam = S.contas.filter((c) => !pag[c.id]).reduce((a, c) => a + num(c.valor), 0);
+    const contasFaltam = contasCobrandoAgora().reduce((a, x) => a + num(x.st.valor), 0);
+    const contasProximas = S.contas
+      .map((ct) => estadoConta(ct))
+      .filter((st) => !st.cobrando && !st.pago)
+      .reduce((a, st) => a + num(st.valor), 0);
     const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
     const gastosMes = S.gastos.filter((g) => g.ts >= ini.getTime()).reduce((a, g) => a + num(g.valor), 0);
     const comprasCiclo = S.cartao.compras.reduce((a, c) => a + num(c.valor), 0);
@@ -968,7 +1250,7 @@
     const livreViver = Math.max(0, livreAte - (bestCaiu ? lazerRest : 0));
     const porDia = livreViver / diasAte;
 
-    return { mk, caixa, banco, cedula, entrouMes, previstoMes, contasPagas, contasFaltam, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, livreViver, lazerRest: lazerDisp, porDia, metaNum, esperandoSalario: !bestCaiu };
+    return { mk, caixa, banco, cedula, entrouMes, previstoMes, contasPagas, contasFaltam, contasProximas, gastosMes, comprasCiclo, faturaPaga, prox, diasAte, obrigAte, livreAte, livreViver, lazerRest: lazerDisp, porDia, metaNum, esperandoSalario: !bestCaiu };
   }
 
   // Duração média por unidade (dias) de um item da despensa, pelo histórico de compras
@@ -987,6 +1269,20 @@
     if (porDia >= 50) return { cls: "verde", msg: "Ritmo tranquilo", sub: "Dá pra viver sem aperto até o próximo salário." };
     if (porDia >= 20) return { cls: "amarelo", msg: "Atenção", sub: "Tem dinheiro, mas sem exagero no dia a dia." };
     return { cls: "vermelho", msg: "Apertado", sub: "Prioriza o essencial até o próximo salário." };
+  }
+  /** Cor do hero pelo plano real (não pelo R$/dia antigo). */
+  function semaforoPlano(c, plano) {
+    const precisa = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
+    if (precisa > num(c.caixa) + 0.009) {
+      return { cls: "vermelho", msg: "Falta no caixa", sub: `Plano pede ${fmt(precisa)} e tem ${fmt(c.caixa)}.` };
+    }
+    if (num(c.caixa) <= 0) {
+      return { cls: "vermelho", msg: "Caixa zerado", sub: "Espera próximo salário ou anota o que entrou." };
+    }
+    if (num(plano.livre) <= 0 && num(plano.lazerUsa) < 80) {
+      return { cls: "amarelo", msg: "Caixa justo", sub: "Depois de pagar/separar sobra pouco. Lazer = o que o plano diz." };
+    }
+    return { cls: "verde", msg: "Caixa ok", sub: "Dá pra seguir o plano desta quinzena." };
   }
 
   function contasDaQuinzena(diaRenda) {
@@ -1196,6 +1492,62 @@
   function emergenciaGuardado() {
     return Math.max(0, num((S.emergencia || {}).guardado));
   }
+  /** Só o que já venceu / vence hoje (contas + fatura). Próximo mês não entra. */
+  function dividasFaltam(c) {
+    const contas = Math.max(0, num(c.contasFaltam));
+    const fat = estadoFatura();
+    return contas + (fat.cobrando ? Math.max(0, num(fat.valor)) : 0);
+  }
+
+  const ENV100_TOTAL = 5050; // 1+2+…+100
+  const ENV500_TOTAL = 500;
+  // Tabela clássica meta R$ 500 (quadradinhos pra marcar) — ordem fixa “embaralhada”
+  const VALORES_500 = (function () {
+    const base = [].concat(
+      Array(12).fill(5),
+      Array(10).fill(10),
+      Array(6).fill(15),
+      Array(5).fill(20),
+      Array(4).fill(25),
+      [50]
+    );
+    let s = 500;
+    for (let i = base.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      const j = s % (i + 1);
+      const t = base[i]; base[i] = base[j]; base[j] = t;
+    }
+    return base;
+  })();
+
+  function envFeitosMap() {
+    return (S.desafio100 && S.desafio100.feitos) || {};
+  }
+  function envStats() {
+    const feitos = envFeitosMap();
+    let qtd = 0, soma = 0;
+    for (let n = 1; n <= 100; n++) {
+      if (feitos[String(n)]) { qtd++; soma += n; }
+    }
+    return { qtd, soma, falta: 100 - qtd, faltaRs: ENV100_TOTAL - soma };
+  }
+  function envFaltam() {
+    const feitos = envFeitosMap();
+    const out = [];
+    for (let n = 1; n <= 100; n++) if (!feitos[String(n)]) out.push(n);
+    return out;
+  }
+  function env500FeitosMap() {
+    return (S.desafio500 && S.desafio500.feitos) || {};
+  }
+  function env500Stats() {
+    const feitos = env500FeitosMap();
+    let qtd = 0, soma = 0;
+    VALORES_500.forEach((v, i) => {
+      if (feitos[String(i)]) { qtd++; soma += v; }
+    });
+    return { qtd, soma, totalCells: VALORES_500.length, falta: VALORES_500.length - qtd, faltaRs: ENV500_TOTAL - soma };
+  }
 
   function avancarParcelasAposFatura() {
     if (!S.cartao.parcelas) S.cartao.parcelas = [];
@@ -1236,6 +1588,7 @@
       juntadoEst: r.juntadoEst,
       ifood: r.ifood,
       mercado: r.mercado,
+      lazer: r.lazer,
       emergencia: emergenciaGuardado(),
     };
   }
@@ -1367,6 +1720,18 @@
       `Despensa faltando: ${despensaFalta || "ok"}. Lista compras: ${lista || "vazia"}.`,
       `Gatos: ${(S.gatos || []).map((g) => g.nome).join(", ") || "nenhum"}.`,
       `Missão: juntar o máximo sem matar lazer. Respostas curtas, com números em R$, didáticas.`,
+      (() => {
+        const v = visaoDoMes();
+        const r = ritmoGasto();
+        const m = metaDinamica();
+        const p = metaProgressiva();
+        return [
+          `VISÃO DO MÊS: renda ${fmt(v.rendaTotal)} − comprometido (contas+fatura) ${fmt(v.comprometido)} = sobra real ${fmt(v.sobraReal)}.`,
+          `RITMO: gasto variável/dia ${fmt(r.gastoPorDia)} · dias restantes ~${r.diasRestantes} · projeção ${fmt(r.projecaoFinal)} · estourando=${r.estourando ? "SIM" : "não"}.`,
+          `META DINÂMICA (3× fixo): alvo ${fmt(m.metaSugerida)} · faltam ${fmt(m.faltam)} · meses estimados ${m.mesesEstimados == null ? "?" : m.mesesEstimados}.`,
+          `META PROGRESSIVA (coach): agora ${fmt(p.metaAgora)} · iniciante=${p.iniciante ? "sim" : "não"} · streak meses ${p.streak}.`,
+        ].join("\n");
+      })(),
     ].join("\n");
   }
 
@@ -1418,6 +1783,723 @@
     const txt = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
     if (!txt) throw new Error("IA vazia");
     return String(txt).replace(/\n/g, "<br>");
+  }
+
+  /* ═══════════════════════ VISÃO / RITMO / META / RESUMO ═══════════════════════ */
+  function mesKeyOffset(deltaMes) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + (deltaMes || 0));
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+  function visaoDoMes() {
+    const rendaTotal = rendaMesPrevista();
+    const contas = contasMesPrevistas();
+    const fatura = num(S.config.faturaEstimada) > 0 ? num(S.config.faturaEstimada) : (valorFaturaPrevista() || 0);
+    const comprometido = contas + fatura;
+    return { rendaTotal, comprometido, sobraReal: rendaTotal - comprometido, contas, fatura };
+  }
+  function ritmoGasto() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const gastosVar = (S.gastos || [])
+      .filter((g) => num(g.ts) >= ini.getTime())
+      .reduce((a, g) => a + num(g.valor), 0);
+    const diasPassados = Math.max(1, hoje.getDate());
+    const gastoPorDia = gastosVar / diasPassados;
+    const prox = proxRenda();
+    let diasRestantes;
+    if (prox && prox.d) {
+      diasRestantes = Math.max(1, Math.round((prox.d.getTime() - hoje.getTime()) / 86400000));
+    } else {
+      diasRestantes = Math.max(1, diasAteFimDoMes());
+    }
+    const vis = visaoDoMes();
+    const disponivelMes = Math.max(0, vis.sobraReal);
+    const projecaoFinal = gastoPorDia * (diasPassados + diasRestantes);
+    const estourando = disponivelMes > 0 && projecaoFinal > disponivelMes * 0.92 && gastoPorDia >= 15;
+    return { gastoPorDia, diasRestantes, projecaoFinal, estourando, gastosVar, disponivelMes, diasPassados };
+  }
+  function metaDinamica() {
+    const fixoMensal = contasMesPrevistas() + (num(S.config.faturaEstimada) > 0 ? num(S.config.faturaEstimada) : (valorFaturaPrevista() || 0));
+    const metaSugerida = Math.max(500, Math.round((fixoMensal * 3) / 50) * 50);
+    const guardado = emergenciaGuardado();
+    const faltam = Math.max(0, metaSugerida - guardado);
+    const aportes = (S.emergencia && S.emergencia.aportes) || [];
+    const corte = Date.now() - 1000 * 60 * 60 * 24 * 100;
+    const recentes = aportes.filter((a) => num(a.ts) >= corte);
+    const porMes = {};
+    recentes.forEach((a) => {
+      const k = mesKey(a.ts);
+      porMes[k] = (porMes[k] || 0) + num(a.valor);
+    });
+    const vals = Object.keys(porMes).map((k) => porMes[k]);
+    const mediaMes = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    const mesesEstimados = faltam <= 0 ? 0 : (mediaMes > 0 ? Math.ceil(faltam / mediaMes) : null);
+    return { metaSugerida, faltam, mesesEstimados, fixoMensal, mediaAporteMes: mediaMes };
+  }
+  function resumoMes(mesId) {
+    const mk = mesId || mesKey();
+    const snap = S.mesesFechados && S.mesesFechados[mk];
+    const lazerTeto = lazerOrcamento();
+    let lazerGasto = 0;
+    let guardadoMes = 0;
+    let metaMes = metaEfetiva();
+    let gastosTot = 0;
+    if (snap) {
+      lazerGasto = num(snap.ifood) + num(snap.lazer || 0);
+      guardadoMes = Math.max(0, num(snap.juntadoEst));
+      metaMes = num(snap.meta) || metaMes;
+      gastosTot = num(snap.gastos);
+      if (snap.emergencia != null && snap.emergenciaPrev != null) {
+        guardadoMes = Math.max(0, num(snap.emergencia) - num(snap.emergenciaPrev));
+      }
+    } else if (mk === mesKey()) {
+      lazerGasto = lazerGastoMes();
+      const aportes = ((S.emergencia && S.emergencia.aportes) || []).filter((a) => mesKey(a.ts) === mk);
+      guardadoMes = aportes.reduce((a, x) => a + num(x.valor), 0);
+      gastosTot = (S.gastos || []).filter((g) => mesKey(g.ts) === mk).reduce((a, g) => a + num(g.valor), 0);
+    }
+    const prevMk = (function () {
+      const [y, m] = mk.split("-").map(Number);
+      const d = new Date(y, m - 2, 1);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    })();
+    const prev = S.mesesFechados && S.mesesFechados[prevMk];
+    return {
+      mk,
+      lazerGasto,
+      lazerTeto,
+      lazerOk: lazerGasto <= lazerTeto + 0.009,
+      guardadoMes,
+      metaMes,
+      gastosTot,
+      vsAnterior: prev
+        ? {
+            gastosDelta: gastosTot - num(prev.gastos),
+            guardadoDelta: guardadoMes - Math.max(0, num(prev.juntadoEst)),
+          }
+        : null,
+      fechado: !!snap,
+    };
+  }
+  function registrarAporte(v, motivo) {
+    const valor = Math.round(num(v) * 100) / 100;
+    if (!(valor > 0)) return 0;
+    if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [] };
+    if (!Array.isArray(S.emergencia.aportes)) S.emergencia.aportes = [];
+    S.emergencia.aportes.push({ ts: Date.now(), valor, motivo: motivo || "" });
+    S.emergencia.guardado = Math.round((emergenciaGuardado() + valor) * 100) / 100;
+    return valor;
+  }
+  function metaProgressiva() {
+    const din = metaDinamica();
+    const guardado = emergenciaGuardado();
+    const aportes = (S.emergencia && S.emergencia.aportes) || [];
+    const porMes = {};
+    aportes.forEach((a) => {
+      const k = mesKey(a.ts);
+      porMes[k] = (porMes[k] || 0) + num(a.valor);
+    });
+    let streak = 0;
+    for (let i = 0; i < 24; i++) {
+      const k = mesKeyOffset(-i);
+      if ((porMes[k] || 0) > 0) streak++;
+      else if (i > 0) break;
+    }
+    const iniciante = guardado < din.metaSugerida * 0.2 && aportes.length < 4;
+    const vis = visaoDoMes();
+    let metaAgora;
+    if (iniciante) {
+      const base = Math.max(10, Math.round((Math.max(0, vis.sobraReal) * 0.03) / 5) * 5);
+      metaAgora = Math.min(50, Math.max(10, base || 10));
+    } else if (streak >= 3) {
+      metaAgora = Math.min(din.metaSugerida, Math.max(50, Math.round(din.metaSugerida * 0.2 / 10) * 10));
+    } else {
+      metaAgora = Math.min(din.metaSugerida, Math.max(20, Math.round(din.metaSugerida * 0.08 / 5) * 5));
+    }
+    const ultimoAporte = aportes.length ? Math.max.apply(null, aportes.map((a) => num(a.ts))) : 0;
+    const diasSemAporte = ultimoAporte ? Math.floor((Date.now() - ultimoAporte) / 86400000) : 999;
+    return {
+      metaAgora,
+      iniciante,
+      streak,
+      metaFinal: din.metaSugerida,
+      faltam: din.faltam,
+      mesesEstimados: din.mesesEstimados,
+      diasSemAporte,
+      mesesComAporte: Object.keys(porMes).length,
+    };
+  }
+  function proximaContaResumo() {
+    const lista = S.contas
+      .map((ct) => ({ ct, st: estadoConta(ct) }))
+      .filter((x) => !x.st.pago)
+      .sort((a, b) => a.st.venc - b.st.venc);
+    if (!lista.length) return null;
+    const x = lista[0];
+    return { nome: x.ct.nome, valor: x.st.valor, dias: diasAteDate(x.st.venc), venc: x.st.venc };
+  }
+
+  /* ═══════════════════════ GÊNIO NOSSA CASA ═══════════════════════ */
+  const GENIO_IDLE_FRASES = [
+    "Tô de olho no caixa. Qualquer coisa, me chama — a gente resolve um passo de cada vez.",
+    "Sem urgência agora. Guardar R$10 já conta. Hábito > valor.",
+    "Dica: separar assim que o salário cai é mais fácil que tentar sobrar no fim do mês.",
+    "Caixa calmo. Bom momento pra olhar o pote Guardar — mesmo se for pouquinho.",
+    "Sem cobrança hoje. Só lembra: pagar → lazer no teto → um trocado pro cofre.",
+    "Se der, marca um valor bem pequeno pra guardar no próximo salário. Sem drama.",
+  ];
+  const GENIO_EDUCA_DICAS = [
+    " Uma dica: separar assim que o salário cai é mais fácil que tentar sobrar no fim do mês.",
+    " Uma dica: lazer com teto não é castigo — é o que deixa o resto do plano possível.",
+    " Uma dica: R$10 guardado hoje vira história. Mês que vem vocês lembram.",
+  ];
+  function genioDicaExtra() {
+    if (Math.random() > 0.35) return "";
+    return GENIO_EDUCA_DICAS[Math.floor(Math.random() * GENIO_EDUCA_DICAS.length)];
+  }
+  function diaKeyGenio(ts) {
+    const d = ts ? new Date(ts) : new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function genioEnsure() {
+    if (!S.genio || typeof S.genio !== "object") S.genio = { avisosVistos: {} };
+    if (!S.genio.avisosVistos || typeof S.genio.avisosVistos !== "object") S.genio.avisosVistos = {};
+  }
+  function genioJaViu(chave) {
+    genioEnsure();
+    return !!S.genio.avisosVistos[chave];
+  }
+  function genioMarcar(chave) {
+    if (!chave) return;
+    genioEnsure();
+    S.genio.avisosVistos[chave] = Date.now();
+    saveLocal();
+    if (logado && NCCloud.configured()) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(cloudSave, 900);
+    }
+  }
+  function genioSvg() {
+    return `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <ellipse cx="32" cy="54" rx="14" ry="5" fill="rgba(0,0,0,0.18)"/>
+      <path d="M22 48c0-2 4-4 10-4s10 2 10 4c0 3-4 5-10 5s-10-2-10-5z" fill="#f0e6c8"/>
+      <path d="M18 28c0-10 6-18 14-18s14 8 14 18c0 8-5 14-14 14s-14-6-14-14z" fill="#7fd4a8"/>
+      <path d="M24 22c2-6 6-9 8-9 3 0 7 3 9 9" fill="none" stroke="#155234" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="26" cy="28" r="3.2" fill="#fff"/><circle cx="38" cy="28" r="3.2" fill="#fff"/>
+      <g class="olho"><circle cx="26.5" cy="28.5" r="1.4" fill="#155234"/><circle cx="38.5" cy="28.5" r="1.4" fill="#155234"/></g>
+      <path d="M27 36c2 2 8 2 10 0" fill="none" stroke="#155234" stroke-width="2" stroke-linecap="round"/>
+      <path d="M32 10c-1 3 1 5 0 8M28 12c1 2-1 4 0 6M36 12c-1 2 1 4 0 6" fill="none" stroke="#f0c14a" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+  }
+  function genioFallbacks(tipo, ctx) {
+    ctx = ctx || {};
+    if (tipo === "salario") {
+      return { txt: "Oi! Seu pagamento do dia " + (ctx.dia || "?") + " caiu — vamos separar o que é importante pagar primeiro?", btn: "Clica aqui e eu te levo lá" };
+    }
+    if (tipo === "conta") {
+      return { txt: "Psst, " + (ctx.nome || "uma conta") + (ctx.dias != null && ctx.dias <= 0 ? " já venceu" : " vence em breve") + " (" + fmt(ctx.valor || 0) + "). Bora resolver?", btn: "Ver dívidas" };
+    }
+    if (tipo === "fatura") {
+      const d = ctx.dias;
+      return { txt: d != null && d >= 0
+        ? ("Psst, a fatura do cartão vence em " + d + " dia" + (d === 1 ? "" : "s") + " e ainda falta separar uma grana")
+        : "A fatura do cartão já passou do vencimento — separa/paga pra não enrolar.", btn: "Ver fatura" };
+    }
+    if (tipo === "lazer") {
+      return { txt: "Vocês já usaram quase todo o lazer do mês e ainda faltam alguns dias pro salário.", btn: "Ver detalhes" };
+    }
+    if (tipo === "guardar") {
+      return { txt: (ctx.iniciante
+        ? ("Bora tentar um valor bem pequeno esse mês? Tipo " + fmt(ctx.metaAgora || 10) + " — sem culpa, só hábito.")
+        : ("Esse mês o cofre não andou muito — meta do momento " + fmt(ctx.metaAgora || 0) + ". Quer ver?")) + genioDicaExtra(), btn: "Ver guardar" };
+    }
+    if (tipo === "ritmo") {
+      return { txt: "Nesse ritmo de gasto (~" + fmt(ctx.gastoPorDia || 0) + "/dia) a projeção fecha em " + fmt(ctx.projecaoFinal || 0) + " — dá pra ajustar agora, antes de apertar.", btn: "Ver Hoje" };
+    }
+    if (tipo === "fechado") {
+      return { txt: "Mês " + (ctx.mk || "") + " fechou: lazer " + fmt(ctx.lazerGasto || 0) + " de " + fmt(ctx.lazerTeto || 0) + ", guardado " + fmt(ctx.guardadoMes || 0) + ". Quer o comparativo?", btn: "Ver resumo" };
+    }
+    if (tipo === "coach-sobrou") {
+      return { txt: "Contas em ordem! Sobrou " + fmt(ctx.sobrou || 0) + " do que dá pra usar agora. Vamos no próximo passo?", btn: "Continuar" };
+    }
+    if (tipo === "coach-lazer") {
+      return { txt: "Desse valor, " + fmt(ctx.lazer || 0) + " é o teto de lazer agora — quer travar isso na cabeça?", btn: "Beleza, lazer ok" };
+    }
+    if (tipo === "coach-guardar") {
+      return { txt: "E olha: dá pra guardar " + fmt(ctx.Z || 0) + " agora mesmo, sem sentir falta. Quer separar?" + genioDicaExtra(), btn: "Guardar " + fmt(ctx.Z || 0) + " agora" };
+    }
+    if (tipo === "coach-guardar-zero") {
+      return { txt: "Desta vez não sobrou pra guardar — tudo bem. No próximo salário a gente tenta um valor bem pequeno.", btn: "Ok" };
+    }
+    if (tipo === "coach-celebra" || tipo === "celebra-aporte") {
+      return { txt: "Boa! Isso já é história — cofre agora em " + fmt(ctx.depois || 0) + (ctx.streak > 1 ? (" · " + ctx.streak + " meses seguidos guardando") : "") + ". Sem falar em falta hoje.", btn: "Ver cofre" };
+    }
+    if (tipo === "ocioso") {
+      return { txt: ctx.frase || GENIO_IDLE_FRASES[0], btn: "Ver Hoje" };
+    }
+    return { txt: "Bom dia! Dei uma olhada no caixa — toque no botão que eu te mostro o plano de hoje.", btn: "Ver Hoje" };
+  }
+  function genioIdleTip() {
+    const vis = visaoDoMes();
+    const prog = metaProgressiva();
+    const prox = proximaContaResumo();
+    const fraseRot = GENIO_IDLE_FRASES[genioIdleIdx % GENIO_IDLE_FRASES.length];
+    genioIdleIdx++;
+    const partes = [
+      fraseRot,
+      " Sobra real do mês ~" + fmt(vis.sobraReal) + ".",
+      " Cofre " + fmt(emergenciaGuardado()) + (prog.metaAgora ? (" · meta leve agora " + fmt(prog.metaAgora)) : "") + ".",
+    ];
+    if (prox) {
+      partes.push(" Próxima conta: " + prox.nome + " " + fmt(prox.valor) + (prox.dias != null ? (" em " + Math.max(0, prox.dias) + "d") : "") + ".");
+    }
+    const txt = partes.join("");
+    return {
+      tipo: "ocioso",
+      chave: "ocioso:" + diaKeyGenio() + ":" + genioIdleIdx,
+      ephemeral: true,
+      skipVisto: true,
+      ctx: { frase: txt },
+      txt,
+      btn: "Ver Hoje",
+      go: { tab: "hoje" },
+      highlight: {
+        anchor: "guia",
+        tit: "Como estamos agora",
+        txt: "Sobra real " + fmt(vis.sobraReal) + " · cofre " + fmt(emergenciaGuardado()) + " · " + (prox ? ("próxima " + prox.nome + " " + fmt(prox.valor)) : "sem conta aberta na fila") + ".",
+      },
+    };
+  }
+  function genioPickTip(c, plano) {
+    const dk = diaKeyGenio();
+    const mk = mesKey();
+    const candidatos = [];
+    const prog = metaProgressiva();
+    const ritmo = ritmoGasto();
+
+    const cobrando = contasCobrandoAgora();
+    cobrando.forEach((x) => {
+      const dias = diasAteDate(x.st.venc);
+      candidatos.push({
+        pri: dias < 0 ? 10 : 20,
+        tipo: "conta",
+        chave: "conta:" + x.ct.id + ":" + (x.st.mk || mk),
+        ctx: { nome: x.ct.nome, valor: x.st.valor, dias },
+        go: { tab: "contas" },
+        highlight: {
+          anchor: "dividas",
+          tit: "Por que importa agora",
+          txt: (x.ct.nome || "Conta") + " " + (dias < 0 ? "está atrasada" : "vence hoje") + " (" + fmt(x.st.valor) + "). Paga ou marca pago pra limpar o plano.",
+        },
+      });
+    });
+    const janela = janelaSalarioAtiva();
+    if (janela) {
+      contasDaJanela(janela.dia).forEach((ct) => {
+        const st = estadoConta(ct);
+        if (st.pago || st.cobrando) return;
+        const dias = diasAteDate(st.venc);
+        if (!(dias >= 1 && dias <= 3)) return;
+        candidatos.push({
+          pri: 22,
+          tipo: "conta",
+          chave: "conta-prox:" + ct.id + ":" + (st.mk || mk),
+          ctx: { nome: ct.nome, valor: st.valor, dias },
+          go: { tab: "contas" },
+          highlight: {
+            anchor: "dividas",
+            tit: "Conta chegando",
+            txt: ct.nome + " vence em " + dias + " dia" + (dias === 1 ? "" : "s") + " (" + fmt(st.valor) + "). Já pode separar do caixa.",
+          },
+        });
+      });
+    }
+
+    const fat = estadoFatura();
+    if (!fat.pago) {
+      const dias = diasAteDate(fat.venc);
+      if (fat.cobrando || dias <= 5) {
+        candidatos.push({
+          pri: fat.cobrando ? 15 : 30,
+          tipo: "fatura",
+          chave: "fatura:" + mk,
+          ctx: { dias, valor: fat.valor },
+          go: { tab: "cartao" },
+          highlight: {
+            anchor: "fatura",
+            tit: "Fatura do cartão",
+            txt: "Separa " + fmt(num(plano.separarFatura) || fat.valor || valorFaturaPrevista()) + " do caixa até " + dataBRFull(fat.venc) + ". Essa grana não é lazer.",
+          },
+        });
+      }
+    }
+
+    if (ritmo.estourando) {
+      candidatos.push({
+        pri: 27,
+        tipo: "ritmo",
+        chave: "ritmo:" + mk + ":" + Math.floor(new Date().getDate() / 7),
+        ctx: { gastoPorDia: ritmo.gastoPorDia, projecaoFinal: ritmo.projecaoFinal, diasRestantes: ritmo.diasRestantes },
+        go: { tab: "hoje" },
+        highlight: {
+          anchor: "guia",
+          tit: "Ritmo apertando",
+          txt: "Gasto variável ~" + fmt(ritmo.gastoPorDia) + "/dia. Projeção " + fmt(ritmo.projecaoFinal) + " vs sobra real ~" + fmt(ritmo.disponivelMes) + ". Segura lazer/imprevisto.",
+        },
+      });
+    }
+
+    const caiu = rendaRecenteCaiu();
+    if (caiu && caiu.ts && diaKeyGenio(caiu.ts) === dk) {
+      const precisa = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
+      if (precisa > 0) {
+        candidatos.push({
+          pri: 25,
+          tipo: "salario",
+          chave: "salario:" + caiu.id + ":" + dk,
+          ctx: { dia: caiu.dia, valor: caiu.valor },
+          go: { tab: "hoje" },
+          highlight: {
+            anchor: "pagar",
+            tit: "Salário caiu — ordem do dia",
+            txt: "Primeiro separa/paga o da janela (" + fmt(precisa) + "). Depois lazer com o que sobrar. Guia embaixo mostra o passo a passo.",
+          },
+        });
+      }
+    }
+
+    const prevMk = mesKeyOffset(-1);
+    if (S.mesesFechados && S.mesesFechados[prevMk]) {
+      const rm = resumoMes(prevMk);
+      candidatos.push({
+        pri: 33,
+        tipo: "fechado",
+        chave: "fechado:" + prevMk,
+        ctx: { mk: prevMk, lazerGasto: rm.lazerGasto, lazerTeto: rm.lazerTeto, guardadoMes: rm.guardadoMes },
+        go: { tab: "mais", mais: "mes" },
+        highlight: {
+          anchor: "cofre",
+          tit: "Resumo do mês fechado",
+          txt: "Lazer " + fmt(rm.lazerGasto) + "/" + fmt(rm.lazerTeto) + " · guardado ~" + fmt(rm.guardadoMes) + " (meta " + fmt(rm.metaMes) + ")" + (rm.vsAnterior ? (" · gastos " + (rm.vsAnterior.gastosDelta >= 0 ? "+" : "") + fmt(rm.vsAnterior.gastosDelta) + " vs mês anterior") : "") + ".",
+        },
+      });
+    }
+
+    const lazerOrc = lazerOrcamento();
+    const lazerGasto = lazerGastoMes();
+    if (lazerOrc > 0 && lazerGasto / lazerOrc >= 0.8) {
+      candidatos.push({
+        pri: 40,
+        tipo: "lazer",
+        chave: "lazer:" + mk,
+        ctx: { gasto: lazerGasto, orc: lazerOrc },
+        go: { tab: "hoje" },
+        highlight: {
+          anchor: "lazer",
+          tit: "Lazer quase no teto",
+          txt: "Já foi " + fmt(lazerGasto) + " de " + fmt(lazerOrc) + " neste mês. O número do pote é o que ainda dá pra gastar AGORA com o caixa.",
+        },
+      });
+    }
+
+    if (prog.diasSemAporte >= 12 && new Date().getDate() >= 5) {
+      candidatos.push({
+        pri: 48,
+        tipo: "guardar",
+        chave: "guardar:" + mk,
+        ctx: { meta: prog.metaFinal, metaAgora: prog.metaAgora, iniciante: prog.iniciante, faltam: prog.faltam, mesesEstimados: prog.mesesEstimados },
+        go: { tab: "mais", mais: "mes" },
+        highlight: {
+          anchor: "cofre",
+          tit: "Hábito de guardar",
+          txt: prog.iniciante
+            ? ("Sem culpa. Meta leve agora: " + fmt(prog.metaAgora) + ". Alvo grande (" + fmt(prog.metaFinal) + ") vem depois, com calma.")
+            : ("Faltam ~" + fmt(prog.faltam) + " pro alvo " + fmt(prog.metaFinal) + (prog.mesesEstimados != null ? (" · ~" + prog.mesesEstimados + " meses no ritmo atual") : "") + "."),
+        },
+      });
+    }
+
+    candidatos.push({
+      pri: 90,
+      tipo: "bomdia",
+      chave: "bomdia:" + dk,
+      ctx: {},
+      go: { tab: "hoje" },
+      highlight: {
+        anchor: "guia",
+        tit: "Resumo do dia",
+        txt: "Caixa " + fmt(c.caixa) + ". Segue a ordem: pagar/separar → lazer → guardar. Os potes mostram o que dá pra fazer agora.",
+      },
+    });
+
+    candidatos.sort((a, b) => a.pri - b.pri);
+    for (let i = 0; i < candidatos.length; i++) {
+      if (!genioJaViu(candidatos[i].chave)) return candidatos[i];
+    }
+    return null;
+  }
+  function genioApplyTip(tip, opts) {
+    opts = opts || {};
+    const fb = genioFallbacks(tip.tipo, tip.ctx || {});
+    genioUI.tip = Object.assign({}, tip, {
+      txt: tip.txt || fb.txt,
+      btn: tip.btn || fb.btn,
+    });
+    genioUI.open = opts.open !== false;
+    genioUI.loading = false;
+    paintGenio();
+  }
+  function genioStartCoachPosPagamento() {
+    if (!logado || !S.caixa) return;
+    const c = calc();
+    const plano = planoDoCaixa(c);
+    const prog = metaProgressiva();
+    const sobrou = Math.max(0, num(plano.lazerUsa) + num(plano.guardarUsa) + num(plano.livre));
+    const lazer = Math.max(0, num(plano.lazerUsa));
+    let Z = 0;
+    if (num(plano.guardarUsa) > 0) Z = Math.min(prog.metaAgora, plano.guardarUsa);
+    else if (sobrou >= 10) Z = Math.min(prog.metaAgora, Math.max(10, Math.floor(sobrou * 0.1 / 5) * 5 || 10));
+    if (Z > sobrou && sobrou > 0) Z = Math.floor(sobrou / 5) * 5;
+    if (Z > 0 && Z < 10) Z = Math.min(10, sobrou);
+
+    const steps = [];
+    steps.push({
+      tipo: "coach-sobrou",
+      chave: "coach-sobrou:" + Date.now(),
+      ephemeral: true,
+      skipVisto: true,
+      coach: true,
+      ctx: { sobrou },
+      go: { tab: "hoje" },
+      highlight: { anchor: "guia", tit: "Depois de pagar", txt: "Sobrou " + fmt(sobrou) + " pra lazer/guardar neste caixa. Próximo passo com calma." },
+      coachNext: true,
+    });
+    if (lazer > 0) {
+      steps.push({
+        tipo: "coach-lazer",
+        chave: "coach-lazer:" + Date.now(),
+        ephemeral: true,
+        skipVisto: true,
+        coach: true,
+        ctx: { lazer },
+        go: { tab: "hoje" },
+        highlight: { anchor: "lazer", tit: "Teto de lazer", txt: "Pode gastar até " + fmt(lazer) + " de lazer agora (pote 2). O resto não é lazer." },
+        coachNext: true,
+      });
+    }
+    if (Z > 0) {
+      steps.push({
+        tipo: "coach-guardar",
+        chave: "coach-guardar:" + Date.now(),
+        ephemeral: true,
+        skipVisto: true,
+        coach: true,
+        ctx: { Z, antes: emergenciaGuardado() },
+        valor: Z,
+        action: "guardar",
+        go: { tab: "mais", mais: "mes" },
+        highlight: { anchor: "cofre", tit: "Guardar agora", txt: "Um clique separa " + fmt(Z) + " pro cofre. Hábito pequeno, vitória real." },
+      });
+    } else {
+      steps.push({
+        tipo: "coach-guardar-zero",
+        chave: "coach-zero:" + Date.now(),
+        ephemeral: true,
+        skipVisto: true,
+        coach: true,
+        ctx: {},
+        go: { tab: "hoje" },
+        highlight: { anchor: "guardar", tit: "Sem folga agora", txt: "Tudo bem não guardar neste caixa. No próximo salário tentamos " + fmt(prog.metaAgora) + "." },
+        coachNext: true,
+      });
+    }
+    genioCoach = { steps, i: 0 };
+    genioApplyTip(steps[0]);
+    enrichGenioTipIA(steps[0]);
+  }
+  function genioAvancarCoach() {
+    if (!genioCoach) return;
+    genioCoach.i += 1;
+    if (genioCoach.i >= genioCoach.steps.length) {
+      genioCoach = null;
+      genioUI.tip = null;
+      genioUI.open = false;
+      paintGenio();
+      return;
+    }
+    const step = genioCoach.steps[genioCoach.i];
+    genioApplyTip(step);
+    enrichGenioTipIA(step);
+  }
+  function genioCelebrarAporte(valor, antes) {
+    const depois = emergenciaGuardado();
+    const streak = metaProgressiva().streak;
+    genioCoach = null;
+    const tip = {
+      tipo: "celebra-aporte",
+      chave: "celebra:" + Date.now(),
+      ephemeral: true,
+      skipVisto: true,
+      ctx: { valor, antes, depois, streak },
+      go: { tab: "mais", mais: "mes" },
+      highlight: {
+        anchor: "cofre",
+        tit: "Vitória no cofre",
+        txt: "+" + fmt(valor) + " · total " + fmt(depois) + (streak > 1 ? (" · " + streak + " meses seguidos") : "") + ". Hoje a gente só celebra.",
+      },
+    };
+    genioApplyTip(tip);
+  }
+  async function genioTextoIA(tip, c) {
+    const key = getAiKey();
+    const builtOn = !!(window.NC_AI && window.NC_AI.enabled && key);
+    if (!(S.config.aiOn || builtOn) || !key) return null;
+    const provider = S.config.aiProvider || (window.NC_AI && window.NC_AI.provider) || "groq";
+    const url = provider === "openai"
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://api.groq.com/openai/v1/chat/completions";
+    const model = provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant";
+    const fb = genioFallbacks(tip.tipo, tip.ctx || {});
+    const tomExtra = tip.tipo.indexOf("celebra") >= 0 || tip.tipo.indexOf("coach") >= 0
+      ? " Tom de coach: reforço positivo, nunca culpa. Se celebrar aporte, NÃO diga quanto falta."
+      : "";
+    const messages = [
+      {
+        role: "system",
+        content: "Você é o Gênio do Nossa Casa, o conselheiro financeiro proativo do casal. Você conhece as contas, o cartão, os gastos e as entradas deles em tempo real. Sua função é avisar, de forma curta, animada e simpática (como um amigo genial dando um toque), quando algo importa agora — nunca dar sermão, nunca usar economês. Sempre termine sugerindo uma ação clara e um próximo passo. Use os números reais fornecidos no contexto, nunca invente valores. Responda em português do Brasil com NO MÁXIMO 2 frases curtas. Sem markdown, sem aspas, sem botão no texto." + tomExtra,
+      },
+      {
+        role: "user",
+        content: "Gatilho: " + tip.tipo + "\nContexto do gatilho: " + JSON.stringify(tip.ctx || {}) + "\nDados:\n" + contextoCasaTexto(c) + "\nEscreva só a fala do balão (2 frases).",
+      },
+    ];
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+      body: JSON.stringify({ model, temperature: 0.5, max_tokens: 120, messages }),
+    });
+    if (!res.ok) throw new Error("IA HTTP " + res.status);
+    const data = await res.json();
+    const txt = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!txt) return fb.txt;
+    return String(txt).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() || fb.txt;
+  }
+  async function enrichGenioTipIA(tip) {
+    if (!tip || tip.skipIA) return;
+    const chave = tip.chave;
+    genioUI.loading = true;
+    paintGenio();
+    try {
+      const ai = await genioTextoIA(tip, calc());
+      if (ai && genioUI.tip && genioUI.tip.chave === chave) genioUI.tip.txt = ai;
+    } catch (_) { /* fallback */ }
+    if (genioUI.tip && genioUI.tip.chave === chave) genioUI.loading = false;
+    paintGenio();
+  }
+  function paintGenio() {
+    const root = $("#genio-root");
+    if (!root) return;
+    if (!logado || !S.caixa) {
+      root.hidden = true;
+      root.innerHTML = "";
+      return;
+    }
+    root.hidden = false;
+    const tip = genioUI.tip;
+    const urgent = !!(tip && !tip.ephemeral && tip.tipo !== "ocioso" && tip.tipo !== "bomdia");
+    const open = genioUI.open && tip;
+    const fb = tip ? genioFallbacks(tip.tipo, tip.ctx || {}) : null;
+    const txt = tip && tip.txt ? tip.txt : (fb ? fb.txt : "");
+    const btn = tip && tip.btn ? tip.btn : (fb ? fb.btn : "Ok");
+    root.innerHTML = `
+      ${open ? `<div class="genio-balao">
+        <div class="gtit">Gênio Nossa Casa</div>
+        <div class="gtxt">${esc(genioUI.loading ? "Deixa eu ver o caixa um segundo…" : txt)}</div>
+        <div class="gacts">
+          <button type="button" class="btn small" data-action="genio-ir" ${genioUI.loading ? "disabled" : ""}>${esc(btn)}</button>
+          <button type="button" class="ghostx" data-action="genio-dismiss">Agora não</button>
+        </div>
+      </div>` : ""}
+      <button type="button" class="genio-ava ${tip && !tip.ephemeral && tip.tipo !== "ocioso" ? "has-tip" : "sleep"}" data-action="genio-toggle" title="Gênio Nossa Casa" aria-label="Gênio Nossa Casa">
+        ${genioSvg()}
+      </button>`;
+  }
+  function applyGenioHighlight() {
+    document.querySelectorAll(".genio-callout").forEach((n) => n.remove());
+    document.querySelectorAll(".genio-hl").forEach((n) => n.classList.remove("genio-hl"));
+    if (!genioHighlight) return;
+    const el = document.querySelector('[data-genio-anchor="' + genioHighlight.anchor + '"]');
+    if (!el) return;
+    el.classList.add("genio-hl");
+    const box = document.createElement("div");
+    box.className = "genio-callout";
+    box.innerHTML = `<strong>${esc(genioHighlight.tit || "Dica do gênio")}</strong><p>${esc(genioHighlight.txt || "")}</p><button type="button" data-action="genio-hl-close">Entendi</button>`;
+    el.insertAdjacentElement("afterend", box);
+    try { el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) {}
+  }
+  async function tickGenio(forceOpen) {
+    if (!logado || !S.caixa) {
+      genioUI.tip = null;
+      paintGenio();
+      return;
+    }
+    // Coach em andamento: não rouba a fala
+    if (genioCoach && genioUI.tip && genioUI.tip.coach) {
+      if (forceOpen) genioUI.open = true;
+      paintGenio();
+      return;
+    }
+    // Celebração / ocioso aberto pelo usuário
+    if (genioUI.tip && genioUI.tip.ephemeral && genioUI.open && !forceOpen) {
+      paintGenio();
+      return;
+    }
+    const c = calc();
+    const plano = planoDoCaixa(c);
+    const tip = genioPickTip(c, plano);
+    if (!tip) {
+      // Sem gatilho: avatar ocioso sempre clicável; não some
+      if (!(genioUI.tip && genioUI.tip.ephemeral && genioUI.open)) {
+        genioUI.tip = null;
+        genioUI.open = false;
+      }
+      if (forceOpen) {
+        genioApplyTip(genioIdleTip(), { open: true });
+        return;
+      }
+      paintGenio();
+      return;
+    }
+    const same = genioUI.tip && genioUI.tip.chave === tip.chave;
+    if (!same) {
+      genioApplyTip(tip, { open: true });
+      enrichGenioTipIA(tip);
+    } else {
+      if (forceOpen) genioUI.open = true;
+      paintGenio();
+    }
+  }
+  function scheduleGenio() {
+    clearTimeout(genioTickTimer);
+    genioTickTimer = setTimeout(() => {
+      tickGenio(false).then(() => applyGenioHighlight()).catch(() => paintGenio());
+    }, 180);
+  }
+  function genioNavegarTip(tip) {
+    if (!tip) return;
+    if (tip.go && tip.go.mais) {
+      tab = "mais";
+      maisSub = tip.go.mais;
+    } else {
+      tab = (tip.go && tip.go.tab) || "hoje";
+    }
+    genioHighlight = tip.highlight || null;
+    closeModal();
+    render();
+    window.scrollTo(0, 0);
   }
 
   function responderPergunta(pergunta, c) {
@@ -1508,7 +2590,199 @@
     return !!S.cartao.faturas[mesKey()];
   }
 
-  // Valor a guardar/pagar da fatura: compras do ciclo, senão estimativa manual
+  // Valor previsto da fatura: compras · estimativa (padrão R$ 1200)
+  function valorFaturaPrevista() {
+    if (faturaPagaEsteMes()) return 0;
+    const ciclo = (S.cartao.compras || []).reduce((a, x) => a + num(x.valor), 0);
+    if (ciclo > 0) return ciclo;
+    const est = num(S.config.faturaEstimada);
+    return est > 0 ? est : 1200;
+  }
+  function faturaEstimativaEhChute() {
+    return false;
+  }
+
+  function diasSalarioOrdenados() {
+    return (S.config.rendas || []).map((r) => Math.round(num(r.dia))).filter((d) => d >= 1 && d <= 31).sort((a, b) => a - b);
+  }
+  /** Maior salário ≤ dia do vencimento; se vencimento antes do 1º salário, usa o último. */
+  function salarioPagaDia(diaVenc) {
+    const dias = diasSalarioOrdenados();
+    if (!dias.length) return null;
+    let best = null;
+    for (let i = 0; i < dias.length; i++) {
+      if (dias[i] <= diaVenc) best = dias[i];
+    }
+    return best != null ? best : dias[dias.length - 1];
+  }
+  function rendaDoDia(dia) {
+    return (S.config.rendas || []).find((r) => Math.round(num(r.dia)) === dia) || null;
+  }
+  function valorRenda(r) {
+    if (!r) return 0;
+    return num(r.valor) * (num(r.pessoas) || 1);
+  }
+  /** Último Caiu do mês, senão infere pelo calendário. */
+  function janelaSalarioAtiva() {
+    const mk = mesKey();
+    const rec = S.recebidos[mk] || {};
+    let best = null;
+    for (const id in rec) {
+      const r = S.config.rendas.find((x) => x.id === id);
+      if (!r) continue;
+      const ts = num(rec[id].ts);
+      if (!best || ts > best.ts) {
+        best = { id: r.id, dia: Math.round(num(r.dia)), nome: r.nome, valor: valorRenda(r), ts, caiu: true };
+      }
+    }
+    if (best) return best;
+    const hoje = new Date().getDate();
+    const dias = diasSalarioOrdenados();
+    let last = null;
+    for (let i = 0; i < dias.length; i++) if (dias[i] <= hoje) last = dias[i];
+    if (last == null && dias.length) last = dias[dias.length - 1];
+    if (last == null) return null;
+    const r = rendaDoDia(last);
+    return { id: r && r.id, dia: last, nome: (r && r.nome) || ("Salário dia " + last), valor: valorRenda(r), ts: 0, caiu: false, inferido: true };
+  }
+  /** Contas da quinzena do salário S até o próximo (exclusive). Último salário: S→fim + dias antes do 1º. */
+  function contasDaJanela(salarioDia) {
+    const dias = diasSalarioOrdenados();
+    if (!dias.length) return S.contas.slice();
+    const idx = dias.indexOf(salarioDia);
+    const prox = idx >= 0 && idx < dias.length - 1 ? dias[idx + 1] : null;
+    const primeiro = dias[0];
+    return S.contas.filter((ct) => {
+      const d = Math.round(num(ct.dia));
+      if (prox != null) return d >= salarioDia && d < prox;
+      return d >= salarioDia || d < primeiro;
+    });
+  }
+  function faturaNaJanela(salarioDia) {
+    return salarioPagaDia(diaFatura()) === salarioDia;
+  }
+
+  /** Plano por janela de salário + caixa (banco+cédula). */
+  function planoDoCaixa(c) {
+    const janela = janelaSalarioAtiva();
+    const fat = estadoFatura();
+    const fatValor = valorFaturaPrevista();
+    const chute = faturaEstimativaEhChute();
+    const lazerDisp = Math.max(0, num(c.lazerRest));
+    const meta = Math.max(0, num(c.metaNum));
+    let resto = Math.max(0, num(c.caixa));
+
+    const contasJ = janela ? contasDaJanela(janela.dia).map((ct) => ({ ct, st: estadoConta(ct) })) : [];
+    const contasPagar = contasJ.filter((x) => !x.st.pago && x.st.cobrando);
+    const contasSeparar = contasJ.filter((x) => !x.st.pago && !x.st.cobrando);
+    const pagarAgora = contasPagar.reduce((a, x) => a + num(x.st.valor), 0);
+    const separarContas = contasSeparar.reduce((a, x) => a + num(x.st.valor), 0);
+    const nomesPagar = contasPagar.map((x) => x.ct.nome).join(", ");
+    const nomesSeparar = contasSeparar.map((x) => x.ct.nome + " " + dataBRFull(x.st.venc)).join(", ");
+
+    const fatDesta = janela ? faturaNaJanela(janela.dia) : true;
+    const separarFatura = fatDesta && !fat.pago ? fatValor : 0;
+    const fatCobrando = fatDesta && fat.cobrando;
+
+    const passos = [];
+    const rotuloJanela = janela
+      ? (janela.caiu ? ("Pós " + janela.nome) : ("Janela " + janela.nome + " (marca Caiu se já caiu)"))
+      : "Sem salário cadastrado";
+    const subJanela = janela
+      ? ("Salário ~" + fmt(janela.valor) + " · caixa agora " + fmt(c.caixa) + " (banco " + fmt(c.banco) + " + cédula " + fmt(c.cedula) + ")")
+      : ("Caixa " + fmt(c.caixa));
+
+    if (pagarAgora > 0) {
+      passos.push({
+        cls: "warn",
+        n: passos.length + 1,
+        tit: "Pagar agora (já venceu)",
+        gs: nomesPagar || "Contas da janela",
+        valor: pagarAgora,
+      });
+      resto = Math.max(0, resto - pagarAgora);
+    }
+
+    if (separarContas > 0) {
+      passos.push({
+        cls: "warn",
+        n: passos.length + 1,
+        tit: "Separar contas desta quinzena",
+        gs: nomesSeparar || "Vencem antes do próximo salário",
+        valor: separarContas,
+      });
+      resto = Math.max(0, resto - separarContas);
+    }
+
+    if (separarFatura > 0) {
+      const dias = diasAteDate(fat.venc);
+      passos.push({
+        cls: "warn",
+        n: passos.length + 1,
+        tit: fatCobrando ? "Pagar fatura do cartão" : "Separar fatura do cartão",
+        gs: fmt(fatValor) + " · vence " + dataBRFull(fat.venc) + (dias >= 0 ? " · em " + dias + "d" : "") + " · salário dia " + salarioPagaDia(diaFatura()) + " · não gasta",
+        valor: separarFatura,
+      });
+      resto = Math.max(0, resto - separarFatura);
+    } else if (fat.pago) {
+      passos.push({ cls: "ok", n: passos.length + 1, tit: "Fatura ok", gs: "Próxima " + dataBRFull(fat.venc), valor: 0 });
+    } else if (janela && !fatDesta) {
+      passos.push({
+        cls: "ok",
+        n: passos.length + 1,
+        tit: "Fatura não é desta quinzena",
+        gs: "Vence " + dataBRFull(fat.venc) + " · fica pro salário dia " + salarioPagaDia(diaFatura()),
+        valor: 0,
+      });
+    }
+
+    if (!passos.length) {
+      passos.push({ cls: "ok", n: 1, tit: "Nada vencido nesta janela", gs: "Pode seguir lazer e guardar", valor: 0 });
+    }
+
+    const lazerUsa = Math.min(lazerDisp, resto);
+    passos.push({
+      cls: lazerUsa > 0 ? "" : "ok",
+      n: passos.length + 1,
+      tit: "Lazer / iFood",
+      gs: lazerUsa > 0
+        ? ("Pode gastar até " + fmt(lazerUsa) + " agora (é o que sobrou no caixa). Teto do mês é " + fmt(lazerDisp) + " — caixa manda.")
+        : "Sem folga pra lazer nesta conta",
+      valor: lazerUsa,
+    });
+    resto = Math.max(0, resto - lazerUsa);
+
+    const guardarUsa = Math.min(meta, resto);
+    passos.push({
+      cls: guardarUsa > 0 ? "" : "ok",
+      n: passos.length + 1,
+      tit: guardarUsa > 0 ? "Guardar no cofre" : "Guardar agora",
+      gs: guardarUsa > 0
+        ? ("Meta " + fmt(meta) + " · cofre " + fmt(emergenciaGuardado()) + " · Mais → Mês → Guardei")
+        : (meta > 0
+          ? ("Meta do mês " + fmt(meta) + " — deste caixa não sobra. Guarda no próximo salário.")
+          : "Sem meta"),
+      valor: guardarUsa,
+    });
+    resto = Math.max(0, resto - guardarUsa);
+
+    return {
+      passos,
+      livre: resto,
+      pagarAgora: pagarAgora + (fatCobrando ? separarFatura : 0),
+      separarFatura: fatCobrando ? 0 : separarFatura,
+      separarContas,
+      fatValor,
+      fat,
+      chute,
+      lazerUsa,
+      guardarUsa,
+      janela,
+      rotuloJanela,
+      subJanela,
+    };
+  }
+
   function valorFaturaPendente() {
     if (faturaPagaEsteMes()) return 0;
     const ciclo = S.cartao.compras.reduce((a, x) => a + num(x.valor), 0);
@@ -1676,17 +2950,25 @@
   function render() {
     if (!logado) return;
     try {
-      if (tab === "despensa" || tab === "gatos") { casaSub = tab; tab = "casa"; }
-      if (tab === "mes" || tab === "ajustes") { maisSub = tab === "ajustes" ? "ajustes" : "mes"; tab = "mais"; }
+      if (tab === "despensa" || tab === "gatos" || tab === "casa") {
+        if (tab === "despensa" || tab === "gatos") casaSub = tab;
+        maisSub = "casa";
+        tab = "mais";
+      }
+      if (tab === "mes" || tab === "ajustes" || tab === "100" || tab === "poupar") {
+        maisSub = tab === "ajustes" ? "ajustes" : (tab === "casa" ? "casa" : "mes");
+        if (tab === "100" || tab === "poupar") maisSub = "mes";
+        tab = "mais";
+      }
       document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
       const v = $("#view");
       if (tab === "hoje") v.innerHTML = viewHoje();
       else if (tab === "contas") v.innerHTML = viewContas();
       else if (tab === "cartao") v.innerHTML = viewCartao();
-      else if (tab === "casa") v.innerHTML = viewCasa();
       else if (tab === "mais") v.innerHTML = viewMais();
       else v.innerHTML = viewHoje();
       maybeShowOnboard();
+      scheduleGenio();
     } catch (e) {
       console.error(e);
       const v = $("#view");
@@ -1704,13 +2986,21 @@
     const rec = S.recebidos[mk] || {};
     const hojeDia = new Date().getDate();
     const nq = nomesQuem();
+    const lazerOrc = lazerOrcamento();
+    const lazerTetoMes = Math.max(0, lazerOrc - lazerGastoMes());
+    const pagar = dividasFaltam(c);
+    const fatSt = estadoFatura();
+    const fatAberto = fatSt.cobrando ? num(fatSt.valor) : 0;
+    const plano = planoDoCaixa(c);
+    const precisaAgora = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
+    const sem = semaforoPlano(c, plano);
 
     if (!S.caixa) {
       return `
       <div class="hero amarelo">
         <div class="k">Bem-vindos</div>
         <div class="v" style="font-size:1.85rem;">Quanto tem agora?</div>
-        <div class="sub">Só 2 números: no banco e em papel (cédula).</div>
+        <div class="sub">Só 2 números: no banco e em papel (cédula). App diz o que fazer.</div>
       </div>
       <form class="card mt" data-form="caixa-set">
         <div class="row2">
@@ -1718,33 +3008,75 @@
           <div><label>Em cédula (R$)</label><input name="cedula" inputmode="decimal" placeholder="0,00" /></div>
         </div>
         <button class="btn full" type="submit">Começar</button>
-        <div class="dica">Pode pôr 0. Salário do dia ${c.prox ? c.prox.d.getDate() : "?"} o app já espera.</div>
+        <div class="dica">Cédula = papel na mão. Não é pote separado — só onde o dinheiro está.</div>
       </form>`;
     }
 
-    const sem = semaforo(c.porDia);
-    const diaProx = c.prox ? c.prox.d.getDate() : "?";
     const icoPlus = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
     const icoMinus = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>`;
     const icoCheck = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`;
+
     let html = `
       <div class="hero ${sem.cls}">
-        <div class="k">Vocês têm</div>
+        <div class="k">Caixa agora</div>
         <div class="v">${fmt(c.caixa)}</div>
         <div class="split">Banco ${fmt(c.banco)} · Cédula ${fmt(c.cedula)}</div>
         <div class="status-row">
           <span class="status-dot" aria-hidden="true"></span>
           <div>
-            <div class="msg">${sem.msg}</div>
-            <div class="sub">${sem.sub}</div>
+            <div class="msg">${esc(sem.msg)}</div>
+            <div class="sub">${esc(sem.sub)}</div>
           </div>
         </div>
-        <div class="metrics">
-          <div>Pode ~<b>${fmt(Math.max(0, c.porDia))}/dia</b> até dia ${diaProx}</div>
-          <div>Lazer do mês: <b>${fmt(c.lazerRest || 0)}</b></div>
-          ${c.obrigAte > 0 ? `<div>Não gasta agora: <b>${fmt(c.obrigAte)}</b> <span style="opacity:0.85">(contas + fatura + meta ${fmt(c.metaNum)})</span></div>` : ""}
+      </div>
+
+      <div class="potes">
+        <div class="pote n1" data-genio-anchor="pagar">
+          <div class="pk">1 · Pagar / separar agora</div>
+          <div class="pv">${fmt(precisaAgora)}</div>
+          <div class="ps">${precisaAgora > 0
+            ? `Contas ${fmt((plano.pagarAgora || 0) + (plano.separarContas || 0))}${plano.separarFatura ? " · fatura " + fmt(plano.separarFatura) : ""}`
+            : (pagar <= 0 ? "Nada pra separar nesta quinzena" : "Contas " + fmt(pagar))}</div>
+        </div>
+        <div class="pote n2" data-genio-anchor="lazer">
+          <div class="pk">2 · Lazer agora</div>
+          <div class="pv">${fmt(plano.lazerUsa || 0)}</div>
+          <div class="ps">com o caixa de hoje · teto do mês ainda ${fmt(lazerTetoMes)} de ${fmt(lazerOrc)}</div>
+        </div>
+        <div class="pote n3" data-genio-anchor="guardar">
+          <div class="pk">3 · Guardar agora</div>
+          <div class="pv">${fmt(plano.guardarUsa || 0)}</div>
+          <div class="ps">${(plano.guardarUsa || 0) > 0
+            ? `deste caixa · meta mês ${fmt(c.metaNum)} · cofre ${fmt(emergenciaGuardado())}`
+            : `meta mês ${fmt(c.metaNum)} · deste caixa não sobra · cofre ${fmt(emergenciaGuardado())}`}</div>
         </div>
       </div>
+
+      <div class="guia" data-genio-anchor="guia">
+        <div class="gh">${esc(plano.rotuloJanela || "O que fazer")}</div>
+        <div class="dica" style="margin:0 0 10px;">${esc(plano.subJanela || "")}</div>
+        ${plano.passos.map((p) => `
+          <div class="guia-step ${p.cls || ""}">
+            <div class="gn">${p.cls === "ok" ? "✓" : p.n}</div>
+            <div class="grow">
+              <div class="gt">${esc(p.tit)}</div>
+              <div class="gs">${esc(p.gs)}</div>
+            </div>
+            <div class="gv">${p.valor > 0 ? fmt(p.valor) : "—"}</div>
+          </div>`).join("")}
+        <div class="resumo-livre">
+          ${plano.livre > 0
+            ? `Sobrou ${fmt(plano.livre)} depois do plano — dia a dia ou reforça o cofre.`
+            : `Caixa fecha no plano desta quinzena. Sem folga extra.`}
+        </div>
+        <div class="dica" style="margin-top:0.5rem;">Regra: conta perto do dia 7 → salário 7. Conta/fatura após o 15 → salário 15. Fatura ${plano.fat && plano.fat.pago ? "já paga" : "= " + fmt(plano.fatValor)}. Potes = o que dá pra fazer AGORA com o caixa.</div>
+        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+          ${plano.separarFatura > 0 || (plano.pagarAgora > 0) ? `<button type="button" class="btn small" data-action="tab" data-tab="cartao">Ver fatura</button>` : ""}
+          ${plano.guardarUsa > 0 ? `<button type="button" class="btn small" data-action="ir-mais" data-mais="mes">Guardei</button>` : ""}
+        </div>
+      </div>
+
+      <div class="ordem-fix">Quinzena: paga/separa o da janela · lazer · guarda</div>
 
       <div class="acao-grid">
         <button type="button" class="acao-btn ${hojePainel === "entrou" ? "on" : ""}" data-action="hoje-painel" data-painel="entrou">
@@ -1762,17 +3094,18 @@
       html += `
       <form class="card mt" data-form="entrada-add">
         <label style="margin-top:0;">Quanto entrou?</label>
-        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, presente — não é salário.</div>
+        <div class="dica" style="margin-top:0.2rem;">PIX, bônus, presente — não é salário. App já calcula os 3 potes.</div>
         <div class="row2">
           <div><label>Valor (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" required autofocus /></div>
           <div><label>De onde</label><input name="desc" placeholder="PIX da mãe…" required /></div>
         </div>
-        <label>Foi pra onde?</label>
+        <label>Onde está agora?</label>
         <select name="fonte">
           <option value="banco">Banco / PIX</option>
           <option value="cedula">Cédula (papel)</option>
         </select>
-        <button class="btn full" type="submit">Somar</button>
+        <div class="dica">Só local do dinheiro — não escolhe pote. Ordem: pagar → lazer → guardar.</div>
+        <button class="btn full" type="submit">Somar no caixa</button>
       </form>`;
     }
 
@@ -1796,6 +3129,7 @@
           <option value="banco">Banco / PIX</option>
           <option value="cedula">Cédula</option>
         </select>
+        <div class="dica">iFood/Lazer consome o pote 2. Resto = vida do dia a dia.</div>
         <button class="btn full" type="submit">Anotar</button>
       </form>`;
     }
@@ -1820,70 +3154,8 @@
       html += `<div class="dica">Toque Caiu só quando o dinheiro aparecer no banco.</div></div>`;
     }
 
-    html += lembretesSmartCard(c);
-
-    if (!showMaisHoje) {
-      html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Ver mais do dia →</button>`;
-      return html;
-    }
-
-    html += `<button type="button" class="softlink" data-action="toggle-mais-hoje">Esconder extras ↑</button>`;
-    html += renderChatConversa();
-    html += `
-      <form class="card mt" data-form="simular">
-        <label style="margin-top:0;">E se gastar quanto?</label>
-        <div style="display:flex; gap:0.6rem; align-items:flex-end;">
-          <div style="flex:1;"><input name="valor" inputmode="decimal" placeholder="40,00" required /></div>
-          <button class="btn small" type="submit" style="min-height:3rem;">Simular</button>
-        </div>
-      </form>`;
-    html += renderBaloes(dicas(c));
-
-    const ck = checklistEstado();
-    if (ck) {
-      const espera = ck.modo === "espera" && !ck.caiu;
-      html += `
-      <div class="sect">Passo a passo</div>
-      <div class="card">
-        ${espera ? `<div class="dica" style="margin-top:0;">Próximo salário dia <b>${ck.alvo.dia}</b>. Até lá, sem conta grande.</div>` : ""}
-        <div class="chkstep">
-          <div class="chknum ${ck.caiu ? "done" : "wait"}">1</div>
-          <div class="grow">
-            <div class="t">${esc(ck.alvo.nome)} — ${fmt(ck.total)}</div>
-            <div class="s">${ck.caiu ? "Já caiu ✓" : "Quando cair, marca Caiu"}</div>
-          </div>
-          ${ck.caiu ? `<span class="statusbtn tem">OK</span>` : `<button class="btn small" data-action="checklist-salario">Caiu</button>`}
-        </div>
-        <div class="chkstep">
-          <div class="chknum ${!ck.faltam.length ? "done" : (ck.caiu ? "wait" : "")}">2</div>
-          <div class="grow">
-            <div class="t">Pagar contas</div>
-            <div class="s">${ck.faltam.length ? ck.faltam.length + " falta · " + fmt(ck.totalContas) : "Tudo pago"}</div>
-          </div>
-          ${ck.faltam.length && ck.caiu
-            ? `<button class="btn small" data-action="checklist-pagar-quinzena">Pagar</button>`
-            : `<span class="statusbtn">${ck.faltam.length ? "Depois" : "OK"}</span>`}
-        </div>
-      </div>`;
-    }
-
-    const entradasMesLista = (S.entradas || [])
-      .filter((e) => {
-        const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
-        return num(e.ts) >= ini.getTime();
-      })
-      .slice()
-      .sort((a, b) => num(b.ts) - num(a.ts));
-    if (entradasMesLista.length) {
-      html += `<div class="sect">Entradas</div><div class="card">`;
-      entradasMesLista.forEach((e) => {
-        const dest = e.fonte === "cedula" ? "cédula" : "banco";
-        html += `<div class="chkstep">
-          <div class="grow"><div class="t">${esc(e.desc || "Entrada")}</div><div class="s">${fmt(e.valor)} · ${dest}</div></div>
-          <button class="btn small ghost" data-action="entrada-del" data-id="${esc(e.id)}">Apagar</button>
-        </div>`;
-      });
-      html += `</div>`;
+    if (pagar > 0) {
+      html += `<div class="alerta warn" style="margin-top:var(--space-4);"><span>Falta pagar ${fmt(pagar)}. Abre a aba <b>Dívidas</b> (e Cartão se for fatura).</span></div>`;
     }
 
     html += `
@@ -1902,22 +3174,15 @@
 
     const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
     const recentesAll = S.gastos.filter((g) => g.ts >= ini.getTime()).slice().sort((a, b) => b.ts - a.ts);
-    const recentes = recentesAll.filter((g) => passaFiltroQuem(g.quem)).slice(0, 12);
-    let totEu = 0, totEla = 0;
-    recentesAll.forEach((g) => {
-      if (g.quem === "eu") totEu += num(g.valor);
-      if (g.quem === "ela") totEla += num(g.valor);
-    });
-    html += `<div class="sect">Gastos do mês</div><div class="card">
-      ${htmlFiltroQuem()}
-      <div class="dica" style="margin-top:0;">${esc(nq.eu)} ${fmt(totEu)} · ${esc(nq.ela)} ${fmt(totEla)}</div>`;
+    const recentes = recentesAll.filter((g) => passaFiltroQuem(g.quem)).slice(0, 8);
+    html += `<div class="sect">Gastos recentes</div><div class="card">`;
     if (!recentes.length) html += `<div class="vazio">Nenhum gasto ainda.</div>`;
     recentes.forEach((g) => {
       const quemLbl = g.quem === "ela" ? nq.ela : g.quem === "eu" ? nq.eu : (g.quem === "casa" ? "Juntos" : "");
       const fonteLbl = g.fonte === "cedula" ? "cédula" : "banco";
       html += `
         <div class="item">
-          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)}${quemLbl ? " · " + esc(quemLbl) : ""} · ${fonteLbl} · ${dataBR(g.ts)}</div></div>
+          <div class="grow"><div class="t">${esc(g.desc)}</div><div class="s">${esc(g.cat)}${quemLbl ? " · " + esc(quemLbl) : ""} · ${fonteLbl}</div></div>
           <div class="val">${fmt(g.valor)}</div>
           <button class="statusbtn" data-action="gasto-del" data-id="${g.id}">✕</button>
         </div>`;
@@ -1939,9 +3204,85 @@
     return `
       <div class="subtabs">
         <button type="button" class="${maisSub === "mes" ? "on" : ""}" data-action="mais-sub" data-sub="mes">Mês</button>
+        <button type="button" class="${maisSub === "casa" ? "on" : ""}" data-action="mais-sub" data-sub="casa">Casa</button>
         <button type="button" class="${maisSub === "ajustes" ? "on" : ""}" data-action="mais-sub" data-sub="ajustes">Ajustes</button>
       </div>
-      ${maisSub === "ajustes" ? viewAjustes() : viewMes()}`;
+      ${maisSub === "ajustes" ? viewAjustes() : maisSub === "casa" ? viewCasa() : viewMes()}`;
+  }
+
+  function viewPoupar() {
+    /* Removido da UI — desafio 500/100 não compete com Dívidas/Lazer/Guardar */
+    return viewMes();
+  }
+
+  function viewDesafio500() {
+    const st = env500Stats();
+    const feitos = env500FeitosMap();
+    const pct = Math.round((st.soma / ENV500_TOTAL) * 100);
+    let cells = "";
+    VALORES_500.forEach((v, i) => {
+      const done = !!feitos[String(i)];
+      cells += `<button type="button" class="env-cell${done ? " done" : ""}" data-action="env500-toggle" data-i="${i}" title="Guardar ${fmt(v)}">${v}</button>`;
+    });
+    return `
+      <div class="card">
+        <div class="t">Tabela R$ 500</div>
+        <div class="s" style="margin-top:0.35rem;">Igual a tabela de papel: toca o valor, marca. Completou tudo = <b>${fmt(ENV500_TOTAL)}</b>.</div>
+        <div class="bar" style="margin-top:0.85rem;"><div class="fill lim" style="width:${barraPct(st.soma, ENV500_TOTAL)}%"></div></div>
+        <div class="env-stats">
+          <div><div class="k">Marcados</div><div class="v">${st.qtd}/${st.totalCells}</div></div>
+          <div><div class="k">Guardado</div><div class="v">${fmt(st.soma)}</div></div>
+          <div><div class="k">Falta</div><div class="v">${fmt(st.faltaRs)}</div></div>
+        </div>
+        <div class="dica" style="margin-top:0.6rem;">${pct}% · valores mistos (5, 10, 15, 20, 25, 50)</div>
+      </div>
+
+      <div class="sect">Marcar</div>
+      <div class="card" style="padding:10px;">
+        <div class="env-grid tab500">${cells}</div>
+        <div class="dica" style="margin-top:0.65rem;">Toque marca / toque de novo desfaz. Só tabela — não mexe no caixa sozinho.</div>
+      </div>
+      ${st.soma > 0 ? `<button type="button" class="btn full" data-action="env500-emergencia">Somar ${fmt(st.soma)} na emergência</button>
+        <div class="dica">Soma o total já marcado no fundo (não desmarca a tabela).</div>` : ""}`;
+  }
+
+  function viewDesafio100() {
+    const st = envStats();
+    const feitos = envFeitosMap();
+    const pct = Math.round((st.soma / ENV100_TOTAL) * 100);
+    let cells = "";
+    for (let n = 1; n <= 100; n++) {
+      const done = !!feitos[String(n)];
+      if (envFiltro === "feitos" && !done) continue;
+      if (envFiltro === "faltam" && done) continue;
+      const hint = envHint === n ? " hint" : "";
+      cells += `<button type="button" class="env-cell${done ? " done" : ""}${hint}" data-action="env-abrir" data-n="${n}" title="Envelope ${n} = ${fmt(n)}">${n}</button>`;
+    }
+    return `
+      <div class="card">
+        <div class="t">Desafio 100 envelopes</div>
+        <div class="s" style="margin-top:0.35rem;">Guarda o valor do número (envelope 47 = R$ 47). Soma final: <b>${fmt(ENV100_TOTAL)}</b>. Ordem livre ou sorteia.</div>
+        <div class="bar" style="margin-top:0.85rem;"><div class="fill lim" style="width:${barraPct(st.soma, ENV100_TOTAL)}%"></div></div>
+        <div class="env-stats">
+          <div><div class="k">Feitos</div><div class="v">${st.qtd}/100</div></div>
+          <div><div class="k">Guardado</div><div class="v">${fmt(st.soma)}</div></div>
+          <div><div class="k">Falta</div><div class="v">${fmt(st.faltaRs)}</div></div>
+        </div>
+        <div class="dica" style="margin-top:0.6rem;">${pct}% do desafio · ${st.falta} envelopes ainda</div>
+      </div>
+
+      <div class="row" style="display:flex; gap:8px; margin: var(--space-3) 0;">
+        <button type="button" class="btn ${envFiltro === "todos" ? "" : "ghost"}" style="flex:1;" data-action="env-filtro" data-f="todos">Todos</button>
+        <button type="button" class="btn ${envFiltro === "faltam" ? "" : "ghost"}" style="flex:1;" data-action="env-filtro" data-f="faltam">Faltam</button>
+        <button type="button" class="btn ${envFiltro === "feitos" ? "" : "ghost"}" style="flex:1;" data-action="env-filtro" data-f="feitos">Feitos</button>
+      </div>
+      <button type="button" class="btn full" data-action="env-sortear" ${st.falta ? "" : "disabled"}>Sortear envelope</button>
+
+      <div class="sect">Envelopes</div>
+      <div class="card" style="padding:10px;">
+        <div class="env-grid">${cells || `<div class="vazio">Nada neste filtro.</div>`}</div>
+        <div class="dica" style="margin-top:0.65rem;">Toque no número pra marcar. Pode só marcar ou somar no fundo emergência.</div>
+      </div>`;
   }
 
   function maybeShowOnboard() {
@@ -1949,9 +3290,9 @@
     if (old) old.remove();
     if (!logado || !S.caixa || S.config.onboardDone) return;
     const steps = [
-      { t: "Só 3 botões no Hoje", p: "Entrou = dinheiro novo. Gastei = anotou saída. Caiu? = salário chegou no banco." },
-      { t: "Contas e Cartão embaixo", p: "Pague contas na aba Contas. Compras no cartão ficam em Cartão. Casa = despensa + gatos." },
-      { t: "Meta alimenta emergência", p: "Meta do mês = quanto juntar agora. Quando juntar, some no Fundo de emergência (aba Mais → Mês)." },
+      { t: "3 potes no Hoje", p: "1 Pagar dívidas · 2 Lazer (teto) · 3 Guardar. App calcula. Você só anota." },
+      { t: "Dívidas e Cartão", p: "Aba Dívidas = contas da casa. Cartão = fatura. Casa (despensa/gatos) fica em Mais." },
+      { t: "Um cofre só", p: "Quando puder guardar, Mais → Mês → Guardei. Meta do mês alimenta o cofre. Sem bingo." },
     ];
     const s = steps[Math.min(onboardStep, steps.length - 1)];
     const last = onboardStep >= steps.length - 1;
@@ -2056,22 +3397,18 @@
         ${!c.gastosMes ? `<div class="vazio">Nenhum gasto no dinheiro este mês.</div>` : ""}
       </div>
 
-      <div class="sect">Meta de juntar</div>
+      <div class="sect">Guardar (um cofre só)</div>
       <div class="card">
+        <div class="bar-legend"><span>Meta deste mês</span><span>${fmt(meta)}</span></div>
         <div class="bar"><div class="fill lim" style="width:${meta > 0 ? metaPct : 0}%"></div></div>
-        <div class="bar-legend"><span>Estimativa sobra do mês</span><span>${fmt(r.juntadoEst)} / meta ${fmt(meta)}</span></div>
-        <div class="dica">Meta do mês = quanto juntar <b>este mês</b>. Emergência = pote grande. Ordem: 1) contas+fatura 2) meta do mês → soma na emergência 3) lazer.</div>
-      </div>
-
-      <div class="sect">Fundo de emergência</div>
-      <div class="card">
-        <div class="bar"><div class="fill lim" style="width:${barraPct(emergenciaGuardado(), emergenciaMeta())}%"></div></div>
-        <div class="bar-legend"><span>Guardado</span><span>${fmt(emergenciaGuardado())} / ${fmt(emergenciaMeta())}</span></div>
-        <form class="buyrow mt" data-form="emergencia-add" style="grid-template-columns: 1fr auto;">
-          <input name="valor" inputmode="decimal" placeholder="Guardei quanto (R$)" required />
-          <button class="btn small" type="submit">Somar</button>
+        <div class="bar-legend"><span>Sobra estimada</span><span>${fmt(r.juntadoEst)}</span></div>
+        <div class="bar" style="margin-top:0.85rem;"><div class="fill lim" style="width:${barraPct(emergenciaGuardado(), emergenciaMeta())}%"></div></div>
+        <div class="bar-legend"><span>Cofre</span><span>${fmt(emergenciaGuardado())} / ${fmt(emergenciaMeta())}</span></div>
+        <form class="buyrow mt" data-form="emergencia-add" data-genio-anchor="cofre" style="grid-template-columns: 1fr auto;">
+          <input name="valor" inputmode="decimal" placeholder="Quanto guardou" required />
+          <button class="btn small" type="submit">Guardei</button>
         </form>
-        <div class="dica">Quando cumprir a meta do mês, toca Somar aqui. Meta não compete com emergência — a meta <b>alimenta</b> o fundo.</div>
+        <div class="dica">Ordem: 1) pagar dívidas 2) lazer no teto 3) Guardei → soma no cofre. Sem segundo pote.</div>
       </div>
 
       <div class="sect">Previsto × real (contas)</div>
@@ -2169,20 +3506,23 @@
   /* ─── Contas ─── */
   function viewContas() {
     const c = calc();
-    const mk = c.mk;
-    const pag = S.pagamentos[mk] || {};
-    const totalMes = S.contas.reduce((a, x) => a + num(x.valor), 0);
-    const pagoMes = S.contas.filter((x) => pag[x.id]).reduce((a, x) => a + num(pag[x.id].valor), 0);
-    const pct = totalMes ? Math.min(100, (pagoMes / totalMes) * 100) : 0;
+    const cobrando = contasCobrandoAgora();
+    const totalCobra = cobrando.reduce((a, x) => a + num(x.st.valor), 0);
+    const fatSt = estadoFatura();
+    const lista = S.contas
+      .map((ct) => ({ ct, st: estadoConta(ct) }))
+      .sort((a, b) => a.st.venc - b.st.venc || a.ct.nome.localeCompare(b.ct.nome));
+    const pagoMes = lista.filter((x) => x.st.pago).length;
+    const pct = lista.length ? Math.min(100, (pagoMes / lista.length) * 100) : 0;
 
     let html = `
-      <div class="sect">Contas da casa <span class="mini">${esc(mesNome())}</span></div>
-      <div class="card resumo-card">
-        <div class="resumo-label">Contas do mês</div>
-        <div class="resumo-valor">${fmt(totalMes)}</div>
-        <div class="resumo-meta">Total previsto · <b>${fmt(pagoMes)}</b> pago</div>
+      <div class="sect">Dívidas da casa <span class="mini">${esc(mesNome())}</span></div>
+      <div class="card resumo-card" data-genio-anchor="dividas">
+        <div class="resumo-label">Cobrando agora</div>
+        <div class="resumo-valor">${fmt(totalCobra + (fatSt.cobrando ? fatSt.valor : 0))}</div>
+        <div class="resumo-meta">Só o que já venceu ou vence hoje${fatSt.cobrando ? " · fatura inclusa" : ""}</div>
         <div class="bar"><div class="fill lim" style="width:${pct}%"></div></div>
-        <div class="bar-legend"><span>${Math.round(pct)}% quitado</span><span>${fmt(Math.max(0, totalMes - pagoMes))} falta</span></div>
+        <div class="bar-legend"><span>${pagoMes}/${lista.length} contas do ciclo</span><span>${fmt(Math.max(0, num(c.contasProximas)))} ainda não venceu</span></div>
       </div>
       <div class="card">`;
 
@@ -2190,35 +3530,46 @@
       html += `<div class="vazio">Nenhuma conta cadastrada.<br>Adicione a primeira conta fixa pra começar.</div>`;
     }
     const nqC = nomesQuem();
-    S.contas.slice().sort((a, b) => a.dia - b.dia).forEach((x) => {
-      const p = pag[x.id];
+    lista.forEach(({ ct: x, st }) => {
+      const p = (S.pagamentos[st.mk] || {})[x.id] || (st.pago ? (S.pagamentos[mesKey()] || {})[x.id] : null);
       const quemLbl = p && p.quem === "ela" ? nqC.ela : p && p.quem === "eu" ? nqC.eu : "";
       const openMenu = menuContaId === x.id;
+      const dias = diasAteDate(st.venc);
+      let statusTxt = "";
+      if (st.pago) statusTxt = `Paga · próxima ${dataBRFull(st.venc)}`;
+      else if (st.status === "atrasada") statusTxt = `Atrasada desde ${dataBRFull(st.venc)}`;
+      else if (st.status === "hoje") statusTxt = `Vence hoje · ${dataBRFull(st.venc)}`;
+      else statusTxt = `Próxima cobrança ${dataBRFull(st.venc)}${dias > 0 ? " · em " + dias + "d" : ""}`;
+      const pill = st.cobrando
+        ? (st.status === "atrasada" ? `<span class="pill bad">Pagar</span>` : `<span class="pill warn">Hoje</span>`)
+        : (st.pago ? `<span class="pill ok">OK</span>` : `<span class="pill neu">Depois</span>`);
       html += `
         <div class="conta-row">
           <div class="grow">
-            <div class="t">${esc(x.nome)}</div>
-            <div class="s">${p ? "Pago " + dataBR(p.ts) + (quemLbl ? " · " + esc(quemLbl) : "") : "Vence dia " + x.dia}</div>
-            <div class="val">${fmt(p ? p.valor : x.valor)}</div>
+            <div class="t">${esc(x.nome)} ${pill}</div>
+            <div class="s">${statusTxt}${quemLbl && st.pago ? " · " + esc(quemLbl) : ""} · todo dia ${x.dia}</div>
+            <div class="val">${fmt(st.valor)}</div>
           </div>
           <div class="conta-actions">
-            ${p
-              ? `<button class="statusbtn tem" data-action="conta-desfazer" data-id="${x.id}">Pago ✓</button>`
-              : `<button class="btn small" data-action="conta-pagar" data-id="${x.id}">Pagar</button>`}
+            ${st.pago && !st.cobrando
+              ? `<button class="statusbtn tem" data-action="conta-desfazer" data-id="${x.id}" data-mk="${esc(st.mkPago || mesKey())}">Pago ✓</button>`
+              : st.cobrando
+                ? `<button class="btn small" data-action="conta-pagar" data-id="${x.id}">Pagar</button>`
+                : `<button class="btn small ghost" data-action="conta-pagar" data-id="${x.id}" title="Adiantar">Adiantar</button>`}
             <button type="button" class="icon-more" data-action="conta-menu" data-id="${x.id}" aria-label="Mais opções">⋮</button>
           </div>
         </div>`;
       if (openMenu) {
         html += `<div class="menu-sheet" style="padding-bottom:8px;">
-          <button class="btn ghost full" style="margin-top:0;" data-action="conta-edit" data-id="${x.id}">Editar valor previsto</button>
+          <button class="btn ghost full" style="margin-top:0;" data-action="conta-edit" data-id="${x.id}">Editar valor / dia fixo</button>
           <button class="btn danger full" style="margin-top:0;" data-action="conta-del" data-id="${x.id}">Excluir conta</button>
           <button class="btn ghost full" style="margin-top:0;" data-action="conta-menu-close">Fechar</button>
         </div>`;
       }
-      if (!p && pagandoId === x.id) {
+      if (pagandoId === x.id) {
         html += `
-        <form class="card" data-form="conta-paga" data-id="${x.id}" style="margin:0 0 12px; box-shadow:none; border-style:dashed;">
-          <label style="margin-top:0;">Valor real deste mês</label>
+        <form class="card" data-form="conta-paga" data-id="${x.id}" data-mk="${esc(st.mk)}" style="margin:0 0 12px; box-shadow:none; border-style:dashed;">
+          <label style="margin-top:0;">Valor real · cobrança ${dataBRFull(st.venc)}</label>
           <input name="valor" inputmode="decimal" value="${String(num(x.valor)).replace(".", ",")}" required />
           <label>Quem pagou?</label>
           <select name="quem">
@@ -2227,9 +3578,23 @@
             <option value="casa">Juntos</option>
           </select>
           <button class="btn full" type="submit">Confirmar pagamento</button>
+          <div class="dica">Depois de pagar, próxima data vira sozinha o dia ${x.dia} do mês seguinte.</div>
         </form>`;
       }
     });
+    if (fatSt.valor > 0 || fatSt.cobrando || fatSt.pago) {
+      html += `
+        <div class="conta-row" style="border-top:1px dashed var(--line); margin-top:8px; padding-top:12px;">
+          <div class="grow">
+            <div class="t">Fatura cartão ${fatSt.cobrando ? `<span class="pill bad">Pagar</span>` : fatSt.pago ? `<span class="pill ok">OK</span>` : `<span class="pill warn">Separar</span>`}</div>
+            <div class="s">${fatSt.pago ? "Paga · próxima " + dataBRFull(fatSt.venc) : (fatSt.cobrando ? "Vence " : "Separar até ") + dataBRFull(fatSt.venc)} · todo dia ${S.config.diaVencFatura || 19}${faturaEstimativaEhChute() && !fatSt.pago ? " · chute" : ""}</div>
+            <div class="val">${fmt(fatSt.valor)}</div>
+          </div>
+          <div class="conta-actions">
+            <button class="btn small ghost" data-action="tab" data-tab="cartao">Abrir</button>
+          </div>
+        </div>`;
+    }
     html += `</div>`;
 
     if (!showNovaConta) {
@@ -2243,6 +3608,7 @@
           <div><label>Valor (R$)</label><input name="valor" inputmode="decimal" placeholder="100,00" required /></div>
           <div><label>Dia do vencimento</label><input name="dia" type="number" min="1" max="31" value="7" required /></div>
         </div>
+        <div class="dica">Dia fixo todo mês. App mostra a data cheia e só cobra quando chega o dia. Depois de pagar, pula pro mês seguinte sozinho.</div>
         <button class="btn full" type="submit">Salvar conta</button>
         <button type="button" class="softlink" data-action="toggle-nova-conta">Cancelar</button>
       </form>`;
@@ -2254,43 +3620,54 @@
   function viewCartao() {
     const c = calc();
     const mk = c.mk;
-    const limite = num(S.config.limiteCartao);
-    const reserva = num(S.config.reservaCartao);
+    const limite = num(S.config.limiteCartao) || 1200;
+    const reserva = Math.max(0, num(S.config.reservaCartao));
     const teto = limite + reserva;
     const total = c.comprasCiclo;
     const fatura = S.cartao.faturas[mk];
+    const fatSt = estadoFatura();
+    const prev = valorFaturaPrevista();
 
-    const pctLim = Math.min(total, limite) / teto * 100;
-    const pctRes = Math.max(0, Math.min(total - limite, reserva)) / teto * 100;
-    const pctOver = Math.max(0, total - teto) / teto * 100;
+    const baseTeto = Math.max(teto, 1);
+    const pctLim = Math.min(total, limite) / baseTeto * 100;
+    const pctRes = reserva > 0 ? Math.max(0, Math.min(total - limite, reserva)) / baseTeto * 100 : 0;
+    const pctOver = Math.max(0, total - teto) / baseTeto * 100;
 
     let html = `
-      <div class="sect">Fatura atual <span class="mini">vence dia ${S.config.diaVencFatura || 19}</span></div>
-      <div class="card fatura-hero">
+      <div class="sect">Fatura atual <span class="mini">vence ${dataBRFull(fatSt.venc)}</span></div>
+      <div class="card fatura-hero" data-genio-anchor="fatura">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
           <div>
-            <div class="fh-val">${fmt(total)}</div>
-            <div class="fh-meta">${fatura ? "Fatura paga neste mês" : "Ciclo aberto · ainda não paga"}</div>
+            <div class="fh-val">${fmt(total > 0 ? total : prev)}</div>
+            <div class="fh-meta">${fatura ? "Fatura paga neste mês" : (total > 0 ? "Ciclo aberto · compras lançadas" : "Fatura R$ 1.200 · separar do caixa")}</div>
           </div>
-          ${fatura ? `<span class="pill ok">Paga</span>` : total > teto ? `<span class="pill bad">Estourou</span>` : total > limite ? `<span class="pill warn">Reserva</span>` : `<span class="pill neu">Aberta</span>`}
+          ${fatura ? `<span class="pill ok">Paga</span>` : fatSt.cobrando ? `<span class="pill bad">Pagar</span>` : total > teto ? `<span class="pill bad">Estourou</span>` : `<span class="pill warn">Separar</span>`}
         </div>
+        ${!fatura ? `<div class="alerta warn" style="margin:12px 0 0;"><span><b>Separa ${fmt(prev)}</b> do caixa até ${dataBRFull(fatSt.venc)}. Não gasta essa grana.</span></div>` : ""}
         <div class="bar">
           <div class="fill lim" style="width:${pctLim}%"></div>
-          <div class="fill res" style="width:${pctRes}%"></div>
+          ${reserva > 0 ? `<div class="fill res" style="width:${pctRes}%"></div>` : ""}
           <div class="fill over" style="width:${Math.min(pctOver, 100 - pctLim - pctRes)}%"></div>
         </div>
-        <div class="bar-legend"><span>${fmt(total)} usado</span><span>${fmt(teto)} teto</span></div>
-        <div class="fatura-stats">
+        <div class="bar-legend"><span>${fmt(total)} usado</span><span>${fmt(teto)} limite</span></div>
+        <div class="fatura-stats" style="grid-template-columns:${reserva > 0 ? "1fr 1fr 1fr" : "1fr 1fr"};">
           <div><div class="k">Limite</div><div class="v">${fmt(limite)}</div></div>
-          <div><div class="k">Reserva</div><div class="v">${fmt(reserva)}</div></div>
+          ${reserva > 0 ? `<div><div class="k">Reserva</div><div class="v">${fmt(reserva)}</div></div>` : ""}
           <div><div class="k">Utilizado</div><div class="v">${fmt(total)}</div></div>
         </div>
         ${!fatura ? `
         <form data-form="fatura-paga-valor" class="mt">
           <label>Valor da fatura (R$)</label>
-          <input name="valor" inputmode="decimal" value="${total > 0 ? String(total).replace(".", ",") : String(num(S.config.faturaEstimada)).replace(".", ",")}" placeholder="0,00" required />
+          <input name="valor" inputmode="decimal" value="${String((total > 0 ? total : prev)).replace(".", ",")}" placeholder="0,00" required />
           <button class="btn full" type="submit">Pagar fatura e zerar ciclo</button>
           <div class="dica">Confirma o valor e zera as compras deste ciclo. Parcelas futuras entram depois.</div>
+        </form>
+        <form data-form="cfg-fatura-est" class="mt" style="border-top:1px dashed var(--line); padding-top:12px;">
+          <label>Valor fixo da fatura (pra separar no plano)</label>
+          <div class="buyrow" style="grid-template-columns:1fr auto;">
+            <input name="faturaEst" inputmode="decimal" value="${num(S.config.faturaEstimada) > 0 ? String(num(S.config.faturaEstimada)).replace(".", ",") : "1200"}" placeholder="1200" />
+            <button class="btn small" type="submit">Salvar</button>
+          </div>
         </form>` : `<div class="dica">Fatura de ${esc(mesNome())} paga (${fmt(fatura.valor)}). Compras novas entram na próxima.</div>`}
       </div>
 
@@ -2524,27 +3901,27 @@
           <input name="valor" inputmode="decimal" placeholder="R$/pessoa" required />
           <button class="btn small" type="submit">Add</button>
         </form>
-        <div class="dica">Valores são por pessoa — o app multiplica por 2 (você + esposa).</div>
+        <div class="dica">Valor = total que cai na conta (ex.: 1676 e 1620). Deixa pessoas = 1.</div>
       </div>
 
       <div class="sect">Cartão de crédito</div>
       <form class="card" data-form="cfg-cartao">
         <div class="row2">
-          <div><label>Limite (R$)</label><input name="limite" inputmode="decimal" value="${String(num(cfg.limiteCartao)).replace(".", ",")}" /></div>
-          <div><label>Reserva (R$)</label><input name="reserva" inputmode="decimal" value="${String(num(cfg.reservaCartao)).replace(".", ",")}" /></div>
+          <div><label>Limite do cartão (R$)</label><input name="limite" inputmode="decimal" value="${String(num(cfg.limiteCartao) || 1200).replace(".", ",")}" /></div>
+          <div><label>Fatura fixa (R$)</label><input name="faturaEst" inputmode="decimal" value="${String(num(cfg.faturaEstimada) || 1200).replace(".", ",")}" /></div>
         </div>
-        <div class="row2">
-          <div><label>Fatura vence dia</label><input name="diaFatura" type="number" min="1" max="31" value="${cfg.diaVencFatura || 19}" /></div>
-          <div><label>Estimativa fatura (R$)</label><input name="faturaEst" inputmode="decimal" value="${String(num(cfg.faturaEstimada)).replace(".", ",")}" placeholder="se ainda não souber" /></div>
-        </div>
+        <label>Fatura vence dia</label>
+        <input name="diaFatura" type="number" min="1" max="31" value="${cfg.diaVencFatura || 19}" />
+        <input type="hidden" name="reserva" value="0" />
+        <div class="dica">Sem “reserva/limite garantido”. Só limite + valor da fatura (R$ 1.200).</div>
         <div class="row2">
           <div><label>Lazer/iFood do mês (R$)</label><input name="lazer" inputmode="decimal" value="${String(lazerOrcamento()).replace(".", ",")}" /></div>
-          <div><label>Meta juntar (opcional)</label><input name="meta" inputmode="decimal" value="${num(cfg.metaGuardar) > 0 ? String(num(cfg.metaGuardar)).replace(".", ",") : ""}" placeholder="vazio = automática" /></div>
+          <div><label>Guardar este mês (opcional)</label><input name="meta" inputmode="decimal" value="${num(cfg.metaGuardar) > 0 ? String(num(cfg.metaGuardar)).replace(".", ",") : ""}" placeholder="vazio = automática" /></div>
         </div>
-        <label>Fundo emergência — meta (R$)</label>
+        <label>Cofre — meta total (R$)</label>
         <input name="emergencia" inputmode="decimal" value="${String(emergenciaMeta()).replace(".", ",")}" />
-        <button class="btn full" type="submit">Salvar cartão e metas</button>
-        <div class="dica">Meta automática agora: <b>${fmt(metaSugerida())}</b> — a casa calcula sozinha. Fundo emergência atual: <b>${fmt(emergenciaGuardado())}</b>.</div>
+        <button class="btn full" type="submit">Salvar potes</button>
+        <div class="dica">Ordem: pagar · lazer · guardar. Meta automática agora: <b>${fmt(metaSugerida())}</b>. Cofre: <b>${fmt(emergenciaGuardado())}</b>.</div>
       </form>
 
       <div class="sect">Casal, lembretes e IA</div>
@@ -2622,6 +3999,70 @@
       render();
       window.scrollTo(0, 0);
     },
+    "genio-toggle": () => {
+      if (genioUI.open) {
+        genioUI.open = false;
+        paintGenio();
+        return;
+      }
+      if (genioUI.tip && !genioUI.tip.ephemeral) {
+        genioUI.open = true;
+        paintGenio();
+        return;
+      }
+      tickGenio(true);
+    },
+    "genio-dismiss": () => {
+      const tip = genioUI.tip;
+      if (tip && tip.chave && !tip.skipVisto) genioMarcar(tip.chave);
+      if (tip && tip.coach) {
+        genioCoach = null;
+      }
+      genioUI.open = false;
+      genioUI.tip = null;
+      genioHighlight = null;
+      paintGenio();
+      scheduleGenio();
+    },
+    "genio-ir": () => {
+      const tip = genioUI.tip;
+      if (!tip) return;
+      if (tip.chave && !tip.skipVisto) genioMarcar(tip.chave);
+
+      if (tip.action === "guardar" && num(tip.valor) > 0) {
+        const antes = emergenciaGuardado();
+        const v = registrarAporte(tip.valor, "genio-coach");
+        genioCelebrarAporte(v, antes);
+        saveLocal();
+        if (logado && NCCloud.configured()) {
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(cloudSave, 900);
+        }
+        genioNavegarTip(Object.assign({}, tip, {
+          highlight: {
+            anchor: "cofre",
+            tit: "Vitória no cofre",
+            txt: "+" + fmt(v) + " · total " + fmt(emergenciaGuardado()) + ". Hoje só celebra.",
+          },
+        }));
+        return;
+      }
+
+      if (tip.coachNext || (tip.coach && tip.tipo !== "coach-guardar")) {
+        genioNavegarTip(tip);
+        setTimeout(() => genioAvancarCoach(), 220);
+        return;
+      }
+
+      genioUI.open = false;
+      if (!tip.ephemeral) genioUI.tip = null;
+      genioNavegarTip(tip);
+    },
+    "genio-hl-close": () => {
+      genioHighlight = null;
+      document.querySelectorAll(".genio-callout").forEach((n) => n.remove());
+      document.querySelectorAll(".genio-hl").forEach((n) => n.classList.remove("genio-hl"));
+    },
     "ir-mais": (el) => {
       tab = "mais";
       maisSub = el.dataset.mais || "ajustes";
@@ -2637,6 +4078,78 @@
     "toggle-mais-hoje": () => { showMaisHoje = !showMaisHoje; render(); },
     "casa-sub": (el) => { casaSub = el.dataset.sub || "despensa"; render(); window.scrollTo(0, 0); },
     "mais-sub": (el) => { maisSub = el.dataset.sub || "mes"; render(); window.scrollTo(0, 0); },
+    "env-modo": (el) => { envModo = el.dataset.modo === "100" ? "100" : "500"; render(); window.scrollTo(0, 0); },
+    "env500-toggle": (el) => {
+      const i = Math.round(num(el.dataset.i));
+      if (!(i >= 0 && i < VALORES_500.length)) return;
+      if (!S.desafio500) S.desafio500 = { feitos: {} };
+      if (!S.desafio500.feitos) S.desafio500.feitos = {};
+      const key = String(i);
+      const v = VALORES_500[i];
+      if (S.desafio500.feitos[key]) {
+        delete S.desafio500.feitos[key];
+        touch("Desmarcou " + fmt(v));
+      } else {
+        S.desafio500.feitos[key] = { em: Date.now() };
+        const st = env500Stats();
+        touch(`✓ ${fmt(v)} · ${fmt(st.soma)}/${fmt(ENV500_TOTAL)}`);
+      }
+    },
+    "env500-emergencia": () => {
+      const st = env500Stats();
+      if (!S.desafio500) S.desafio500 = { feitos: {} };
+      const ja = Math.max(0, num(S.desafio500.enviadoEmerg));
+      const delta = st.soma - ja;
+      if (delta <= 0) {
+        toast(st.soma <= 0 ? "Nada marcado ainda" : "Já somou o que está marcado");
+        return;
+      }
+      if (!confirm(`Somar ${fmt(delta)} novo(s) da tabela na emergência?\n\n(Marcados: ${fmt(st.soma)} · já enviado antes: ${fmt(ja)})`)) return;
+      const antes = emergenciaGuardado();
+      registrarAporte(delta, "desafio500");
+      S.desafio500.enviadoEmerg = st.soma;
+      touch("✓ +" + fmt(delta) + " na emergência");
+      setTimeout(() => genioCelebrarAporte(delta, antes), 280);
+    },
+    "env-filtro": (el) => { envFiltro = el.dataset.f || "todos"; render(); },
+    "env-sortear": () => {
+      const faltam = envFaltam();
+      if (!faltam.length) { toast("Desafio completo!"); return; }
+      envHint = faltam[Math.floor(Math.random() * faltam.length)];
+      envFiltro = "faltam";
+      maisSub = "100";
+      render();
+      toast("Sorteou #" + envHint + " · " + fmt(envHint));
+    },
+    "env-abrir": (el) => {
+      const n = Math.round(num(el.dataset.n));
+      if (!(n >= 1 && n <= 100)) return;
+      const feitos = envFeitosMap();
+      const key = String(n);
+      if (feitos[key]) {
+        if (!confirm(`Desfazer envelope #${n} (${fmt(n)})?\n\nNão tira valor da emergência automaticamente.`)) return;
+        delete S.desafio100.feitos[key];
+        if (envHint === n) envHint = null;
+        touch("Envelope #" + n + " desfeito");
+        return;
+      }
+      const ced = S.cedula ? num(S.cedula.valor) : 0;
+      $("#modal").innerHTML = `
+        <div class="t">Envelope #${n}</div>
+        <div class="s" style="margin-top:0.35rem;">Guardar <b>${fmt(n)}</b> neste envelope.</div>
+        <form data-form="env-guardar" data-n="${n}" class="mt">
+          <label>Como anotar</label>
+          <select name="fonte" required>
+            <option value="emergencia">Somar na emergência</option>
+            <option value="cedula">Saiu da cédula → emergência</option>
+            <option value="marca">Só marcar (já guardei fora)</option>
+          </select>
+          <div class="dica">Cédula agora: ${fmt(ced)}. Emergência: ${fmt(emergenciaGuardado())}.</div>
+          <button class="btn full" type="submit">Guardar ${fmt(n)}</button>
+        </form>
+        <button class="btn ghost full" data-action="modal-close">Cancelar</button>`;
+      $("#modalbk").hidden = false;
+    },
     "onboard-next": () => {
       const total = 3;
       if (onboardStep >= total - 1) {
@@ -2682,6 +4195,7 @@
         S.pagamentos[ck.mk][ct.id] = { valor: num(ct.valor), ts: Date.now() };
       });
       touch();
+      setTimeout(() => genioStartCoachPosPagamento(), 350);
     },
     "checklist-fatura-guardar": () => {
       const mk = mesKey();
@@ -2748,16 +4262,20 @@
     "conta-edit": (el) => {
       const ct = S.contas.find((c) => c.id === el.dataset.id);
       if (!ct) return;
-      const raw = prompt("Novo valor previsto (R$)", String(num(ct.valor)).replace(".", ","));
+      const raw = prompt("Valor previsto (R$)", String(num(ct.valor)).replace(".", ","));
       if (raw === null) return;
       const v = num(raw);
       if (!(v > 0)) { alert("Valor inválido."); return; }
+      const rawDia = prompt("Dia fixo todo mês (1–31)", String(ct.dia || 7));
+      if (rawDia === null) return;
+      const dia = Math.min(31, Math.max(1, parseInt(rawDia, 10) || ct.dia || 7));
       ct.valor = v;
+      ct.dia = dia;
       menuContaId = null;
-      touch("Conta atualizada");
+      touch("Conta atualizada · dia " + dia);
     },
     "conta-desfazer": (el) => {
-      const mk = mesKey();
+      const mk = el.dataset.mk || mesKey();
       if (S.pagamentos[mk]) delete S.pagamentos[mk][el.dataset.id];
       touch("Pagamento desfeito");
     },
@@ -2769,14 +4287,14 @@
     },
 
     "fatura-pagar": () => {
-      const c = calc();
-      const valor = c.comprasCiclo > 0 ? c.comprasCiclo : num(S.config.faturaEstimada);
+      const fat = estadoFatura();
+      const valor = fat.valor > 0 ? fat.valor : (calc().comprasCiclo > 0 ? calc().comprasCiclo : num(S.config.faturaEstimada));
       if (valor <= 0) return;
-      if (!confirm(`Pagar fatura de ${fmt(valor)}?`)) return;
-      S.cartao.faturas[c.mk] = { valor, ts: Date.now() };
+      if (!confirm(`Pagar fatura de ${fmt(valor)}?\nVencimento: ${dataBRFull(fat.venc)}`)) return;
+      S.cartao.faturas[fat.mk] = { valor, ts: Date.now() };
       S.cartao.compras = [];
       avancarParcelasAposFatura();
-      touch();
+      touch("✓ Fatura paga · próxima " + dataBRFull(estadoFatura().venc));
     },
     "compra-del": (el) => {
       S.cartao.compras = S.cartao.compras.filter((x) => x.id !== el.dataset.id);
@@ -2789,8 +4307,25 @@
       if (!S.mesesFechados) S.mesesFechados = {};
       S.mesesFechados[mk] = snapMesAtual();
       touch();
-      tab = "mes";
+      tab = "mais";
+      maisSub = "mes";
       render();
+      setTimeout(() => {
+        const rm = resumoMes(mk);
+        genioApplyTip({
+          tipo: "fechado",
+          chave: "fechado:" + mk,
+          ctx: { mk, lazerGasto: rm.lazerGasto, lazerTeto: rm.lazerTeto, guardadoMes: rm.guardadoMes },
+          go: { tab: "mais", mais: "mes" },
+          highlight: {
+            anchor: "cofre",
+            tit: "Mês fechado",
+            txt: "Lazer " + fmt(rm.lazerGasto) + "/" + fmt(rm.lazerTeto) + " · guardado ~" + fmt(rm.guardadoMes) + ".",
+          },
+        });
+        genioMarcar("fechado:" + mk);
+        enrichGenioTipIA(genioUI.tip);
+      }, 300);
     },
     "mes-reabrir": () => {
       const mk = mesKey();
@@ -2972,7 +4507,7 @@
       touch("✓ Conta adicionada");
     },
     "conta-paga": (f) => {
-      const mk = mesKey();
+      const mk = f.dataset.mk || mesKey();
       if (!S.pagamentos[mk]) S.pagamentos[mk] = {};
       S.pagamentos[mk][f.dataset.id] = {
         valor: num(f.valor.value),
@@ -2980,7 +4515,10 @@
         ts: Date.now(),
       };
       pagandoId = null;
-      touch("✓ Conta paga");
+      const ct = S.contas.find((c) => c.id === f.dataset.id);
+      const st = ct ? estadoConta(ct) : null;
+      touch(st ? "✓ Paga · próxima " + dataBRFull(st.venc) : "✓ Conta paga");
+      setTimeout(() => genioStartCoachPosPagamento(), 350);
     },
     "hist-cmp": (f) => {
       histCmpA = f.a.value;
@@ -3095,11 +4633,39 @@
     "emergencia-add": (f) => {
       const v = num(f.valor.value);
       if (v <= 0) return;
-      if (!S.emergencia) S.emergencia = { guardado: 0 };
-      S.emergencia.guardado = emergenciaGuardado() + v;
-      touch();
-      tab = "mes";
-      render();
+      const antes = emergenciaGuardado();
+      registrarAporte(v, "mes-guardei");
+      maisSub = "mes";
+      tab = "mais";
+      touch("✓ +" + fmt(v) + " no cofre");
+      setTimeout(() => genioCelebrarAporte(v, antes), 280);
+    },
+    "env-guardar": (f) => {
+      const n = Math.round(num(f.dataset.n));
+      if (!(n >= 1 && n <= 100)) return;
+      if (!S.desafio100) S.desafio100 = { feitos: {} };
+      if (!S.desafio100.feitos) S.desafio100.feitos = {};
+      if (S.desafio100.feitos[String(n)]) { closeModal(); return; }
+      const fonte = (f.fonte && f.fonte.value) || "marca";
+      if (fonte === "cedula") {
+        if (!S.cedula) S.cedula = { valor: 0 };
+        if (num(S.cedula.valor) < n) {
+          if (!confirm(`Cédula tem só ${fmt(S.cedula.valor)}. Usar o que tem e zerar cédula?`)) return;
+          S.cedula.valor = 0;
+        } else {
+          S.cedula.valor = Math.round((num(S.cedula.valor) - n) * 100) / 100;
+        }
+        if (!S.emergencia) S.emergencia = { guardado: 0 };
+        S.emergencia.guardado = emergenciaGuardado() + n;
+      } else if (fonte === "emergencia") {
+        if (!S.emergencia) S.emergencia = { guardado: 0 };
+        S.emergencia.guardado = emergenciaGuardado() + n;
+      }
+      S.desafio100.feitos[String(n)] = { em: Date.now(), fonte };
+      if (envHint === n) envHint = null;
+      closeModal();
+      const st = envStats();
+      touch(`✓ #${n} · ${fmt(n)} · ${st.qtd}/100`);
     },
     "des-add": (f) => {
       const item = { id: uid(), nome: f.nome.value.trim(), cat: f.cat.value, status: "tem" };
@@ -3173,9 +4739,13 @@
       S.config.rendas.push({ id: uid(), nome: f.nome.value.trim(), dia: Math.min(31, Math.max(1, parseInt(f.dia.value) || 7)), valor: num(f.valor.value), pessoas: 2 });
       touch();
     },
+    "cfg-fatura-est": (f) => {
+      S.config.faturaEstimada = Math.max(0, num(f.faturaEst.value));
+      touch("✓ Estimativa fatura " + fmt(S.config.faturaEstimada));
+    },
     "cfg-cartao": (f) => {
       S.config.limiteCartao = num(f.limite.value);
-      S.config.reservaCartao = num(f.reserva.value);
+      S.config.reservaCartao = 0;
       S.config.diaVencFatura = Math.min(31, Math.max(1, parseInt(f.diaFatura.value, 10) || 19));
       S.config.faturaEstimada = num(f.faturaEst.value);
       S.config.lazerMes = num(f.lazer.value);
