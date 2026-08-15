@@ -1,0 +1,46 @@
+# Publica o site multi-app no GitHub Pages (Trevo na raiz + pastas fiado, nossacasa, etc.).
+# NÃO sobe só uma pasta na raiz — senão some os outros projetos do site ao vivo.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Montar pasta pública
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          for d in fiado nossacasa balanco caixa coletagem corpoearoma; do
+            if [ -d "$d" ]; then cp -r "$d" _site/; fi
+          done
+          # evita publicar lixo de agent/skills se existir
+          rm -rf _site/.agents _site/.github || true
+
+      - uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
