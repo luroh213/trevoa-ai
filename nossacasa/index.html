@@ -4557,6 +4557,17 @@
       logado = false;
       location.reload();
     },
+    "cofre-reset": () => {
+      const atual = emergenciaGuardado();
+      if (!(atual > 0)) { toast("Cofre já está zerado"); return; }
+      if (!confirm("Zerar o cofre (" + fmt(atual) + ")? Isso só apaga o valor guardado no app — não mexe no banco.")) return;
+      if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [] };
+      S.emergencia.guardado = 0;
+      S.emergencia.aportes = [];
+      maisSub = "mes";
+      tab = "mais";
+      touch("Cofre zerado");
+    },
   };
 
   document.addEventListener("click", (e) => {
@@ -4739,17 +4750,6 @@
       tab = "mais";
       touch("✓ +" + fmt(v) + " no cofre");
       setTimeout(() => genioCelebrarAporte(v, antes), 280);
-    },
-    "cofre-reset": () => {
-      const atual = emergenciaGuardado();
-      if (!(atual > 0)) { toast("Cofre já está zerado"); return; }
-      if (!confirm("Zerar o cofre (" + fmt(atual) + ")? Isso só apaga o valor guardado no app — não mexe no banco.")) return;
-      if (!S.emergencia) S.emergencia = { guardado: 0, aportes: [] };
-      S.emergencia.guardado = 0;
-      S.emergencia.aportes = [];
-      maisSub = "mes";
-      tab = "mais";
-      touch("Cofre zerado");
     },
     "env-guardar": (f) => {
       const n = Math.round(num(f.dataset.n));
