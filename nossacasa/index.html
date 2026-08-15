@@ -1264,18 +1264,26 @@
     });
     for (const k in S.pagamentos) for (const id in S.pagamentos[k]) {
       const p = S.pagamentos[k][id];
-      if (num(p.ts) > emBase) pagou += num(p.valor);
+      if (num(p.ts) > emBase) pagou += p.fromBanco != null ? num(p.fromBanco) : num(p.valor);
     }
     for (const k in S.cartao.faturas) {
       const f = S.cartao.faturas[k];
-      if (num(f.ts) > emBase) faturasPagas += num(f.valor);
+      if (num(f.ts) > emBase) faturasPagas += f.fromBanco != null ? num(f.fromBanco) : num(f.valor);
     }
     const gastosPos = S.gastos
       .filter((g) => g.ts > emBase && g.fonte !== "cedula")
       .reduce((a, g) => a + num(g.valor), 0);
     const cofreBancoPos = aportesBancoApos(emBase);
-    const banco = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas - cofreBancoPos;
-    const cedula = Math.max(0, num((S.cedula || {}).valor));
+    let banco = (S.caixa ? num(S.caixa.valor) : 0) + entrou - pagou - gastosPos - faturasPagas - cofreBancoPos;
+    let cedula = Math.max(0, num((S.cedula || {}).valor));
+    if (banco < -0.009 && cedula > 0.009) {
+      const cover = Math.min(cedula, -banco);
+      banco = Math.round((banco + cover) * 100) / 100;
+      cedula = Math.round((cedula - cover) * 100) / 100;
+      if (S.caixa) S.caixa.valor = Math.round((num(S.caixa.valor) + cover) * 100) / 100;
+      if (!S.cedula) S.cedula = { valor: 0 };
+      S.cedula.valor = cedula;
+    }
     const caixa = banco + cedula; // total na mão + banco
 
     // Visão do mês (telas de controle)
@@ -2230,6 +2238,9 @@
         btn: "Ver despensa",
       };
     }
+    if (tipo === "ainda-falta") {
+      return { txt: "Ainda falta separar " + fmt(ctx.precisa || 0) + ". Cofre depois.", btn: "Ver o que falta" };
+    }
     if (tipo === "coach-sobrou") {
       return { txt: "Contas em ordem! Sobrou " + fmt(ctx.sobrou || 0) + ". Próximo: ver quanto dá pra guardar.", btn: "Continuar" };
     }
@@ -2333,6 +2344,7 @@
         pri: dias < 0 ? 10 : 20,
         tipo: "conta",
         chave: "conta:" + x.ct.id + ":" + (x.st.mk || mk),
+        skipIA: true,
         ctx: { nome: x.ct.nome, valor: x.st.valor, dias },
         go: { tab: "contas" },
         highlight: {
@@ -2353,6 +2365,7 @@
           pri: 22,
           tipo: "conta",
           chave: "conta-prox:" + ct.id + ":" + (st.mk || mk),
+          skipIA: true,
           ctx: { nome: ct.nome, valor: st.valor, dias },
           go: { tab: "contas" },
           highlight: {
@@ -2372,6 +2385,7 @@
           pri: fat.cobrando ? 15 : 30,
           tipo: "fatura",
           chave: "fatura:" + mk,
+          skipIA: true,
           ctx: { dias, valor: fat.valor },
           go: { tab: "cartao" },
           highlight: {
@@ -2545,10 +2559,25 @@
     if (!logado || !S.caixa) return;
     const c = calc();
     const plano = planoDoCaixa(c);
+    const precisa = Math.max(0, num(plano.pagarAgora)) + Math.max(0, num(plano.separarFatura)) + Math.max(0, num(plano.separarContas));
     const lazer = Math.max(0, num(plano.lazerUsa));
     const Z = Math.max(0, num(plano.guardarUsa));
     const steps = [];
-    if (Z > 0) {
+    if (precisa > 0.009) {
+      steps.push({
+        tipo: "ainda-falta",
+        chave: "ainda-falta:" + Date.now(),
+        ephemeral: true,
+        skipVisto: true,
+        skipIA: true,
+        coach: true,
+        ctx: { precisa },
+        txt: "Ainda falta separar " + fmt(precisa) + ". Cofre depois.",
+        btn: "Ver o que falta",
+        go: num(plano.separarFatura) > 0 && num(plano.pagarAgora) <= 0 ? { tab: "cartao" } : { tab: "contas" },
+        highlight: { anchor: "dividas", tit: "Ainda falta", txt: "Paga/separa " + fmt(precisa) + " antes de guardar." },
+      });
+    } else if (Z > 0) {
       steps.push({
         tipo: "coach-guardar",
         chave: "coach-guardar:" + Date.now(),
@@ -3134,22 +3163,25 @@
       passos.push({ cls: "ok", n: 1, tit: "Nada vencido nesta janela", gs: "Pode seguir guardar e lazer", valor: 0 });
     }
 
-    // Paga/separa. Deixa reserva PIX. Guarda a meta. Lazer só com o resto, no teto.
+    // Paga/separa do BANCO. Cédula é PIX. Guarda só o que sobra na conta.
     const gMes = planoGestorMes();
     const disc = leituraQuinzena(c);
+    const bills = pagarAgora + separarContas + separarFatura;
+    let bancoResto = Math.max(0, num(c.banco) - bills);
     const reservaFalta = Math.max(0, RESERVA_PIX - num(c.cedula));
-    const reservaUsa = Math.min(reservaFalta, resto);
-    resto = Math.max(0, resto - reservaUsa);
+    const reservaUsa = Math.min(reservaFalta, bancoResto);
+    bancoResto = Math.max(0, bancoResto - reservaUsa);
     let guardarUsa = 0;
     let lazerUsa = 0;
     if (genioModo() === "iniciante") {
-      guardarUsa = Math.min(passoGuardarMes(), resto);
+      guardarUsa = Math.min(passoGuardarMes(), bancoResto);
     } else {
-      guardarUsa = Math.min(gMes.faltaMeta, resto);
+      guardarUsa = Math.min(gMes.faltaMeta, bancoResto);
     }
-    resto = Math.max(0, resto - guardarUsa);
-    lazerUsa = Math.min(lazerDisp, resto);
-    resto = Math.max(0, resto - lazerUsa);
+    bancoResto = Math.max(0, bancoResto - guardarUsa);
+    lazerUsa = Math.min(lazerDisp, bancoResto);
+    bancoResto = Math.max(0, bancoResto - lazerUsa);
+    resto = bancoResto;
     if (reservaUsa > 0) {
       passos.push({
         cls: "",
@@ -3166,7 +3198,7 @@
       gs: guardarUsa > 0
         ? (genioModo() === "iniciante"
           ? ("Passo " + fmt(guardarUsa) + " · meta do mês " + fmt(meta) + " · já " + fmt(gMes.ja))
-          : ("Falta " + fmt(gMes.faltaMeta) + " da meta " + fmt(meta) + " este mês · já " + fmt(gMes.ja) + " · cofre " + fmt(emergenciaGuardado())))
+          : ("Falta " + fmt(gMes.faltaMeta) + " da meta " + fmt(meta) + " este mês · já " + fmt(gMes.ja) + " · cofre " + fmt(emergenciaGuardado()) + " · do banco, cédula fica pro PIX"))
         : (gMes.faltaMeta > 0
           ? (reservaUsa > 0
             ? ("Meta " + fmt(meta) + " · livre deste salário " + fmt(disc.livreSalario) + " · margem apertada, os " + fmt(reservaUsa) + " ficam no banco até o dia " + disc.proxDia + ".")
@@ -5461,6 +5493,7 @@
       genioMarcar,
       registrarAporte,
       resetarPraTestar,
+      genioStartCoachPosPagamento,
       viewHoje,
       viewAjustes,
       viewMes,

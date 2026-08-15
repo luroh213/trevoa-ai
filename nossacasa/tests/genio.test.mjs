@@ -63,12 +63,12 @@ test("dois salários: plano ensina teto de lazer + falta da meta, não R$ 40", (
   const g = NC.planoGestorMes();
   assert.ok(c.caixa >= 1600, "caixa depois do salário 15");
   assert.equal(NC.genioModo(), "gestor");
-  const depoisContas = Math.max(0, c.caixa - (plano.pagarAgora || 0) - (plano.separarFatura || 0) - (plano.separarContas || 0));
-  const reserva = Math.min(80, depoisContas);
+  const depoisBanco = Math.max(0, c.banco - (plano.pagarAgora || 0) - (plano.separarFatura || 0) - (plano.separarContas || 0));
+  const reserva = Math.min(Math.max(0, 80 - (c.cedula || 0)), depoisBanco);
   assert.equal(plano.reservaUsa, reserva);
-  assert.equal(plano.guardarUsa, Math.min(g.faltaMeta, depoisContas - reserva));
+  assert.equal(plano.guardarUsa, Math.min(g.faltaMeta, depoisBanco - reserva));
   assert.ok(plano.guardarUsa > 50, "guardar deste caixa > passo de hábito, veio " + plano.guardarUsa);
-  assert.equal(plano.lazerUsa, Math.min(200, Math.max(0, depoisContas - reserva - plano.guardarUsa)));
+  assert.equal(plano.lazerUsa, Math.min(200, Math.max(0, depoisBanco - reserva - plano.guardarUsa)));
   assert.ok(g.renda >= 3200, "soma os dois salários");
   assert.ok(g.ja >= 40);
 });
@@ -384,7 +384,7 @@ test("Guardei tira do caixa; segundo 149 some do plano", () => {
   const precisa = (p0.pagarAgora || 0) + (p0.separarFatura || 0) + (p0.separarContas || 0);
   assert.equal(Math.round(c0.caixa), 1716);
   assert.equal(precisa, 1560);
-  assert.ok(p0.guardarUsa > 0, "sobra depois de earmark, veio " + p0.guardarUsa);
+  assert.equal(Math.round(p0.guardarUsa), 76);
   const g1 = p0.guardarUsa;
   assert.equal(NC.registrarAporte(g1, "teste"), g1);
   const c1 = NC.calc();
@@ -393,7 +393,7 @@ test("Guardei tira do caixa; segundo 149 some do plano", () => {
   assert.equal(p1.guardarUsa, 0);
   const idle = NC.genioIdleTip();
   assert.equal(/Guarda R\$/.test(idle.txt), false);
-  NC.registrarAporte(g1, "teste2");
+  NC.registrarAporte(200, "teste2");
   const c2 = NC.calc();
   const p2 = NC.planoDoCaixa(c2);
   const precisa2 = (p2.pagarAgora || 0) + (p2.separarFatura || 0) + (p2.separarContas || 0);
@@ -461,4 +461,51 @@ test("resetar pra testar: saldo informado fica, marcas e cofre saem, caixa não 
   assert.equal(S.despensa.length, 1);
   const html = NC.viewAjustes() + NC.viewMes();
   assert.match(html, /Resetar pra testar/);
+});
+
+test("guardar é do banco: 1643−1560−7 reserva = 76, não 149 da cédula", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 260, dia: 17 },
+      { id: "otica", nome: "Otica", valor: 100, dia: 17 },
+    ];
+  });
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.caixa = { valor: 1643, em: Date.now() };
+  S.cedula = { valor: 73 };
+  const p = NC.planoDoCaixa(NC.calc());
+  assert.equal(Math.round(p.guardarUsa), 76);
+  assert.equal(Math.round(p.reservaUsa), 7);
+  assert.equal(p.lazerUsa, 0);
+});
+
+test("conta maior que banco come cédula, não mostra banco negativo", () => {
+  casaLimpa();
+  const S = NC.getS();
+  S.caixa = { valor: 194, em: Date.now() - 1000 };
+  S.cedula = { valor: 73 };
+  const mk = NC.mesKey();
+  S.pagamentos[mk] = { x: { valor: 260, ts: Date.now() } };
+  const c = NC.calc();
+  assert.equal(Math.round(c.banco), 0);
+  assert.equal(Math.round(c.cedula), 7);
+  assert.equal(Math.round(c.caixa), 7);
+});
+
+test("depois de pagar uma conta, gênio não manda guardar se fatura ainda falta", () => {
+  casaLimpa((S) => {
+    S.contas = [
+      { id: "vanuza", nome: "Vanuza", valor: 100, dia: 15 },
+      { id: "energia", nome: "Energia papel 2", valor: 260, dia: 17 },
+    ];
+  });
+  salarioCaiu(15, 0);
+  const S = NC.getS();
+  S.caixa = { valor: 1643, em: Date.now() };
+  S.cedula = { valor: 73 };
+  pagaConta("Vanuza");
+  NC.genioStartCoachPosPagamento();
+  assert.equal(NC.ui().tip.tipo, "ainda-falta");
+  assert.equal(/Guarda/.test(NC.ui().tip.txt || ""), false);
 });
