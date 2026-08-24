@@ -1881,6 +1881,9 @@
           Ver o que deve
         </button>
       </div>
+      <div class="footer-actions row" id="rowRecibo" hidden>
+        <button type="button" class="btn primary full" id="btnRecibo">Comprovante de quitação</button>
+      </div>
       <div class="footer-actions row">
         <button type="button" class="btn" id="btnEditarCli">Editar</button>
         <button type="button" class="btn danger" id="btnApagarCli">Apagar</button>
@@ -2088,6 +2091,18 @@
       <p class="subtitle" style="margin-bottom:0.65rem">Lançamentos apagados com dia e hora. Toque em <strong>Restaurar</strong> pra devolver pro caderno.</p>
       <div id="lixeiraLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
       <button type="button" class="btn full" id="btnFecharLixeira">Fechar</button>
+    </div>
+  </div>
+
+  <div class="confirm-modal" id="reciboModal" role="dialog" aria-modal="true" aria-labelledby="reciboTitulo" hidden>
+    <div class="sheet">
+      <h2 id="reciboTitulo">Conta quitada ✓</h2>
+      <p class="subtitle" id="reciboResumo" style="margin-bottom:0.65rem"></p>
+      <div style="display:grid;gap:0.45rem">
+        <button type="button" class="btn primary full" id="btnReciboZap">Enviar no Zap</button>
+        <button type="button" class="btn full" id="btnReciboImprimir">Imprimir cupom</button>
+        <button type="button" class="btn ghost full" id="btnReciboFechar">Agora não</button>
+      </div>
     </div>
   </div>
 
@@ -4407,6 +4422,8 @@
       }
       $("#painelMov").hidden = true;
       $("#painelMov").innerHTML = "";
+      const rowRecibo = $("#rowRecibo");
+      if (rowRecibo) rowRecibo.hidden = saldo > 0.009 || !dadosRecibo(c).pags.length;
       renderMovs(c);
       mostrar("#viewDetalhe");
     }
@@ -4741,6 +4758,106 @@
         registrarDiario(`Fiado ${formatBRL(valorOk)} — ${c.nome}${nota ? " · " + nota : ""}`);
       }
       abrirDetalhe(c.id);
+      if (tipo === "pagamento" && saldoAntes > 0.009 && saldoDepois <= 0.009) {
+        oferecerRecibo(c);
+      }
+    }
+
+    function ehDesktop() {
+      return !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    }
+
+    function dadosRecibo(c) {
+      const pags = (c.movs || [])
+        .filter((m) => m.tipo === "pagamento")
+        .sort((a, b) => a.ts - b.ts);
+      const totalPago = pags.reduce((s, m) => s + (Number(m.valor) || 0), 0);
+      return { pags, totalPago };
+    }
+
+    function textoRecibo(c) {
+      const mercado = credenciaisBalcao().nomeApp || "Mercado";
+      const { pags, totalPago } = dadosRecibo(c);
+      const linhas = [
+        `*COMPROVANTE DE QUITAÇÃO*`,
+        `*${mercado}*`,
+        ``,
+        `Cliente: ${c.nome}`,
+        `Emitido em: ${formatQuandoSegundos(Date.now())}`,
+        `Total pago: *${formatBRL(totalPago)}*`,
+        `Saldo: R$ 0,00 — nada em aberto`,
+      ];
+      if (pags.length) {
+        linhas.push(``, `Pagamentos:`);
+        pags.forEach((p) => {
+          linhas.push(`• ${formatQuando(p.ts)} — ${formatBRL(p.valor)}${p.forma ? ` (${rotuloForma(p.forma)})` : ""}`);
+        });
+      }
+      linhas.push(``, `Obrigado!`);
+      return linhas.join("\n");
+    }
+
+    function imprimirRecibo(c) {
+      const mercado = credenciaisBalcao().nomeApp || "Mercado";
+      const { pags, totalPago } = dadosRecibo(c);
+      const linhasPags = pags.length
+        ? pags
+            .map(
+              (p) =>
+                `<div class="l"><span>${formatQuando(p.ts)}</span><span>${formatBRL(p.valor)}</span></div>` +
+                (p.forma ? `<div class="sub">${escapeHtml(rotuloForma(p.forma))}</div>` : "")
+            )
+            .join("")
+        : `<div class="c">(sem pagamentos listados)</div>`;
+      const w = window.open("", "_blank", "width=380,height=640");
+      if (!w) {
+        toast("Navegador bloqueou a janela — permite pop-up pra imprimir", true);
+        return;
+      }
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title><style>
+        @page { size: 80mm auto; margin: 2mm; }
+        body { font-family: monospace; font-size: 12px; width: 72mm; margin: 0 auto; color: #000; }
+        .c { text-align: center; } .l { display: flex; justify-content: space-between; }
+        hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+        .big { font-size: 15px; font-weight: bold; } .sub { font-size: 11px; }
+      </style></head><body>
+        <div class="c big">${escapeHtml(mercado)}</div>
+        <div class="c">COMPROVANTE DE QUITACAO</div>
+        <hr>
+        <div>Cliente: ${escapeHtml(c.nome)}</div>
+        <div>Emitido: ${formatQuandoSegundos(Date.now())}</div>
+        <hr>
+        ${linhasPags}
+        <hr>
+        <div class="l big"><span>TOTAL PAGO</span><span>${formatBRL(totalPago)}</span></div>
+        <div class="l"><span>Saldo</span><span>R$ 0,00</span></div>
+        <hr>
+        <div class="c">Nada em aberto. Obrigado!</div>
+        <script>window.onload=function(){window.print();};<\/script>
+      </body></html>`);
+      w.document.close();
+    }
+
+    let reciboClienteId = null;
+
+    function oferecerRecibo(c) {
+      reciboClienteId = c.id;
+      $("#reciboResumo").textContent = `${c.nome} — total pago ${formatBRL(dadosRecibo(c).totalPago)}. Mandar comprovante?`;
+      $("#btnReciboImprimir").hidden = !ehDesktop();
+      const modal = $("#reciboModal");
+      modal.hidden = false;
+      modal.classList.add("show");
+    }
+
+    function fecharRecibo() {
+      const modal = $("#reciboModal");
+      modal.classList.remove("show");
+      modal.hidden = true;
+      reciboClienteId = null;
+    }
+
+    function clienteRecibo() {
+      return (state.clientes || []).find((x) => x.id === reciboClienteId) || null;
     }
 
     function textoExtrato(c) {
@@ -5018,6 +5135,23 @@
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
     $("#btnLixeira")?.addEventListener("click", abrirLixeira);
     $("#btnFecharLixeira")?.addEventListener("click", fecharLixeira);
+    $("#btnRecibo")?.addEventListener("click", () => {
+      const c = clienteAtivo();
+      if (c) oferecerRecibo(c);
+    });
+    $("#btnReciboZap")?.addEventListener("click", () => {
+      const c = clienteRecibo();
+      if (c) abrirWhatsUrl(textoRecibo(c), c.fone);
+      fecharRecibo();
+    });
+    $("#btnReciboImprimir")?.addEventListener("click", () => {
+      const c = clienteRecibo();
+      if (c) imprimirRecibo(c);
+    });
+    $("#btnReciboFechar")?.addEventListener("click", fecharRecibo);
+    $("#reciboModal")?.addEventListener("click", (e) => {
+      if (e.target === $("#reciboModal")) fecharRecibo();
+    });
     $("#lixeiraModal")?.addEventListener("click", (e) => {
       if (e.target === $("#lixeiraModal")) fecharLixeira();
     });
