@@ -25,10 +25,10 @@ window.FIADO_CLOUD = {
 
 | Quem | Usuário | Senha |
 |------|---------|-------|
-| Você (admin) | `admin` | `admin123` |
-| Demo balcão | `mercado` | `fiado123` |
+| Você (admin) | `admin` | `admin123` — **troque no primeiro acesso, sem falta** |
+| Demo balcão | `mercado` | `fiado123` (apague ou troque se não for usar) |
 
-Troque a senha do admin no painel. Crie cada loja em **Mercados na nuvem**.
+Troque a senha do admin no painel e defina seu próprio código de liberação. Crie cada loja em **Mercados na nuvem** (senha mín. 8).
 
 ## Fluxo de venda
 

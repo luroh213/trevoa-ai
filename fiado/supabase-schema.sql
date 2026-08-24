@@ -67,11 +67,13 @@ create table if not exists public.admin_conta (
   usuario text not null default 'admin',
   senha_hash text not null,
   seu_whatsapp text default '',
-  codigo_liberacao text default 'LIBERA-MERCADO-26',
+  codigo_liberacao text default 'TROCAR-NO-SETUP',
   trial_dias int default 14
 );
 
--- Admin padrão: admin / admin123  (troque depois)
+-- Admin inicial: admin / admin123
+-- OBRIGATÓRIO: troque a senha no primeiro acesso (painel admin) e
+-- defina um codigo_liberacao próprio. Nunca deixe os padrões no ar.
 insert into public.admin_conta (id, usuario, senha_hash)
 values (1, 'admin', crypt('admin123', gen_salt('bf')))
 on conflict (id) do nothing;
@@ -453,8 +455,8 @@ begin
   if s.role <> 'admin' then
     raise exception 'Só admin';
   end if;
-  if length(u) < 2 or length(p_senha) < 4 then
-    raise exception 'Usuário/senha inválidos';
+  if length(u) < 2 or length(p_senha) < 8 then
+    raise exception 'Usuário inválido ou senha menor que 8 caracteres';
   end if;
   if exists (select 1 from mercados where lower(usuario) = u) then
     return json_build_object('ok', false, 'erro', 'Já existe um mercado com esse usuário.');
@@ -530,7 +532,7 @@ begin
 
   update mercados set
     nome = coalesce(nullif(trim(p_nome), ''), nome),
-    senha_hash = case when p_senha is not null and length(p_senha) >= 4
+    senha_hash = case when p_senha is not null and length(p_senha) >= 8
       then crypt(p_senha, gen_salt('bf')) else senha_hash end,
     pago = coalesce(p_pago, pago),
     bloqueado = coalesce(p_bloqueado, bloqueado),
@@ -663,8 +665,8 @@ begin
   end if;
 
   if p_senha_nova is not null and trim(p_senha_nova) <> '' then
-    if length(trim(p_senha_nova)) < 4 then
-      return json_build_object('ok', false, 'erro', 'Nova senha muito curta (mín. 4).');
+    if length(trim(p_senha_nova)) < 8 then
+      return json_build_object('ok', false, 'erro', 'Nova senha muito curta (mín. 8).');
     end if;
     if m.senha_hash <> crypt(coalesce(p_senha_atual, ''), m.senha_hash) then
       return json_build_object('ok', false, 'erro', 'Senha atual incorreta.');
