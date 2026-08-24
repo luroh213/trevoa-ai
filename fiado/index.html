@@ -1146,6 +1146,19 @@
       display: none;
     }
 
+    .menu-lista {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .menu-lista .btn {
+      width: 100%;
+      text-align: left;
+      padding: 0.8rem 0.9rem;
+      font-size: 0.95rem;
+      min-height: 3rem;
+    }
+
     .home-bar-right {
       display: flex;
       flex-wrap: wrap;
@@ -1764,12 +1777,7 @@
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
-          <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
-          <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
-          <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira</button>
-          <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
-          <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
-          <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
+          <button type="button" class="btn ghost" id="btnMenu" title="Abrir menu">Menu ☰</button>
         </div>
       </nav>
     </section>
@@ -2093,6 +2101,21 @@
     </div>
   </div>
 
+  <div class="confirm-modal" id="menuModal" role="dialog" aria-modal="true" aria-labelledby="menuTitulo" hidden>
+    <div class="sheet">
+      <h2 id="menuTitulo">Menu</h2>
+      <div class="menu-lista">
+        <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário do balcão</button>
+        <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira (recuperar apagados)</button>
+        <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar / mostrar totais</button>
+        <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Minha conta</button>
+        <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">Instalar app</button>
+        <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
+      </div>
+      <button type="button" class="btn full" id="btnFecharMenu" style="margin-top:0.6rem">Fechar</button>
+    </div>
+  </div>
+
   <div class="install-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitulo" hidden>
     <div class="sheet">
       <h2 id="installTitulo">Instalar o Fiado</h2>
@@ -2305,7 +2328,7 @@
       const btn = $("#btnOcultarValores");
       if (!btn) return;
       btn.classList.toggle("active", valoresOcultos());
-      btn.textContent = valoresOcultos() ? "Mostrar" : "Ocultar";
+      btn.textContent = valoresOcultos() ? "Mostrar totais" : "Ocultar totais";
       btn.title = valoresOcultos()
         ? "Mostrar totais do resumo"
         : "Esconder Total em aberto, Fiado hoje e Recebido hoje";
@@ -2748,6 +2771,18 @@
 
     function fecharLixeira() {
       const modal = $("#lixeiraModal");
+      modal.classList.remove("show");
+      modal.hidden = true;
+    }
+
+    function abrirMenu() {
+      const modal = $("#menuModal");
+      modal.hidden = false;
+      modal.classList.add("show");
+    }
+
+    function fecharMenu() {
+      const modal = $("#menuModal");
       modal.classList.remove("show");
       modal.hidden = true;
     }
@@ -5020,6 +5055,14 @@
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
     $("#btnLixeira")?.addEventListener("click", abrirLixeira);
     $("#btnFecharLixeira")?.addEventListener("click", fecharLixeira);
+    $("#btnMenu")?.addEventListener("click", abrirMenu);
+    $("#btnFecharMenu")?.addEventListener("click", fecharMenu);
+    $("#menuModal")?.addEventListener("click", (e) => {
+      if (e.target === $("#menuModal")) fecharMenu();
+    });
+    document.querySelectorAll(".menu-lista .btn").forEach((btn) => {
+      btn.addEventListener("click", fecharMenu);
+    });
     $("#lixeiraModal")?.addEventListener("click", (e) => {
       if (e.target === $("#lixeiraModal")) fecharLixeira();
     });
