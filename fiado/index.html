@@ -4768,6 +4768,7 @@
       }
       abrirDetalhe(c.id);
       if (tipo === "pagamento" && saldoAntes > 0.009 && saldoDepois <= 0.009) {
+        registrarDiario(`Quitou a dívida — ${c.nome} (total pago ${formatBRL(dadosRecibo(c).totalPago)})`);
         oferecerRecibo(c);
       }
     }
@@ -4892,7 +4893,8 @@
 
     function oferecerRecibo(c) {
       reciboClienteId = c.id;
-      $("#reciboResumo").textContent = `${c.nome} — total pago ${formatBRL(dadosRecibo(c).totalPago)}. Mandar comprovante?`;
+      $("#reciboTitulo").textContent = `${c.nome} quitou a dívida!`;
+      $("#reciboResumo").textContent = `Total pago: ${formatBRL(dadosRecibo(c).totalPago)}. Mandar comprovante?`;
       $("#btnReciboImprimir").hidden = !ehDesktop();
       const modal = $("#reciboModal");
       modal.hidden = false;
