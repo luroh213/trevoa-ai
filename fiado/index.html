@@ -1098,7 +1098,8 @@
       display: flex;
       flex-direction: column;
       min-height: calc(100dvh - 2.2rem - var(--safe-top) - var(--safe-bottom));
-      padding-bottom: 4.25rem;
+      padding-bottom: 1rem;
+      padding-right: 4.6rem;
     }
 
     .home-main {
@@ -1107,37 +1108,41 @@
 
     .home-bar {
       position: fixed;
-      left: 50%;
-      bottom: 0;
-      transform: translateX(-50%);
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 40;
-      width: min(28rem, 100%);
-      max-width: 100%;
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 0.35rem;
-      align-items: center;
-      justify-content: space-between;
+      align-items: stretch;
       margin-top: 0;
-      padding: 0.55rem 0.75rem calc(0.55rem + var(--safe-bottom));
-      border-top: 1.5px solid var(--line);
+      padding: 0.5rem 0.4rem calc(0.5rem + var(--safe-bottom));
+      border-left: 1.5px solid var(--line);
       background: rgba(244, 247, 243, 0.97);
       backdrop-filter: blur(10px);
-      box-shadow: 0 -6px 24px rgba(26, 46, 31, 0.1);
-      border-radius: 1rem 1rem 0 0;
+      box-shadow: -6px 0 24px rgba(26, 46, 31, 0.1);
+      border-radius: 1rem 0 0 1rem;
+      max-height: 92dvh;
+      overflow-y: auto;
     }
 
     .home-bar .btn {
-      padding: 0.5rem 0.7rem;
+      padding: 0.5rem 0.4rem;
       font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .home-bar .save-status {
+      text-align: center;
+      font-size: 0.68rem;
     }
 
     .home-bar .trial-pill {
       margin: 0;
-      flex: 1 1 100%;
       text-align: center;
       font-size: 0.72rem;
-      padding: 0.35rem 0.55rem;
+      padding: 0.35rem 0.4rem;
       min-width: 0;
     }
 
@@ -1146,36 +1151,16 @@
       display: none;
     }
 
-    .menu-lista {
-      display: grid;
-      gap: 0.45rem;
-    }
-
-    .menu-lista .btn {
-      width: 100%;
-      text-align: left;
-      padding: 0.8rem 0.9rem;
-      font-size: 0.95rem;
-      min-height: 3rem;
-    }
-
     .home-bar-right {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 0.35rem;
-      align-items: center;
-      justify-content: flex-end;
-      margin-left: auto;
-      width: 100%;
+      align-items: stretch;
     }
 
     @media (min-width: 768px) {
       .wrap {
         max-width: 36rem;
-      }
-
-      .home-bar {
-        width: min(36rem, 100%);
       }
     }
 
@@ -1552,7 +1537,7 @@
     .btn { font-size: 1rem; }
     .filtros button { font-size: 0.95rem; padding: 0.8rem 0.4rem; min-height: 3rem; }
     .hint, .lista-dica { font-size: 0.9rem; }
-    .home-bar .btn { font-size: 0.95rem; padding: 0.6rem 0.8rem; }
+    .home-bar .btn { font-size: 0.85rem; padding: 0.6rem 0.4rem; min-height: 2.75rem; }
     .cliente-atalhos .btn { font-size: 0.9rem; min-height: 2.75rem; }
     .field input, .field select, .field textarea { font-size: 1rem; }
   </style>
@@ -1777,7 +1762,12 @@
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
-          <button type="button" class="btn ghost" id="btnMenu" title="Abrir menu">Menu ☰</button>
+          <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
+          <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
+          <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira</button>
+          <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
+          <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
+          <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
         </div>
       </nav>
     </section>
@@ -2098,21 +2088,6 @@
       <p class="subtitle" style="margin-bottom:0.65rem">Lançamentos apagados com dia e hora. Toque em <strong>Restaurar</strong> pra devolver pro caderno.</p>
       <div id="lixeiraLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
       <button type="button" class="btn full" id="btnFecharLixeira">Fechar</button>
-    </div>
-  </div>
-
-  <div class="confirm-modal" id="menuModal" role="dialog" aria-modal="true" aria-labelledby="menuTitulo" hidden>
-    <div class="sheet">
-      <h2 id="menuTitulo">Menu</h2>
-      <div class="menu-lista">
-        <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário do balcão</button>
-        <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira (recuperar apagados)</button>
-        <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar / mostrar totais</button>
-        <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Minha conta</button>
-        <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">Instalar app</button>
-        <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
-      </div>
-      <button type="button" class="btn full" id="btnFecharMenu" style="margin-top:0.6rem">Fechar</button>
     </div>
   </div>
 
@@ -2771,18 +2746,6 @@
 
     function fecharLixeira() {
       const modal = $("#lixeiraModal");
-      modal.classList.remove("show");
-      modal.hidden = true;
-    }
-
-    function abrirMenu() {
-      const modal = $("#menuModal");
-      modal.hidden = false;
-      modal.classList.add("show");
-    }
-
-    function fecharMenu() {
-      const modal = $("#menuModal");
       modal.classList.remove("show");
       modal.hidden = true;
     }
@@ -5055,14 +5018,6 @@
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
     $("#btnLixeira")?.addEventListener("click", abrirLixeira);
     $("#btnFecharLixeira")?.addEventListener("click", fecharLixeira);
-    $("#btnMenu")?.addEventListener("click", abrirMenu);
-    $("#btnFecharMenu")?.addEventListener("click", fecharMenu);
-    $("#menuModal")?.addEventListener("click", (e) => {
-      if (e.target === $("#menuModal")) fecharMenu();
-    });
-    document.querySelectorAll(".menu-lista .btn").forEach((btn) => {
-      btn.addEventListener("click", fecharMenu);
-    });
     $("#lixeiraModal")?.addEventListener("click", (e) => {
       if (e.target === $("#lixeiraModal")) fecharLixeira();
     });
