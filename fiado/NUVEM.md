@@ -21,6 +21,8 @@ window.FIADO_CLOUD = {
 
 7. **Lixeira (recuperar apagados):** rode também `patch-lixeira.sql` no SQL Editor. Cria a tabela `movimentos_lixeira`, o trigger que guarda cada lançamento apagado e a RPC que alimenta o botão **Lixeira** no app (restaurar devolve o item pro caderno). Sem isso, o botão Lixeira mostra erro ao abrir.
 
+8. **Segurança + backup:** rode também `patch-backup-e-rate-limit.sql`. Trava o login por 15 min após 5 senhas erradas seguidas (por usuário) e cria a RPC `fiado_admin_backup`, usada pelo script `backup/fiado-backup.ps1` — backup diário em JSON na pasta `backup/dumps/` (agendado no Windows, 21h30) com envio por e-mail opcional (configure `emailAppPassword` em `backup/backup-config.json`, que fica fora do git).
+
 ## Contas padrão (depois do SQL)
 
 | Quem | Usuário | Senha |

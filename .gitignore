@@ -7,3 +7,7 @@ nossacasa/config.secrets.js
 # Extratos/dumps com dados de clientes do Fiado — nunca subir
 fiado/extrato-*.txt
 diario_*.txt
+
+# Backup do Fiado: config tem senha admin; dumps têm dados de clientes
+fiado/backup/backup-config.json
+fiado/backup/dumps/
