@@ -1055,6 +1055,29 @@
       color: #eef5ef;
     }
 
+    .filtros-movs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .lixeira-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.35rem 0.6rem;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .lixeira-item:first-child { border-top: none; }
+
+    .lixeira-item .quando {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+    }
+
     .home-actions {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -1740,6 +1763,7 @@
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
           <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
           <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
+          <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
           <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
@@ -1836,6 +1860,12 @@
 
       <div class="historico">
         <h2>Histórico</h2>
+        <div class="filtros filtros-movs" role="tablist" aria-label="Filtrar histórico">
+          <button type="button" class="active" data-mfiltro="todos">Tudo</button>
+          <button type="button" data-mfiltro="debito">Fiados</button>
+          <button type="button" data-mfiltro="pagamento">Pagamentos</button>
+        </div>
+        <p class="hint" id="movsTotal" style="text-align:left;margin:0 0 0.4rem" hidden></p>
         <button type="button" class="btn danger btn-desfazer" id="btnDesfazerUltimo" hidden>Desfazer último lançamento</button>
         <div id="listaMovs"></div>
       </div>
@@ -2048,6 +2078,15 @@
       <p class="hint" id="diarioAoVivo" style="margin:-0.35rem 0 0.65rem;text-align:left" hidden><strong>Ao vivo na nuvem</strong> — atualiza a cada 3 segundos. Abra no PC com o mesmo login do mercado.</p>
       <div id="diarioLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
       <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
+    </div>
+  </div>
+
+  <div class="confirm-modal" id="lixeiraModal" role="dialog" aria-modal="true" aria-labelledby="lixeiraTitulo" hidden>
+    <div class="sheet">
+      <h2 id="lixeiraTitulo">Lixeira</h2>
+      <p class="subtitle" style="margin-bottom:0.65rem">Lançamentos apagados com dia e hora. Toque em <strong>Restaurar</strong> pra devolver pro caderno.</p>
+      <div id="lixeiraLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
+      <button type="button" class="btn full" id="btnFecharLixeira">Fechar</button>
     </div>
   </div>
 
@@ -2654,6 +2693,99 @@
       const modal = $("#diarioModal");
       modal.classList.remove("show");
       modal.hidden = true;
+    }
+
+    function lixeiraDisponivel() {
+      return cloudOn() && FiadoCloud.getToken();
+    }
+
+    function renderLixeira(itens) {
+      const box = $("#lixeiraLista");
+      if (!box) return;
+      if (!itens.length) {
+        box.innerHTML = '<div class="vazio" style="padding:0.8rem">Lixeira vazia. Nada apagado por aqui.</div>';
+        return;
+      }
+      box.innerHTML = itens
+        .map((m, i) => {
+          const rotulo = m.tipo === "debito" ? "Fiado" : "Pagamento";
+          const forma = m.forma ? ` · ${escapeHtml(rotuloForma(m.forma))}` : "";
+          const nome = m.clienteNome || "cliente apagado";
+          return `
+          <div class="lixeira-item">
+            <div>
+              <div>${rotulo} ${formatBRL(m.valor)}${forma} — <strong>${escapeHtml(nome)}</strong></div>
+              <div class="quando">Lançado ${formatQuando(m.ts)} · apagado ${formatQuandoSegundos(m.apagadoEm)}</div>
+            </div>
+            <button type="button" class="btn-mini" data-restaurar="${i}">Restaurar</button>
+          </div>`;
+        })
+        .join("");
+      box.querySelectorAll("[data-restaurar]").forEach((btn) => {
+        btn.addEventListener("click", () => restaurarMov(itens[Number(btn.dataset.restaurar)]));
+      });
+    }
+
+    async function abrirLixeira() {
+      if (!lixeiraDisponivel()) {
+        toast("Lixeira só funciona com o caderno na nuvem", true);
+        return;
+      }
+      const modal = $("#lixeiraModal");
+      modal.hidden = false;
+      modal.classList.add("show");
+      const box = $("#lixeiraLista");
+      box.innerHTML = '<div class="vazio" style="padding:0.8rem">Carregando…</div>';
+      try {
+        renderLixeira(await FiadoCloud.listarLixeira(300));
+      } catch (err) {
+        box.innerHTML = `<div class="vazio" style="padding:0.8rem">${escapeHtml(err.message || "Falha ao carregar a lixeira")}</div>`;
+      }
+    }
+
+    function fecharLixeira() {
+      const modal = $("#lixeiraModal");
+      modal.classList.remove("show");
+      modal.hidden = true;
+    }
+
+    function restaurarMov(m) {
+      if (!m || !exigirAcesso()) return;
+      if (!exigirCadernoAtualizado()) return;
+      let c = (state.clientes || []).find((x) => x.id === m.clienteId);
+      if (!c) {
+        c = {
+          id: m.clienteId || crypto.randomUUID(),
+          nome: m.clienteNome || "Cliente recuperado",
+          fone: "",
+          obs: "",
+          limite: null,
+          criadoEm: Date.now(),
+          movs: [],
+        };
+        state.clientes.push(c);
+      }
+      if ((c.movs || []).some((x) => x.id === m.movId)) {
+        toast("Esse lançamento já está no caderno");
+        fecharLixeira();
+        return;
+      }
+      c.movs = c.movs || [];
+      c.movs.push({
+        id: m.movId || crypto.randomUUID(),
+        tipo: m.tipo,
+        valor: m.valor,
+        nota: m.nota || "",
+        dataRef: m.dataRef || null,
+        forma: m.forma || null,
+        ts: m.ts || Date.now(),
+      });
+      salvar();
+      const rotulo = m.tipo === "debito" ? "fiado" : "pagamento";
+      registrarDiario(`Recuperou ${rotulo} ${formatBRL(m.valor)} — ${c.nome}`);
+      toast("Restaurado — voltou pro caderno");
+      fecharLixeira();
+      abrirDetalhe(c.id);
     }
 
     function cloudOn() {
@@ -4228,6 +4360,7 @@
     function abrirDetalhe(id) {
       state.ativoId = id;
       state.tipoMov = null;
+      state.movFiltro = "todos";
       const c = clienteAtivo();
       if (!c) {
         mostrar("#viewHome");
@@ -4270,10 +4403,31 @@
     function renderMovs(c) {
       const box = $("#listaMovs");
       const btnDesfazer = $("#btnDesfazerUltimo");
-      const movs = [...(c.movs || [])].sort((a, b) => b.ts - a.ts);
-      btnDesfazer.hidden = movs.length === 0;
-      if (!movs.length) {
+      const filtro = state.movFiltro || "todos";
+      const todos = [...(c.movs || [])].sort((a, b) => b.ts - a.ts);
+      const movs = filtro === "todos" ? todos : todos.filter((m) => m.tipo === filtro);
+      btnDesfazer.hidden = todos.length === 0;
+      document.querySelectorAll(".filtros-movs button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mfiltro === filtro);
+      });
+      const elTotal = $("#movsTotal");
+      if (elTotal) {
+        if (todos.length && filtro !== "todos") {
+          const soma = movs.reduce((acc, m) => acc + (Number(m.valor) || 0), 0);
+          elTotal.textContent =
+            (filtro === "pagamento" ? "Total pago: " : "Total em fiado: ") +
+            formatBRL(soma) + ` (${movs.length} lançamento${movs.length === 1 ? "" : "s"})`;
+          elTotal.hidden = false;
+        } else {
+          elTotal.hidden = true;
+        }
+      }
+      if (!todos.length) {
         box.innerHTML = `<div class="vazio" style="padding:1.2rem 0.5rem">Nenhum lançamento ainda.</div>`;
+        return;
+      }
+      if (!movs.length) {
+        box.innerHTML = `<div class="vazio" style="padding:1.2rem 0.5rem">Nada de ${filtro === "pagamento" ? "pagamento" : "fiado"} por aqui.</div>`;
         return;
       }
       box.innerHTML = movs
@@ -4851,6 +5005,18 @@
     });
     $("#btnDiario")?.addEventListener("click", abrirDiario);
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
+    $("#btnLixeira")?.addEventListener("click", abrirLixeira);
+    $("#btnFecharLixeira")?.addEventListener("click", fecharLixeira);
+    $("#lixeiraModal")?.addEventListener("click", (e) => {
+      if (e.target === $("#lixeiraModal")) fecharLixeira();
+    });
+    document.querySelectorAll(".filtros-movs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.movFiltro = btn.dataset.mfiltro;
+        const c = clienteAtivo();
+        if (c) renderMovs(c);
+      });
+    });
     $("#btnOcultarValores")?.addEventListener("click", toggleOcultarValores);
     $("#diarioModal")?.addEventListener("click", (e) => {
       if (e.target === $("#diarioModal")) fecharDiario();

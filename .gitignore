@@ -3,3 +3,7 @@ nossacasa/config.secrets.js
 *.secrets.js
 .env
 .env.*
+
+# Extratos/dumps com dados de clientes do Fiado — nunca subir
+fiado/extrato-*.txt
+diario_*.txt

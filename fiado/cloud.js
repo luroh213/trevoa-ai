@@ -275,6 +275,26 @@
     }));
   }
 
+  async function listarLixeira(limite) {
+    const data = await rpc("fiado_listar_lixeira", {
+      p_token: getToken(),
+      p_limite: limite || 300,
+    });
+    if (!data || !data.ok) throw new Error("Não deu pra carregar a lixeira");
+    return (data.itens || []).map((m) => ({
+      movId: m.movId,
+      clienteId: m.clienteId || null,
+      clienteNome: m.clienteNome || "",
+      tipo: m.tipo,
+      valor: Number(m.valor),
+      nota: m.nota || "",
+      dataRef: m.dataRef || null,
+      forma: m.forma || null,
+      ts: Number(m.ts) || Date.now(),
+      apagadoEm: Number(m.apagadoEm) || Date.now(),
+    }));
+  }
+
   function tokenPermanente() {
     return !!localStorage.getItem(TOKEN_KEY);
   }
@@ -305,5 +325,6 @@
     mercadoInfo,
     registrarDiarioEvento,
     listarDiario,
+    listarLixeira,
   };
 })(window);

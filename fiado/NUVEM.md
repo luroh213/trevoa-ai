@@ -19,6 +19,8 @@ window.FIADO_CLOUD = {
 
 6. **Diário na nuvem:** se o banco já existia, rode também `patch-diario-nuvem.sql` no SQL Editor. Assim o dono acompanha lançamentos no PC (botão **Diário**, mesmo login do mercado).
 
+7. **Lixeira (recuperar apagados):** rode também `patch-lixeira.sql` no SQL Editor. Cria a tabela `movimentos_lixeira`, o trigger que guarda cada lançamento apagado e a RPC que alimenta o botão **Lixeira** no app (restaurar devolve o item pro caderno). Sem isso, o botão Lixeira mostra erro ao abrir.
+
 ## Contas padrão (depois do SQL)
 
 | Quem | Usuário | Senha |
