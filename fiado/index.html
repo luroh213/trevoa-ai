@@ -1884,6 +1884,9 @@
       <div class="footer-actions row" id="rowRecibo" hidden>
         <button type="button" class="btn primary full" id="btnRecibo">Comprovante de quitação</button>
       </div>
+      <div class="footer-actions row" id="rowImprimirExtrato" hidden>
+        <button type="button" class="btn full" id="btnImprimirExtrato" title="Cupom com tudo que o cliente deve — pra quem não tem celular">Imprimir extrato da dívida</button>
+      </div>
       <div class="footer-actions row">
         <button type="button" class="btn" id="btnEditarCli">Editar</button>
         <button type="button" class="btn danger" id="btnApagarCli">Apagar</button>
@@ -4424,6 +4427,8 @@
       $("#painelMov").innerHTML = "";
       const rowRecibo = $("#rowRecibo");
       if (rowRecibo) rowRecibo.hidden = saldo > 0.009 || !dadosRecibo(c).pags.length;
+      const rowExtrato = $("#rowImprimirExtrato");
+      if (rowExtrato) rowExtrato.hidden = saldo <= 0.009 || !ehDesktop();
       renderMovs(c);
       mostrar("#viewDetalhe");
     }
@@ -4838,6 +4843,47 @@
       w.document.close();
     }
 
+    function imprimirExtrato(c) {
+      const mercado = credenciaisBalcao().nomeApp || "Mercado";
+      const saldo = saldoCliente(c);
+      const movs = [...(c.movs || [])].sort((a, b) => a.ts - b.ts);
+      const linhas = movs.length
+        ? movs
+            .map(
+              (m) =>
+                `<div class="l"><span>${formatQuando(m.ts)} ${m.tipo === "debito" ? "Fiado" : "Pagou"}</span><span>${m.tipo === "debito" ? "+" : "-"}${formatBRL(m.valor)}</span></div>` +
+                (m.nota ? `<div class="sub">${escapeHtml(m.nota)}</div>` : "")
+            )
+            .join("")
+        : `<div class="c">(sem lançamentos)</div>`;
+      const w = window.open("", "_blank", "width=380,height=640");
+      if (!w) {
+        toast("Navegador bloqueou a janela — permite pop-up pra imprimir", true);
+        return;
+      }
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Extrato</title><style>
+        @page { size: 80mm auto; margin: 2mm; }
+        body { font-family: monospace; font-size: 12px; width: 72mm; margin: 0 auto; color: #000; }
+        .c { text-align: center; } .l { display: flex; justify-content: space-between; }
+        hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+        .big { font-size: 15px; font-weight: bold; } .sub { font-size: 11px; }
+      </style></head><body>
+        <div class="c big">${escapeHtml(mercado)}</div>
+        <div class="c">EXTRATO DA CONTA</div>
+        <hr>
+        <div>Cliente: ${escapeHtml(c.nome)}</div>
+        <div>Emitido: ${formatQuandoSegundos(Date.now())}</div>
+        <hr>
+        ${linhas}
+        <hr>
+        <div class="l big"><span>TOTAL EM ABERTO</span><span>${formatBRL(saldo)}</span></div>
+        <hr>
+        <div class="c">Qualquer dúvida, fale com o balcão.</div>
+        <script>window.onload=function(){window.print();};<\/script>
+      </body></html>`);
+      w.document.close();
+    }
+
     let reciboClienteId = null;
 
     function oferecerRecibo(c) {
@@ -5149,6 +5195,10 @@
       if (c) imprimirRecibo(c);
     });
     $("#btnReciboFechar")?.addEventListener("click", fecharRecibo);
+    $("#btnImprimirExtrato")?.addEventListener("click", () => {
+      const c = clienteAtivo();
+      if (c) imprimirExtrato(c);
+    });
     $("#reciboModal")?.addEventListener("click", (e) => {
       if (e.target === $("#reciboModal")) fecharRecibo();
     });
