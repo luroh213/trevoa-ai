@@ -1085,6 +1085,28 @@
       color: var(--ink-soft);
     }
 
+    .cobranca-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.35rem 0.6rem;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .cobranca-item:first-child { border-top: none; }
+
+    .cobranca-item .meta {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+    }
+
+    .cobranca-item.feito .nome,
+    .cobranca-item.feito .meta {
+      opacity: 0.45;
+      text-decoration: line-through;
+    }
+
     .home-actions {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -1769,6 +1791,7 @@
           <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
           <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
           <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira</button>
+          <button type="button" class="btn ghost" id="btnCobrar" title="Mandar cobrança no Zap pra quem deve">Cobrar</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
           <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
@@ -2098,6 +2121,16 @@
       <p class="subtitle" style="margin-bottom:0.65rem">Lançamentos apagados com dia e hora. Toque em <strong>Restaurar</strong> pra devolver pro caderno.</p>
       <div id="lixeiraLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
       <button type="button" class="btn full" id="btnFecharLixeira">Fechar</button>
+    </div>
+  </div>
+
+  <div class="confirm-modal" id="cobrancaModal" role="dialog" aria-modal="true" aria-labelledby="cobrancaTitulo" hidden>
+    <div class="sheet">
+      <h2 id="cobrancaTitulo">Cobrar devedores</h2>
+      <p class="subtitle" id="cobrancaResumo" style="margin-bottom:0.65rem"></p>
+      <div id="cobrancaLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
+      <p class="hint">Toque em <strong>Zap</strong>, envie no WhatsApp e volte — o nome fica riscado pra tu não se perder.</p>
+      <button type="button" class="btn full" id="btnFecharCobranca">Fechar</button>
     </div>
   </div>
 
@@ -4978,6 +5011,62 @@
       abrirWhatsUrl(textoCobranca(c), c.fone);
     }
 
+    let cobrancaFeitos = new Set();
+
+    function abrirCobrancaLote() {
+      cobrancaFeitos = new Set();
+      renderCobrancaLote();
+      const modal = $("#cobrancaModal");
+      modal.hidden = false;
+      modal.classList.add("show");
+    }
+
+    function fecharCobrancaLote() {
+      const modal = $("#cobrancaModal");
+      modal.classList.remove("show");
+      modal.hidden = true;
+    }
+
+    function renderCobrancaLote() {
+      const lista = (state.clientes || [])
+        .map((c) => ({ c, saldo: saldoCliente(c) }))
+        .filter((x) => x.saldo > 0.009)
+        .sort((a, b) => b.saldo - a.saldo || a.c.nome.localeCompare(b.c.nome, "pt-BR"));
+      const total = lista.reduce((s, x) => s + x.saldo, 0);
+      $("#cobrancaResumo").textContent = lista.length
+        ? `${lista.length} ${lista.length === 1 ? "pessoa deve" : "pessoas devem"} · total ${formatBRL(total)}`
+        : "Ninguém devendo. Dia bom de caixa!";
+      const box = $("#cobrancaLista");
+      if (!lista.length) {
+        box.innerHTML = "";
+        return;
+      }
+      box.innerHTML = lista
+        .map(({ c, saldo }) => {
+          const feito = cobrancaFeitos.has(c.id);
+          return `
+          <div class="cobranca-item${feito ? " feito" : ""}">
+            <div>
+              <div class="nome">${escapeHtml(c.nome)}</div>
+              <div class="meta">${formatBRL(saldo)}${c.fone ? "" : " · sem WhatsApp"}</div>
+            </div>
+            <button type="button" class="btn primary" data-zap="${c.id}">${feito ? "De novo" : "Zap"}</button>
+          </div>`;
+        })
+        .join("");
+      box.querySelectorAll("[data-zap]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const c = (state.clientes || []).find((x) => x.id === btn.dataset.zap);
+          if (!c) return;
+          if (!c.fone) toast("Sem WhatsApp cadastrado — o Zap abre pra escolher o contato", true);
+          abrirWhatsUrl(textoCobranca(c), c.fone);
+          cobrancaFeitos.add(c.id);
+          registrarDiario(`Cobrou pelo Zap — ${c.nome} (${formatBRL(saldoCliente(c))})`);
+          renderCobrancaLote();
+        });
+      });
+    }
+
     function apagarCliente() {
       const c = clienteAtivo();
       if (!c) return;
@@ -5187,6 +5276,11 @@
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
     $("#btnLixeira")?.addEventListener("click", abrirLixeira);
     $("#btnFecharLixeira")?.addEventListener("click", fecharLixeira);
+    $("#btnCobrar")?.addEventListener("click", abrirCobrancaLote);
+    $("#btnFecharCobranca")?.addEventListener("click", fecharCobrancaLote);
+    $("#cobrancaModal")?.addEventListener("click", (e) => {
+      if (e.target === $("#cobrancaModal")) fecharCobrancaLote();
+    });
     $("#btnRecibo")?.addEventListener("click", () => {
       const c = clienteAtivo();
       if (c) oferecerRecibo(c);
