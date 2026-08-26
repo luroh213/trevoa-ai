@@ -4085,6 +4085,21 @@
       }, 0);
     }
 
+    /** Lançamentos do ciclo atual — desde a última vez que o saldo zerou. */
+    function movsCicloAtual(c) {
+      const movs = [...(c.movs || [])].sort((a, b) => a.ts - b.ts);
+      let saldo = 0;
+      let start = 0;
+      movs.forEach((m, i) => {
+        saldo += m.tipo === "debito" ? m.valor : -m.valor;
+        if (saldo <= 0.009) {
+          start = i + 1;
+          saldo = 0;
+        }
+      });
+      return movs.slice(start);
+    }
+
     function totalAberto() {
       return state.clientes.reduce((acc, c) => acc + Math.max(0, saldoCliente(c)), 0);
     }
@@ -4851,7 +4866,7 @@
     function imprimirExtrato(c) {
       const mercado = credenciaisBalcao().nomeApp || "Mercado";
       const saldo = saldoCliente(c);
-      const movs = [...(c.movs || [])].sort((a, b) => a.ts - b.ts);
+      const movs = movsCicloAtual(c);
       const linhas = movs.length
         ? movs
             .map(
@@ -4860,7 +4875,7 @@
                 (m.nota ? `<div class="sub">${escapeHtml(m.nota)}</div>` : "")
             )
             .join("")
-        : `<div class="c">(sem lançamentos)</div>`;
+        : `<div class="c">(nada em aberto neste período)</div>`;
       const w = window.open("", "_blank", "width=380,height=640");
       if (!w) {
         toast("Navegador bloqueou a janela — permite pop-up pra imprimir", true);
@@ -4914,16 +4929,16 @@
 
     function textoExtrato(c) {
       const saldo = saldoCliente(c);
-      const movs = [...(c.movs || [])].sort((a, b) => b.ts - a.ts).slice(0, 12);
+      const movs = [...movsCicloAtual(c)].sort((a, b) => b.ts - a.ts);
       const linhas = [
         `*Fiado — ${c.nome}*`,
         `Saldo em aberto: *${formatBRL(saldo)}*`,
         "",
       ];
       if (!movs.length) {
-        linhas.push("Sem lançamentos.");
+        linhas.push(saldo <= 0.009 ? "Nada em aberto." : "Sem lançamentos neste período.");
       } else {
-        linhas.push("Últimos lançamentos:");
+        linhas.push("Conta em aberto (desde a última quitação):");
         movs.forEach((m) => {
           const sinal = m.tipo === "debito" ? "+" : "-";
           const tipo = m.tipo === "debito" ? "Fiado" : "Pagamento";
