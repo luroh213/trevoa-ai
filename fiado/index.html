@@ -4882,9 +4882,14 @@
             .map(({ mov, restante }) => {
               const parcial = restante < (Number(mov.valor) || 0) - 0.009;
               const valorTxt = formatBRL(restante);
+              const jaPagou = parcial
+                ? Math.round(((Number(mov.valor) || 0) - restante) * 100) / 100
+                : 0;
               return (
                 `<div class="l"><span>${formatQuando(mov.ts)} Fiado</span><span>+${valorTxt}</span></div>` +
-                (parcial ? `<div class="sub">Restante de compra de ${formatBRL(mov.valor)}</div>` : "") +
+                (parcial && jaPagou > 0.009
+                  ? `<div class="sub">Compra era ${formatBRL(mov.valor)} — já pagou ${formatBRL(jaPagou)}</div>`
+                  : "") +
                 (mov.nota ? `<div class="sub">${escapeHtml(mov.nota)}</div>` : "")
               );
             })
@@ -4912,7 +4917,7 @@
         <hr>
         <div class="l big"><span>TOTAL EM ABERTO</span><span>${formatBRL(saldo)}</span></div>
         <hr>
-        <div class="c">Qualquer dúvida, fale com o balcão.</div>
+        <div class="c">Qualquer dúvida, fale com o vendedor.</div>
         <script>window.onload=function(){window.print();};<\/script>
       </body></html>`);
       w.document.close();
