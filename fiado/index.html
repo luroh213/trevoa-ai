@@ -4873,51 +4873,80 @@
       w.document.close();
     }
 
+    function formatDataExtrato(m) {
+      const iso = dataMov(m);
+      if (iso && iso.length >= 10) {
+        const [y, mo, d] = iso.split("-");
+        return `${d}/${mo}/${y.slice(2)}`;
+      }
+      return (formatQuando(m.ts) || "").split(",")[0].trim();
+    }
+
     function imprimirExtrato(c) {
       const mercado = credenciaisBalcao().nomeApp || "Mercado";
       const saldo = saldoCliente(c);
       const abertos = fifoAbertos(c);
       const linhas = abertos.length
         ? abertos
-            .map(({ mov, restante }) => {
-              const parcial = restante < (Number(mov.valor) || 0) - 0.009;
-              const valorTxt = formatBRL(restante);
-              const jaPagou = parcial
-                ? Math.round(((Number(mov.valor) || 0) - restante) * 100) / 100
-                : 0;
-              return (
-                `<div class="l"><span>${formatQuando(mov.ts)} Fiado</span><span>+${valorTxt}</span></div>` +
-                (parcial && jaPagou > 0.009
-                  ? `<div class="sub">Compra era ${formatBRL(mov.valor)} — já pagou ${formatBRL(jaPagou)}</div>`
-                  : "") +
-                (mov.nota ? `<div class="sub">${escapeHtml(mov.nota)}</div>` : "")
-              );
+            .map(({ mov, restante }, i) => {
+              const total = Number(mov.valor) || 0;
+              const parcial = restante < total - 0.009;
+              const jaPagou = parcial ? Math.round((total - restante) * 100) / 100 : 0;
+              const detalhes = [
+                parcial && jaPagou > 0.009
+                  ? `<div class="det">Comprou ${formatBRL(total)} · já pagou ${formatBRL(jaPagou)}</div>`
+                  : "",
+                mov.nota ? `<div class="det">${escapeHtml(mov.nota)}</div>` : "",
+              ]
+                .filter(Boolean)
+                .join("");
+              return `<div class="item">
+                <div class="item-tit">${i + 1}) Compra — ${formatDataExtrato(mov)}</div>
+                ${detalhes}
+                <div class="falta"><span>Falta pagar</span><span>${formatBRL(restante)}</span></div>
+              </div>`;
             })
             .join("")
-        : `<div class="c">(nada em aberto)</div>`;
-      const w = window.open("", "_blank", "width=380,height=640");
+        : `<div class="c vazio">Nada em aberto.<br>Conta quitada.</div>`;
+      const resumo = abertos.length
+        ? `${abertos.length} ${abertos.length === 1 ? "compra em aberto" : "compras em aberto"}`
+        : "";
+      const w = window.open("", "_blank", "width=380,height=720");
       if (!w) {
         toast("Navegador bloqueou a janela — permite pop-up pra imprimir", true);
         return;
       }
       w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Extrato</title><style>
         @page { size: 80mm auto; margin: 2mm; }
-        body { font-family: monospace; font-size: 12px; width: 72mm; margin: 0 auto; color: #000; }
-        .c { text-align: center; } .l { display: flex; justify-content: space-between; }
-        hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
-        .big { font-size: 15px; font-weight: bold; } .sub { font-size: 11px; }
+        body { font-family: monospace; font-size: 12px; width: 72mm; margin: 0 auto; color: #000; line-height: 1.35; }
+        .c { text-align: center; }
+        .l { display: flex; justify-content: space-between; gap: 4px; }
+        hr { border: 0; border-top: 1px dashed #000; margin: 8px 0; }
+        .big { font-size: 16px; font-weight: bold; }
+        .subtit { font-size: 11px; margin-top: 2px; }
+        .item { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dotted #888; }
+        .item:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+        .item-tit { font-weight: bold; margin-bottom: 3px; }
+        .det { font-size: 10px; margin: 2px 0 4px; }
+        .falta { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-top: 4px; }
+        .total { font-size: 16px; font-weight: bold; margin: 4px 0; }
+        .total .l span:last-child { font-size: 17px; }
+        .rodape { font-size: 11px; margin-top: 6px; }
+        .vazio { padding: 8px 0; font-size: 13px; }
       </style></head><body>
         <div class="c big">${escapeHtml(mercado)}</div>
-        <div class="c">EXTRATO DA CONTA</div>
+        <div class="c big" style="margin-top:4px">O QUE VOCÊ DEVE</div>
+        <div class="c subtit">Só compras ainda não pagas</div>
         <hr>
-        <div>Cliente: ${escapeHtml(c.nome)}</div>
-        <div>Emitido: ${formatQuandoSegundos(Date.now())}</div>
+        <div>Cliente: <strong>${escapeHtml(c.nome)}</strong></div>
+        <div>Data: ${formatQuandoSegundos(Date.now())}</div>
+        ${resumo ? `<div style="margin-top:6px"><strong>${resumo}</strong></div>` : ""}
         <hr>
         ${linhas}
         <hr>
-        <div class="l big"><span>TOTAL EM ABERTO</span><span>${formatBRL(saldo)}</span></div>
+        <div class="total l"><span>TOTAL A PAGAR</span><span>${formatBRL(saldo)}</span></div>
         <hr>
-        <div class="c">Qualquer dúvida, fale com o vendedor.</div>
+        <div class="c rodape">Dúvida? Fale com o vendedor.</div>
         <script>window.onload=function(){window.print();};<\/script>
       </body></html>`);
       w.document.close();
