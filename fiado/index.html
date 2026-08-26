@@ -4085,19 +4085,29 @@
       }, 0);
     }
 
-    /** Lançamentos do ciclo atual — desde a última vez que o saldo zerou. */
-    function movsCicloAtual(c) {
-      const movs = [...(c.movs || [])].sort((a, b) => a.ts - b.ts);
-      let saldo = 0;
-      let start = 0;
-      movs.forEach((m, i) => {
-        saldo += m.tipo === "debito" ? m.valor : -m.valor;
-        if (saldo <= 0.009) {
-          start = i + 1;
-          saldo = 0;
-        }
+    /** Fiados ainda em aberto — pagamentos abatem os mais antigos primeiro (FIFO). */
+    function fifoAbertos(c) {
+      const movs = [...(c.movs || [])].sort((a, b) => {
+        if (a.ts !== b.ts) return a.ts - b.ts;
+        if (a.tipo !== b.tipo) return a.tipo === "debito" ? -1 : 1;
+        return String(a.id || "").localeCompare(String(b.id || ""));
       });
-      return movs.slice(start);
+      const fila = [];
+      for (const m of movs) {
+        if (m.tipo === "debito") {
+          fila.push({ mov: m, restante: Number(m.valor) || 0 });
+        } else {
+          let pago = Number(m.valor) || 0;
+          for (const item of fila) {
+            if (pago <= 0.009) break;
+            if (item.restante <= 0.009) continue;
+            const abat = Math.min(item.restante, pago);
+            item.restante = Math.round((item.restante - abat) * 100) / 100;
+            pago = Math.round((pago - abat) * 100) / 100;
+          }
+        }
+      }
+      return fila.filter((x) => x.restante > 0.009);
     }
 
     function totalAberto() {
@@ -4866,16 +4876,20 @@
     function imprimirExtrato(c) {
       const mercado = credenciaisBalcao().nomeApp || "Mercado";
       const saldo = saldoCliente(c);
-      const movs = movsCicloAtual(c);
-      const linhas = movs.length
-        ? movs
-            .map(
-              (m) =>
-                `<div class="l"><span>${formatQuando(m.ts)} ${m.tipo === "debito" ? "Fiado" : "Pagou"}</span><span>${m.tipo === "debito" ? "+" : "-"}${formatBRL(m.valor)}</span></div>` +
-                (m.nota ? `<div class="sub">${escapeHtml(m.nota)}</div>` : "")
-            )
+      const abertos = fifoAbertos(c);
+      const linhas = abertos.length
+        ? abertos
+            .map(({ mov, restante }) => {
+              const parcial = restante < (Number(mov.valor) || 0) - 0.009;
+              const valorTxt = formatBRL(restante);
+              return (
+                `<div class="l"><span>${formatQuando(mov.ts)} Fiado</span><span>+${valorTxt}</span></div>` +
+                (parcial ? `<div class="sub">Restante de compra de ${formatBRL(mov.valor)}</div>` : "") +
+                (mov.nota ? `<div class="sub">${escapeHtml(mov.nota)}</div>` : "")
+              );
+            })
             .join("")
-        : `<div class="c">(nada em aberto neste período)</div>`;
+        : `<div class="c">(nada em aberto)</div>`;
       const w = window.open("", "_blank", "width=380,height=640");
       if (!w) {
         toast("Navegador bloqueou a janela — permite pop-up pra imprimir", true);
@@ -4929,20 +4943,20 @@
 
     function textoExtrato(c) {
       const saldo = saldoCliente(c);
-      const movs = [...movsCicloAtual(c)].sort((a, b) => b.ts - a.ts);
+      const abertos = [...fifoAbertos(c)].sort((a, b) => b.mov.ts - a.mov.ts);
       const linhas = [
         `*Fiado — ${c.nome}*`,
         `Saldo em aberto: *${formatBRL(saldo)}*`,
         "",
       ];
-      if (!movs.length) {
-        linhas.push(saldo <= 0.009 ? "Nada em aberto." : "Sem lançamentos neste período.");
+      if (!abertos.length) {
+        linhas.push(saldo <= 0.009 ? "Nada em aberto." : "Sem fiados em aberto.");
       } else {
-        linhas.push("Conta em aberto (desde a última quitação):");
-        movs.forEach((m) => {
-          const sinal = m.tipo === "debito" ? "+" : "-";
-          const tipo = m.tipo === "debito" ? "Fiado" : "Pagamento";
-          linhas.push(`• ${formatQuando(m.ts)} — ${tipo} ${sinal}${formatBRL(m.valor)}${m.nota ? ` (${m.nota})` : ""}`);
+        linhas.push("Compras em aberto:");
+        abertos.forEach(({ mov, restante }) => {
+          const parcial = restante < (Number(mov.valor) || 0) - 0.009;
+          const valorTxt = parcial ? `${formatBRL(restante)} (de ${formatBRL(mov.valor)})` : formatBRL(restante);
+          linhas.push(`• ${formatQuando(mov.ts)} — Fiado ${valorTxt}${mov.nota ? ` (${mov.nota})` : ""}`);
         });
       }
       return linhas.join("\n");
