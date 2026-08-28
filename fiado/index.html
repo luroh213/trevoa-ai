@@ -982,6 +982,306 @@
       animation: rise 0.3s ease-out both;
     }
 
+    .painel-modal .sheet {
+      width: min(36rem, 100%);
+      max-height: min(92dvh, 42rem);
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      animation: rise 0.3s ease-out both;
+    }
+
+    .painel-modal .subtitle {
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .painel-corpo {
+      flex: 1;
+      min-height: 0;
+      max-height: min(58vh, 26rem);
+      overflow: auto;
+      margin-bottom: 0.75rem;
+      padding-right: 0.15rem;
+    }
+
+    .painel-tabs {
+      display: flex;
+      background: #e8ede9;
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      padding: 0.28rem;
+      gap: 0.28rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .painel-tabs button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.55rem;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      color: var(--ink-soft);
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+
+    .painel-tabs button.active {
+      background: #fff;
+      color: var(--brand);
+      box-shadow: 0 2px 6px rgba(26, 46, 31, 0.1);
+    }
+
+    .painel-nota {
+      font-size: 0.82rem;
+      line-height: 1.45;
+      background: var(--cream);
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      margin-bottom: 0.75rem;
+      color: var(--ink-soft);
+    }
+
+    .painel-nota strong {
+      display: block;
+      color: var(--brand);
+      margin-bottom: 0.2rem;
+      font-size: 0.88rem;
+    }
+
+    .painel-card {
+      padding: 0.85rem 0.95rem;
+      margin-bottom: 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .painel-card:hover,
+    .painel-card:focus-visible {
+      border-color: var(--brand);
+      box-shadow: 0 3px 10px rgba(26, 46, 31, 0.08);
+      outline: none;
+    }
+
+    .painel-card.atual {
+      border-color: var(--brand);
+      box-shadow: 0 2px 8px rgba(26, 46, 31, 0.08);
+    }
+
+    .painel-card .card-tit {
+      font-weight: 800;
+      font-size: 1.05rem;
+      text-transform: capitalize;
+      font-family: "Bricolage Grotesque", sans-serif;
+      color: var(--brand);
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .painel-card .card-tit .ver-mais {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      text-transform: none;
+      font-family: inherit;
+    }
+
+    .painel-card .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+
+    .painel-card .metric-row span:last-child {
+      font-weight: 700;
+      font-size: 1.02rem;
+      white-space: nowrap;
+    }
+
+    .painel-card .metric-row.ok span:last-child { color: var(--ok); }
+    .painel-card .metric-row.debt span:last-child { color: var(--debt); }
+    .painel-card .metric-row.neutro span:last-child { color: var(--ink); }
+
+    .painel-card .card-meta {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      margin-top: 0.45rem;
+    }
+
+    .btn-voltar-painel {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.65rem;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 0.45rem 0.65rem;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .kpi-box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .kpi-box .kpi-label {
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .kpi-box .kpi-val {
+      font-size: 1.15rem;
+      font-weight: 800;
+      font-family: "Bricolage Grotesque", sans-serif;
+      margin-top: 0.2rem;
+    }
+
+    .kpi-box.ok .kpi-val { color: var(--ok); }
+    .kpi-box.debt .kpi-val { color: var(--debt); }
+    .kpi-box.brand .kpi-val { color: var(--brand); }
+
+    .secao-painel {
+      margin-bottom: 0.85rem;
+    }
+
+    .secao-painel h3 {
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-soft);
+      margin-bottom: 0.45rem;
+    }
+
+    .graf-legenda {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      margin-bottom: 0.45rem;
+    }
+
+    .graf-legenda span { display: flex; align-items: center; gap: 0.3rem; }
+
+    .graf-legenda .dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .graf-legenda .dot.recebido { background: var(--ok); }
+    .graf-legenda .dot.fiado { background: var(--accent); }
+
+    .grafico-mes {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 7rem;
+      padding: 0.35rem 0;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 0.25rem;
+    }
+
+    .graf-dia {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    .graf-dia .graf-col {
+      height: 5.5rem;
+      display: flex;
+      align-items: flex-end;
+      width: 0.45rem;
+    }
+
+    .graf-dia .graf-bar {
+      width: 100%;
+      border-radius: 2px 2px 0 0;
+      min-height: 2px;
+    }
+
+    .graf-dia .graf-bar.recebido { background: var(--ok); }
+    .graf-dia .graf-bar.fiado { background: var(--accent); margin-top: 1px; }
+
+    .graf-dia .graf-label {
+      font-size: 0.62rem;
+      color: var(--ink-soft);
+      margin-top: 0.2rem;
+    }
+
+    .graf-dia.vazio .graf-bar { opacity: 0.15; }
+
+    .lista-dia-grupo {
+      margin-bottom: 0.55rem;
+    }
+
+    .lista-dia-grupo .dia-tit {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      margin-bottom: 0.25rem;
+    }
+
+    .lixeira-card {
+      padding: 0.85rem 0.95rem;
+      margin-bottom: 0.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem 0.75rem;
+      align-items: center;
+    }
+
+    .lixeira-card.debito { border-left: 4px solid var(--accent); }
+    .lixeira-card.pagamento { border-left: 4px solid var(--ok); }
+
+    .lixeira-card .lix-tit {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .lixeira-card .lix-sub {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      margin-top: 0.2rem;
+      line-height: 1.35;
+    }
+
     .confirm-modal h2 {
       font-family: "Bricolage Grotesque", sans-serif;
       font-size: 1.3rem;
@@ -989,6 +1289,15 @@
       color: var(--brand);
       letter-spacing: -0.02em;
       margin-bottom: 0.45rem;
+    }
+
+    .painel-modal h2 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--brand);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
     }
 
     .confirm-modal .resumo-confirm {
@@ -1314,27 +1623,6 @@
     .log-item.log-quitou { border-left: 4px solid var(--brand); background: #eef4f0; }
     .log-item.log-erro { border-left: 4px solid var(--debt); }
 
-    #diarioModal .sheet {
-      width: min(36rem, 100%);
-      max-height: min(92dvh, 42rem);
-      display: flex;
-      flex-direction: column;
-    }
-
-    #diarioModal .diario-corpo {
-      flex: 1;
-      min-height: 0;
-      max-height: min(58vh, 26rem);
-      overflow: auto;
-      margin-bottom: 0.75rem;
-      padding-right: 0.15rem;
-    }
-
-    #diarioModal .subtitle {
-      font-size: 0.88rem;
-      line-height: 1.45;
-    }
-
     #diarioModal #diarioAoVivo {
       font-size: 0.82rem;
       padding: 0.45rem 0.6rem;
@@ -1342,6 +1630,36 @@
       border-radius: 0.5rem;
       border: 1px solid var(--line);
     }
+
+    .painel-card.mes-total {
+      background: var(--cream);
+      border-style: dashed;
+      cursor: default;
+    }
+
+    .painel-modal .passo {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.75rem 0.85rem;
+      margin-bottom: 0.55rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .painel-modal .passo strong {
+      display: block;
+      font-size: 0.92rem;
+      margin-bottom: 0.35rem;
+      color: var(--brand);
+    }
+
+    .painel-modal .passo ol {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+
+    .painel-modal .passo li { margin: 0.3rem 0; }
 
     .diario-sync-bar {
       display: flex;
@@ -1361,93 +1679,6 @@
       font-weight: 500;
       color: var(--ink-soft);
       font-size: 0.8rem;
-    }
-
-    .mes-item {
-      padding: 0.85rem 0.95rem;
-      margin-bottom: 0.55rem;
-      border: 1.5px solid var(--line);
-      border-radius: 0.75rem;
-      background: #fff;
-    }
-
-    .mes-item:first-child { border-top: 1.5px solid var(--line); }
-
-    .mes-item .mes-tit {
-      font-weight: 800;
-      font-size: 1.05rem;
-      margin-bottom: 0.55rem;
-      text-transform: capitalize;
-      font-family: "Bricolage Grotesque", sans-serif;
-      color: var(--brand);
-    }
-
-    .mes-item .l {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 0.75rem;
-      font-size: 0.92rem;
-      margin-top: 0.35rem;
-    }
-
-    .mes-item .l span:last-child {
-      font-size: 1.05rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .mes-item .l.ok span:last-child { color: var(--ok); }
-
-    .mes-item .l.debt span:last-child { color: var(--debt); }
-
-    .mes-item .l.resultado {
-      margin-top: 0.55rem;
-      padding-top: 0.55rem;
-      border-top: 1px dashed var(--line);
-      font-weight: 800;
-      font-size: 0.95rem;
-    }
-
-    .mes-item .l.resultado span:last-child { font-size: 1.12rem; }
-
-    .mes-item .l.resultado.pos span:last-child { color: var(--ok); }
-    .mes-item .l.resultado.neg span:last-child { color: var(--debt); }
-
-    .mes-item .mes-dica {
-      font-size: 0.82rem;
-      color: var(--ink-soft);
-      margin-top: 0.4rem;
-      line-height: 1.4;
-    }
-
-    .mes-ajuda {
-      font-size: 0.84rem;
-      line-height: 1.45;
-      background: var(--cream);
-      border: 1px solid var(--line);
-      border-radius: 0.65rem;
-      padding: 0.65rem 0.75rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .mes-ajuda strong { display: block; margin-bottom: 0.25rem; font-size: 0.9rem; }
-
-    .mes-item.atual {
-      border-color: var(--brand);
-      box-shadow: 0 2px 8px rgba(26, 46, 31, 0.08);
-    }
-
-    .mes-item.mes-total {
-      background: var(--cream);
-      border-style: dashed;
-    }
-
-    .mes-item.atual .mes-tit::after {
-      content: " · mês atual";
-      font-weight: 500;
-      font-size: 0.75rem;
-      color: var(--ink-soft);
     }
 
     @keyframes rise {
@@ -2227,31 +2458,32 @@
     </div>
   </div>
 
-  <div class="confirm-modal" id="diarioModal" role="dialog" aria-modal="true" aria-labelledby="diarioTitulo" hidden>
+  <div class="confirm-modal painel-modal" id="diarioModal" role="dialog" aria-modal="true" aria-labelledby="diarioTitulo" hidden>
     <div class="sheet">
       <h2 id="diarioTitulo">Diário do balcão</h2>
       <p class="subtitle" id="diarioSubtitulo" style="margin-bottom:0.65rem">Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro.</p>
       <p class="hint" id="diarioAoVivo" style="margin:-0.35rem 0 0.65rem;text-align:left" hidden>Atualiza sozinho a cada 3 segundos.</p>
-      <div class="filtros-movs" id="diarioAbas" role="tablist" aria-label="Diário ou resumo mensal">
+      <div class="painel-tabs" id="diarioAbas" role="tablist" aria-label="Diário ou resumo mensal">
         <button type="button" class="active" data-diario-aba="dia">Diário</button>
         <button type="button" data-diario-aba="mes">Por mês</button>
       </div>
-      <div id="diarioLista" class="diario-corpo"></div>
-      <div id="diarioMeses" class="diario-corpo" hidden></div>
+      <div id="diarioLista" class="painel-corpo"></div>
+      <div id="diarioMeses" class="painel-corpo" hidden></div>
+      <div id="diarioMesDetalhe" class="painel-corpo" hidden></div>
       <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
     </div>
   </div>
 
-  <div class="confirm-modal" id="lixeiraModal" role="dialog" aria-modal="true" aria-labelledby="lixeiraTitulo" hidden>
+  <div class="confirm-modal painel-modal" id="lixeiraModal" role="dialog" aria-modal="true" aria-labelledby="lixeiraTitulo" hidden>
     <div class="sheet">
       <h2 id="lixeiraTitulo">Lixeira</h2>
-      <p class="subtitle" style="margin-bottom:0.65rem">Lançamentos apagados com dia e hora. Toque em <strong>Restaurar</strong> pra devolver pro caderno.</p>
-      <div id="lixeiraLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
+      <p class="subtitle" style="margin-bottom:0.65rem">Itens apagados do caderno. Toque em <strong>Restaurar</strong> para devolver.</p>
+      <div id="lixeiraLista" class="painel-corpo"></div>
       <button type="button" class="btn full" id="btnFecharLixeira">Fechar</button>
     </div>
   </div>
 
-  <div class="confirm-modal" id="reciboModal" role="dialog" aria-modal="true" aria-labelledby="reciboTitulo" hidden>
+  <div class="confirm-modal painel-modal" id="reciboModal" role="dialog" aria-modal="true" aria-labelledby="reciboTitulo" hidden>
     <div class="sheet">
       <h2 id="reciboTitulo">Conta quitada ✓</h2>
       <p class="subtitle" id="reciboResumo" style="margin-bottom:0.65rem"></p>
@@ -2263,8 +2495,8 @@
     </div>
   </div>
 
-  <div class="install-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitulo" hidden>
-    <div class="sheet">
+  <div class="install-modal painel-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitulo" hidden>
+    <div class="sheet painel-corpo" style="max-height:min(88dvh,40rem);margin-bottom:0">
       <h2 id="installTitulo">Instalar o Fiado</h2>
       <p class="subtitle" style="margin-bottom:0.25rem">Vira app no PC ou celular. Depois da 1ª vez, funciona <strong>offline</strong> também.</p>
       <p class="ja-instalado" id="installJaOk" hidden>O Fiado já está instalado neste aparelho. Pode fechar.</p>
@@ -2853,24 +3085,166 @@
       </div>`;
     }
 
-    function resultadoMes(recebido, fiado) {
-      const diff = Math.round((recebido - fiado) * 100) / 100;
-      if (Math.abs(diff) <= 0.009) {
-        return { diff: 0, cls: "neutro", dica: "Entrou o mesmo valor que saiu em fiado." };
-      }
-      if (diff > 0) {
-        return {
-          diff,
-          cls: "pos",
-          dica: `Entrou ${formatBRL(diff)} a mais do que fiado naquele mês.`,
-        };
-      }
-      const falta = Math.abs(diff);
-      return {
-        diff,
-        cls: "neg",
-        dica: `Fiado ${formatBRL(falta)} a mais do que entrou em pagamentos.`,
+    function ultimoDiaMes(yyyyMm) {
+      const [y, mo] = yyyyMm.split("-").map(Number);
+      const d = new Date(y, mo, 0);
+      const off = d.getTimezoneOffset();
+      return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+    }
+
+    function saldoAbertoAte(isoDate) {
+      let total = 0;
+      state.clientes.forEach((c) => {
+        let s = 0;
+        (c.movs || []).forEach((m) => {
+          if (dataMov(m) <= isoDate) {
+            s += m.tipo === "debito" ? Number(m.valor) || 0 : -(Number(m.valor) || 0);
+          }
+        });
+        total += Math.max(0, s);
+      });
+      return Math.round(total * 100) / 100;
+    }
+
+    function coletarMes(yyyyMm) {
+      const stats = {
+        mes: yyyyMm,
+        fiado: 0,
+        recebido: 0,
+        qtdFiado: 0,
+        qtdPag: 0,
+        clientesPagaram: new Set(),
+        clientesFiaram: new Set(),
+        pagPorDia: new Map(),
+        fiadoPorDia: new Map(),
+        pagamentos: [],
+        fiados: [],
       };
+      state.clientes.forEach((c) => {
+        (c.movs || []).forEach((m) => {
+          const iso = dataMov(m);
+          if (!iso || iso.slice(0, 7) !== yyyyMm) return;
+          const v = Number(m.valor) || 0;
+          if (m.tipo === "debito") {
+            stats.fiado += v;
+            stats.qtdFiado++;
+            stats.clientesFiaram.add(c.id);
+            stats.fiadoPorDia.set(iso, (stats.fiadoPorDia.get(iso) || 0) + v);
+            stats.fiados.push({ data: iso, valor: v, nome: c.nome, nota: m.nota || "" });
+          } else {
+            stats.recebido += v;
+            stats.qtdPag++;
+            stats.clientesPagaram.add(c.id);
+            stats.pagPorDia.set(iso, (stats.pagPorDia.get(iso) || 0) + v);
+            stats.pagamentos.push({ data: iso, valor: v, nome: c.nome, forma: m.forma, ts: m.ts });
+          }
+        });
+      });
+      stats.fiado = Math.round(stats.fiado * 100) / 100;
+      stats.recebido = Math.round(stats.recebido * 100) / 100;
+      stats.saldoFim = saldoAbertoAte(ultimoDiaMes(yyyyMm));
+      stats.qtdClientesPagaram = stats.clientesPagaram.size;
+      stats.qtdClientesFiaram = stats.clientesFiaram.size;
+      return stats;
+    }
+
+    function formatDataBRcurta(iso) {
+      if (!iso || iso.length < 10) return iso || "";
+      const [y, mo, d] = iso.split("-");
+      return `${d}/${mo}/${y.slice(2)}`;
+    }
+
+    function renderGraficoMes(stats) {
+      const yyyyMm = stats.mes;
+      const [y, mo] = yyyyMm.split("-").map(Number);
+      const diasNoMes = new Date(y, mo, 0).getDate();
+      let max = 0;
+      const dias = [];
+      for (let d = 1; d <= diasNoMes; d++) {
+        const iso = `${yyyyMm}-${String(d).padStart(2, "0")}`;
+        const rec = stats.pagPorDia.get(iso) || 0;
+        const fi = stats.fiadoPorDia.get(iso) || 0;
+        max = Math.max(max, rec, fi);
+        dias.push({ d, rec, fi });
+      }
+      if (max <= 0.009) {
+        return '<p class="vazio" style="padding:0.5rem 0;font-size:0.85rem">Sem movimentação neste mês.</p>';
+      }
+      const bars = dias
+        .map(({ d, rec, fi }) => {
+          const hRec = rec > 0 ? Math.max(8, Math.round((rec / max) * 100)) : 0;
+          const hFi = fi > 0 ? Math.max(8, Math.round((fi / max) * 100)) : 0;
+          return `<div class="graf-dia" title="Dia ${d}: recebido ${formatBRL(rec)}, fiado ${formatBRL(fi)}">
+        <div class="graf-col"><div class="graf-bar recebido" style="height:${hRec}%"></div></div>
+        <div class="graf-col"><div class="graf-bar fiado" style="height:${hFi}%"></div></div>
+        <span class="graf-label">${d}</span>
+      </div>`;
+        })
+        .join("");
+      return `<div class="graf-legenda"><span><i class="dot recebido"></i> Recebido</span><span><i class="dot fiado"></i> Fiado</span></div><div class="grafico-mes">${bars}</div>`;
+    }
+
+    function renderDetalheMes(yyyyMm) {
+      const box = $("#diarioMesDetalhe");
+      if (!box) return;
+      const s = coletarMes(yyyyMm);
+      const pagPorDia = new Map();
+      s.pagamentos.sort((a, b) => b.ts - a.ts).forEach((p) => {
+        if (!pagPorDia.has(p.data)) pagPorDia.set(p.data, []);
+        pagPorDia.get(p.data).push(p);
+      });
+      const diasPag = [...pagPorDia.keys()].sort((a, b) => b.localeCompare(a));
+      const topPag = {};
+      s.pagamentos.forEach((p) => {
+        topPag[p.nome] = (topPag[p.nome] || 0) + p.valor;
+      });
+      const topLista = Object.entries(topPag)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
+      const listaPag = diasPag.length
+        ? diasPag
+            .map((dia) => {
+              const itens = pagPorDia
+                .get(dia)
+                .map(
+                  (p) =>
+                    `<div class="log-item log-pagamento" style="margin-bottom:0.35rem;padding:0.55rem 0.65rem"><div class="log-texto">${escapeHtml(p.nome)} — ${formatBRL(p.valor)}${p.forma ? ` (${escapeHtml(rotuloForma(p.forma))})` : ""}</div></div>`
+                )
+                .join("");
+              return `<div class="lista-dia-grupo"><div class="dia-tit">${formatDataBRcurta(dia)}</div>${itens}</div>`;
+            })
+            .join("")
+        : '<p class="vazio" style="font-size:0.85rem">Nenhum pagamento neste mês.</p>';
+      const topHtml = topLista.length
+        ? topLista
+            .map(
+              ([nome, val]) =>
+                `<div class="metric-row ok" style="display:flex;justify-content:space-between;margin-top:0.25rem;font-size:0.9rem"><span>${escapeHtml(nome)}</span><span style="font-weight:700;color:var(--ok)">${exibirValorResumo(val)}</span></div>`
+            )
+            .join("")
+        : '<p class="vazio" style="font-size:0.85rem">—</p>';
+
+      box.innerHTML = `
+    <button type="button" class="btn ghost btn-voltar-painel" id="btnVoltarMesLista">← Voltar aos meses</button>
+    <h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:1.2rem;color:var(--brand);margin-bottom:0.65rem;text-transform:capitalize">${escapeHtml(rotuloMes(yyyyMm))}</h2>
+    <div class="painel-nota"><strong>Importante</strong>Fiado lançado neste mês pode ser pago depois — em outro mês. Recebido e Fiado são separados de propósito.</div>
+    <div class="kpi-grid">
+      <div class="kpi-box ok"><div class="kpi-label">Recebido</div><div class="kpi-val">${exibirValorResumo(s.recebido)}</div></div>
+      <div class="kpi-box debt"><div class="kpi-label">Fiado dado</div><div class="kpi-val">${exibirValorResumo(s.fiado)}</div></div>
+      <div class="kpi-box brand"><div class="kpi-label">Pagamentos</div><div class="kpi-val">${s.qtdPag}</div></div>
+      <div class="kpi-box brand"><div class="kpi-label">Clientes pagaram</div><div class="kpi-val">${s.qtdClientesPagaram}</div></div>
+    </div>
+    <div class="kpi-box brand" style="margin-bottom:0.75rem">
+      <div class="kpi-label">Em aberto no fim do mês</div>
+      <div class="kpi-val">${exibirValorResumo(s.saldoFim)}</div>
+    </div>
+    <div class="secao-painel"><h3>Movimento por dia</h3>${renderGraficoMes(s)}</div>
+    <div class="secao-painel"><h3>Pagamentos por dia</h3>${listaPag}</div>
+    <div class="secao-painel"><h3>Quem mais pagou</h3>${topHtml}</div>`;
+      $("#btnVoltarMesLista")?.addEventListener("click", () => {
+        diarioMesSel = null;
+        aplicarDiarioAba();
+      });
     }
 
     function renderDiarioMeses() {
@@ -2884,33 +3258,33 @@
       }
       const totalRecebido = lista.reduce((s, x) => s + x.recebido, 0);
       const totalFiado = lista.reduce((s, x) => s + x.fiado, 0);
-      const resumoGeral = resultadoMes(totalRecebido, totalFiado);
-      const ajuda = `<div class="mes-ajuda">
-        <strong>Como ler</strong>
-        Entrou = pagamentos do mês · Fiada = compras fiado do mês · Resultado = diferença (não é lucro da loja).
-      </div>`;
+      const ajuda = `<div class="painel-nota"><strong>Como ler</strong>Recebido = pagamentos daquele mês. Fiado = compras fiadas daquele mês. Fiado de agosto pode ser pago em setembro — isso é normal. Toque no mês para ver detalhes.</div>`;
       box.innerHTML =
         ajuda +
         lista
           .map((x) => {
-            const res = resultadoMes(x.recebido, x.fiado);
+            const det = coletarMes(x.mes);
             return `
-          <div class="mes-item${x.mes === mesAtual ? " atual" : ""}">
-            <div class="mes-tit">${escapeHtml(rotuloMes(x.mes))}</div>
-            <div class="l ok"><span>Dinheiro que entrou</span><span>${exibirValorResumo(x.recebido)}</span></div>
-            <div class="l debt"><span>Mercadoria fiada</span><span>${exibirValorResumo(x.fiado)}</span></div>
-            <div class="l resultado ${res.cls}"><span>Resultado do mês</span><span>${exibirValorResumo(res.diff)}</span></div>
-            <div class="mes-dica">${res.dica}</div>
-          </div>`;
+          <button type="button" class="painel-card${x.mes === mesAtual ? " atual" : ""}" data-mes="${x.mes}">
+            <div class="card-tit">${escapeHtml(rotuloMes(x.mes))}<span class="ver-mais">Ver detalhes →</span></div>
+            <div class="metric-row ok"><span>Dinheiro que entrou</span><span>${exibirValorResumo(x.recebido)}</span></div>
+            <div class="metric-row debt"><span>Mercadoria fiada</span><span>${exibirValorResumo(x.fiado)}</span></div>
+            <div class="card-meta">${det.qtdPag} pagamento${det.qtdPag === 1 ? "" : "s"} · ${det.qtdClientesPagaram} cliente${det.qtdClientesPagaram === 1 ? "" : "s"} pagaram · ${det.qtdFiado} fiado${det.qtdFiado === 1 ? "" : "s"}</div>
+          </button>`;
           })
           .join("") +
-        `<div class="mes-item mes-total">
-          <div class="mes-tit">Desde o início</div>
-          <div class="l ok"><span>Dinheiro que entrou</span><span>${exibirValorResumo(totalRecebido)}</span></div>
-          <div class="l debt"><span>Mercadoria fiada</span><span>${exibirValorResumo(totalFiado)}</span></div>
-          <div class="l resultado ${resumoGeral.cls}"><span>Resultado geral</span><span>${exibirValorResumo(resumoGeral.diff)}</span></div>
-          <div class="mes-dica">${resumoGeral.dica}</div>
+        `<div class="painel-card mes-total" style="cursor:default">
+          <div class="card-tit">Desde o início</div>
+          <div class="metric-row ok"><span>Total recebido</span><span>${exibirValorResumo(totalRecebido)}</span></div>
+          <div class="metric-row debt"><span>Total fiado</span><span>${exibirValorResumo(totalFiado)}</span></div>
+          <div class="card-meta">${lista.length} ${lista.length === 1 ? "mês" : "meses"} com movimento</div>
         </div>`;
+      box.querySelectorAll("[data-mes]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          diarioMesSel = btn.dataset.mes;
+          aplicarDiarioAba();
+        });
+      });
     }
 
     function renderDiario() {
@@ -2940,6 +3314,7 @@
 
     function abrirDiario() {
       diarioAba = "dia";
+      diarioMesSel = null;
       aplicarDiarioAba();
       atualizarDiarioAoVivoUI();
       const modal = $("#diarioModal");
@@ -2955,6 +3330,7 @@
     function fecharDiario() {
       if (abrirDiario._iv) clearInterval(abrirDiario._iv);
       abrirDiario._iv = null;
+      diarioMesSel = null;
       const modal = $("#diarioModal");
       modal.classList.remove("show");
       modal.hidden = true;
@@ -2976,11 +3352,12 @@
           const rotulo = m.tipo === "debito" ? "Fiado" : "Pagamento";
           const forma = m.forma ? ` · ${escapeHtml(rotuloForma(m.forma))}` : "";
           const nome = m.clienteNome || "cliente apagado";
+          const cls = m.tipo === "debito" ? "debito" : "pagamento";
           return `
-          <div class="lixeira-item">
+          <div class="lixeira-card ${cls}">
             <div>
-              <div>${rotulo} ${formatBRL(m.valor)}${forma} — <strong>${escapeHtml(nome)}</strong></div>
-              <div class="quando">Lançado ${formatQuando(m.ts)} · apagado ${formatQuandoSegundos(m.apagadoEm)}</div>
+              <div class="lix-tit">${rotulo} ${formatBRL(m.valor)}${forma}</div>
+              <div class="lix-sub"><strong>${escapeHtml(nome)}</strong><br>Lançado ${formatQuando(m.ts)} · apagado ${formatQuandoSegundos(m.apagadoEm)}</div>
             </div>
             <button type="button" class="btn-mini" data-restaurar="${i}">Restaurar</button>
           </div>`;
@@ -4406,20 +4783,27 @@
     }
 
     let diarioAba = "dia";
+    let diarioMesSel = null;
 
     function aplicarDiarioAba() {
       const dia = diarioAba === "dia";
+      const detalhe = !dia && diarioMesSel;
       $("#diarioLista").hidden = !dia;
-      $("#diarioMeses").hidden = dia;
+      $("#diarioMeses").hidden = dia || detalhe;
+      $("#diarioMesDetalhe").hidden = !detalhe;
+      $("#diarioAbas").hidden = detalhe;
       $("#diarioSubtitulo").textContent = dia
         ? "Lançamentos do balcão com data e hora. O ✅ no topo mostra a última sincronização na nuvem."
-        : "Resumo mês a mês: quanto entrou, quanto saiu fiado e o resultado.";
+        : detalhe
+          ? "Detalhes do mês selecionado."
+          : "Toque em um mês para ver gráfico, pagamentos por dia e quem mais pagou.";
       const aoVivo = $("#diarioAoVivo");
       if (aoVivo) aoVivo.hidden = !dia || !diarioNuvemAtivo();
       document.querySelectorAll("#diarioAbas button").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.diarioAba === diarioAba);
       });
       if (dia) renderDiario();
+      else if (detalhe) renderDetalheMes(diarioMesSel);
       else renderDiarioMeses();
     }
 
@@ -5516,6 +5900,7 @@
     document.querySelectorAll("#diarioAbas button").forEach((btn) => {
       btn.addEventListener("click", () => {
         diarioAba = btn.dataset.diarioAba || "dia";
+        diarioMesSel = null;
         aplicarDiarioAba();
       });
     });
