@@ -1305,6 +1305,36 @@
       margin-top: 0.15rem;
     }
 
+    .mes-item {
+      padding: 0.65rem 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .mes-item:first-child { border-top: none; }
+
+    .mes-item .mes-tit {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      text-transform: capitalize;
+    }
+
+    .mes-item .l {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-top: 0.2rem;
+    }
+
+    .mes-item .l.ok span:last-child { color: var(--ok); font-weight: 700; }
+
+    .mes-item.atual .mes-tit::after {
+      content: " · mês atual";
+      font-weight: 500;
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+    }
+
     @keyframes rise {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -1767,7 +1797,7 @@
         <div class="home-bar-right">
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
           <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
-          <button type="button" class="btn ghost" id="btnDiario" title="Histórico do balcão com hora e segundo">Diário</button>
+          <button type="button" class="btn ghost" id="btnDiario" title="Diário do dia e resumo por mês">Diário</button>
           <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
@@ -2087,7 +2117,12 @@
       <h2 id="diarioTitulo">Diário do balcão</h2>
       <p class="subtitle" id="diarioSubtitulo" style="margin-bottom:0.65rem">Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro.</p>
       <p class="hint" id="diarioAoVivo" style="margin:-0.35rem 0 0.65rem;text-align:left" hidden><strong>Ao vivo na nuvem</strong> — atualiza a cada 3 segundos. Abra no PC com o mesmo login do mercado.</p>
+      <div class="filtros-movs" id="diarioAbas" role="tablist" aria-label="Diário ou resumo mensal">
+        <button type="button" class="active" data-diario-aba="dia">Diário</button>
+        <button type="button" data-diario-aba="mes">Por mês</button>
+      </div>
       <div id="diarioLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
+      <div id="diarioMeses" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem" hidden></div>
       <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
     </div>
   </div>
@@ -2340,7 +2375,7 @@
       aplicarOcultarValoresUI();
       renderHome();
       if (state.ativoId) abrirDetalhe(state.ativoId);
-      if (!$("#diarioModal")?.hidden) renderDiario();
+      if (!$("#diarioModal")?.hidden) aplicarDiarioAba();
     }
 
     function formatDataBR(iso) {
@@ -2437,7 +2472,7 @@
         const mudou = mesclarDiarioRemoto(remoto);
         if (mudou) {
           atualizarSaveStatusUI();
-          if (!silent && !$("#diarioModal")?.hidden) renderDiario();
+          if (!silent && !$("#diarioModal")?.hidden) aplicarDiarioAba();
         }
         return mudou;
       } catch (_) {
@@ -2677,6 +2712,33 @@
       return false;
     }
 
+    function renderDiarioMeses() {
+      const box = $("#diarioMeses");
+      if (!box) return;
+      const mesAtual = hojeISO().slice(0, 7);
+      const lista = totaisPorMes();
+      if (!lista.length) {
+        box.innerHTML = '<div class="vazio" style="padding:0.8rem">Nenhum lançamento ainda.</div>';
+        return;
+      }
+      const totalRecebido = lista.reduce((s, x) => s + x.recebido, 0);
+      box.innerHTML =
+        lista
+          .map(
+            (x) => `
+          <div class="mes-item${x.mes === mesAtual ? " atual" : ""}">
+            <div class="mes-tit">${escapeHtml(rotuloMes(x.mes))}</div>
+            <div class="l ok"><span>Recebido</span><span>${exibirValorResumo(x.recebido)}</span></div>
+            <div class="l"><span>Fiado dado</span><span>${exibirValorResumo(x.fiado)}</span></div>
+          </div>`
+          )
+          .join("") +
+        `<div class="mes-item" style="border-top:2px solid var(--line);margin-top:0.35rem;padding-top:0.75rem">
+          <div class="mes-tit">Desde o início</div>
+          <div class="l ok"><span>Total recebido</span><span>${exibirValorResumo(totalRecebido)}</span></div>
+        </div>`;
+    }
+
     function renderDiario() {
       const box = $("#diarioLista");
       if (!box) return;
@@ -2698,7 +2760,8 @@
     }
 
     function abrirDiario() {
-      renderDiario();
+      diarioAba = "dia";
+      aplicarDiarioAba();
       atualizarDiarioAoVivoUI();
       const modal = $("#diarioModal");
       modal.hidden = false;
@@ -4136,6 +4199,54 @@
       return { fiado, recebido };
     }
 
+    function rotuloMes(yyyyMm) {
+      const [y, mo] = yyyyMm.split("-");
+      const d = new Date(Number(y), Number(mo) - 1, 1);
+      const nome = d.toLocaleDateString("pt-BR", { month: "long" });
+      return `${nome}/${y}`;
+    }
+
+    function totaisPorMes() {
+      const map = new Map();
+      state.clientes.forEach((c) => {
+        (c.movs || []).forEach((m) => {
+          const iso = dataMov(m);
+          if (!iso || iso.length < 7) return;
+          const mes = iso.slice(0, 7);
+          if (!map.has(mes)) map.set(mes, { fiado: 0, recebido: 0 });
+          const b = map.get(mes);
+          const v = Number(m.valor) || 0;
+          if (m.tipo === "debito") b.fiado += v;
+          else b.recebido += v;
+        });
+      });
+      return [...map.entries()]
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([mes, t]) => ({
+          mes,
+          fiado: Math.round(t.fiado * 100) / 100,
+          recebido: Math.round(t.recebido * 100) / 100,
+        }));
+    }
+
+    let diarioAba = "dia";
+
+    function aplicarDiarioAba() {
+      const dia = diarioAba === "dia";
+      $("#diarioLista").hidden = !dia;
+      $("#diarioMeses").hidden = dia;
+      $("#diarioSubtitulo").textContent = dia
+        ? "Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro."
+        : "Quanto entrou e quanto saiu em fiado, mês a mês, desde o primeiro lançamento.";
+      const aoVivo = $("#diarioAoVivo");
+      if (aoVivo) aoVivo.hidden = !dia || !diarioNuvemAtivo();
+      document.querySelectorAll("#diarioAbas button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.diarioAba === diarioAba);
+      });
+      if (dia) renderDiario();
+      else renderDiarioMeses();
+    }
+
     function limiteCliente(c) {
       if (!c) return null;
       const n = Number(c.limite);
@@ -5226,6 +5337,12 @@
     });
     $("#btnDiario")?.addEventListener("click", abrirDiario);
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
+    document.querySelectorAll("#diarioAbas button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        diarioAba = btn.dataset.diarioAba || "dia";
+        aplicarDiarioAba();
+      });
+    });
     $("#btnLixeira")?.addEventListener("click", abrirLixeira);
     $("#btnFecharLixeira")?.addEventListener("click", fecharLixeira);
     $("#btnRecibo")?.addEventListener("click", () => {
