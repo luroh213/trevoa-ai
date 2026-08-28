@@ -1328,6 +1328,38 @@
 
     .mes-item .l.ok span:last-child { color: var(--ok); font-weight: 700; }
 
+    .mes-item .l.debt span:last-child { color: var(--debt); font-weight: 700; }
+
+    .mes-item .l.resultado {
+      margin-top: 0.45rem;
+      padding-top: 0.45rem;
+      border-top: 1px dashed var(--line);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .mes-item .l.resultado.pos span:last-child { color: var(--ok); }
+    .mes-item .l.resultado.neg span:last-child { color: var(--debt); }
+
+    .mes-item .mes-dica {
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      margin-top: 0.25rem;
+      line-height: 1.35;
+    }
+
+    .mes-ajuda {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      background: var(--cream);
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.65rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .mes-ajuda strong { display: block; margin-bottom: 0.2rem; }
+
     .mes-item.atual .mes-tit::after {
       content: " · mês atual";
       font-weight: 500;
@@ -2712,6 +2744,26 @@
       return false;
     }
 
+    function resultadoMes(recebido, fiado) {
+      const diff = Math.round((recebido - fiado) * 100) / 100;
+      if (Math.abs(diff) <= 0.009) {
+        return { diff: 0, cls: "neutro", dica: "Entrou o mesmo valor que saiu em fiado." };
+      }
+      if (diff > 0) {
+        return {
+          diff,
+          cls: "pos",
+          dica: `Entrou ${formatBRL(diff)} a mais do que fiado naquele mês.`,
+        };
+      }
+      const falta = Math.abs(diff);
+      return {
+        diff,
+        cls: "neg",
+        dica: `Fiado ${formatBRL(falta)} a mais do que entrou em pagamentos.`,
+      };
+    }
+
     function renderDiarioMeses() {
       const box = $("#diarioMeses");
       if (!box) return;
@@ -2722,20 +2774,35 @@
         return;
       }
       const totalRecebido = lista.reduce((s, x) => s + x.recebido, 0);
+      const totalFiado = lista.reduce((s, x) => s + x.fiado, 0);
+      const resumoGeral = resultadoMes(totalRecebido, totalFiado);
+      const ajuda = `<div class="mes-ajuda">
+        <strong>Como ler este resumo</strong>
+        Dinheiro que entrou = clientes pagaram fiado naquele mês (Pix, dinheiro, cartão…).<br>
+        Mercadoria fiada = compras que você lançou fiado naquele mês.<br>
+        Resultado do mês = diferença entre os dois. Não é lucro da loja — só movimento do caderno fiado.
+      </div>`;
       box.innerHTML =
+        ajuda +
         lista
-          .map(
-            (x) => `
+          .map((x) => {
+            const res = resultadoMes(x.recebido, x.fiado);
+            return `
           <div class="mes-item${x.mes === mesAtual ? " atual" : ""}">
             <div class="mes-tit">${escapeHtml(rotuloMes(x.mes))}</div>
-            <div class="l ok"><span>Recebido</span><span>${exibirValorResumo(x.recebido)}</span></div>
-            <div class="l"><span>Fiado dado</span><span>${exibirValorResumo(x.fiado)}</span></div>
-          </div>`
-          )
+            <div class="l ok"><span>Dinheiro que entrou</span><span>${exibirValorResumo(x.recebido)}</span></div>
+            <div class="l debt"><span>Mercadoria fiada</span><span>${exibirValorResumo(x.fiado)}</span></div>
+            <div class="l resultado ${res.cls}"><span>Resultado do mês</span><span>${exibirValorResumo(res.diff)}</span></div>
+            <div class="mes-dica">${res.dica}</div>
+          </div>`;
+          })
           .join("") +
         `<div class="mes-item" style="border-top:2px solid var(--line);margin-top:0.35rem;padding-top:0.75rem">
           <div class="mes-tit">Desde o início</div>
-          <div class="l ok"><span>Total recebido</span><span>${exibirValorResumo(totalRecebido)}</span></div>
+          <div class="l ok"><span>Dinheiro que entrou</span><span>${exibirValorResumo(totalRecebido)}</span></div>
+          <div class="l debt"><span>Mercadoria fiada</span><span>${exibirValorResumo(totalFiado)}</span></div>
+          <div class="l resultado ${resumoGeral.cls}"><span>Resultado geral</span><span>${exibirValorResumo(resumoGeral.diff)}</span></div>
+          <div class="mes-dica">${resumoGeral.dica}</div>
         </div>`;
     }
 
@@ -4237,7 +4304,7 @@
       $("#diarioMeses").hidden = dia;
       $("#diarioSubtitulo").textContent = dia
         ? "Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro."
-        : "Quanto entrou e quanto saiu em fiado, mês a mês, desde o primeiro lançamento.";
+        : "Resumo mês a mês: quanto entrou em pagamentos, quanto saiu fiado e o resultado.";
       const aoVivo = $("#diarioAoVivo");
       if (aoVivo) aoVivo.hidden = !dia || !diarioNuvemAtivo();
       document.querySelectorAll("#diarioAbas button").forEach((btn) => {
