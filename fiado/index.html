@@ -1291,74 +1291,157 @@
     .aviso-teste strong { color: var(--brand); }
 
     .log-item {
-      padding: 0.55rem 0;
-      border-top: 1px solid var(--line);
-      font-size: 0.85rem;
-      line-height: 1.35;
+      padding: 0.75rem 0.85rem;
+      margin-bottom: 0.45rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 0.95rem;
+      line-height: 1.4;
     }
 
-    .log-item:first-child { border-top: none; }
+    .log-item .log-texto { font-weight: 600; }
 
     .log-item .quando {
-      font-size: 0.75rem;
+      font-size: 0.78rem;
       color: var(--ink-soft);
-      margin-top: 0.15rem;
+      margin-top: 0.25rem;
+      font-weight: 500;
+    }
+
+    .log-item.log-fiado { border-left: 4px solid var(--accent); }
+    .log-item.log-pagamento { border-left: 4px solid var(--ok); }
+    .log-item.log-quitou { border-left: 4px solid var(--brand); background: #eef4f0; }
+    .log-item.log-erro { border-left: 4px solid var(--debt); }
+
+    #diarioModal .sheet {
+      width: min(36rem, 100%);
+      max-height: min(92dvh, 42rem);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #diarioModal .diario-corpo {
+      flex: 1;
+      min-height: 0;
+      max-height: min(58vh, 26rem);
+      overflow: auto;
+      margin-bottom: 0.75rem;
+      padding-right: 0.15rem;
+    }
+
+    #diarioModal .subtitle {
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    #diarioModal #diarioAoVivo {
+      font-size: 0.82rem;
+      padding: 0.45rem 0.6rem;
+      background: var(--cream);
+      border-radius: 0.5rem;
+      border: 1px solid var(--line);
+    }
+
+    .diario-sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--ok);
+      background: #e8f3ec;
+      border: 1px solid #b8d4c4;
+      border-radius: 0.55rem;
+      padding: 0.5rem 0.65rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .diario-sync-bar .sync-hora {
+      font-weight: 500;
+      color: var(--ink-soft);
+      font-size: 0.8rem;
     }
 
     .mes-item {
-      padding: 0.65rem 0;
-      border-top: 1px solid var(--line);
+      padding: 0.85rem 0.95rem;
+      margin-bottom: 0.55rem;
+      border: 1.5px solid var(--line);
+      border-radius: 0.75rem;
+      background: #fff;
     }
 
-    .mes-item:first-child { border-top: none; }
+    .mes-item:first-child { border-top: 1.5px solid var(--line); }
 
     .mes-item .mes-tit {
-      font-weight: 700;
-      font-size: 0.95rem;
-      margin-bottom: 0.35rem;
+      font-weight: 800;
+      font-size: 1.05rem;
+      margin-bottom: 0.55rem;
       text-transform: capitalize;
+      font-family: "Bricolage Grotesque", sans-serif;
+      color: var(--brand);
     }
 
     .mes-item .l {
       display: flex;
       justify-content: space-between;
-      font-size: 0.85rem;
-      margin-top: 0.2rem;
+      align-items: baseline;
+      gap: 0.75rem;
+      font-size: 0.92rem;
+      margin-top: 0.35rem;
     }
 
-    .mes-item .l.ok span:last-child { color: var(--ok); font-weight: 700; }
+    .mes-item .l span:last-child {
+      font-size: 1.05rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
 
-    .mes-item .l.debt span:last-child { color: var(--debt); font-weight: 700; }
+    .mes-item .l.ok span:last-child { color: var(--ok); }
+
+    .mes-item .l.debt span:last-child { color: var(--debt); }
 
     .mes-item .l.resultado {
-      margin-top: 0.45rem;
-      padding-top: 0.45rem;
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
       border-top: 1px dashed var(--line);
-      font-weight: 700;
-      font-size: 0.9rem;
+      font-weight: 800;
+      font-size: 0.95rem;
     }
+
+    .mes-item .l.resultado span:last-child { font-size: 1.12rem; }
 
     .mes-item .l.resultado.pos span:last-child { color: var(--ok); }
     .mes-item .l.resultado.neg span:last-child { color: var(--debt); }
 
     .mes-item .mes-dica {
-      font-size: 0.75rem;
+      font-size: 0.82rem;
       color: var(--ink-soft);
-      margin-top: 0.25rem;
-      line-height: 1.35;
+      margin-top: 0.4rem;
+      line-height: 1.4;
     }
 
     .mes-ajuda {
-      font-size: 0.8rem;
+      font-size: 0.84rem;
       line-height: 1.45;
       background: var(--cream);
       border: 1px solid var(--line);
-      border-radius: 0.5rem;
-      padding: 0.55rem 0.65rem;
-      margin-bottom: 0.65rem;
+      border-radius: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      margin-bottom: 0.75rem;
     }
 
-    .mes-ajuda strong { display: block; margin-bottom: 0.2rem; }
+    .mes-ajuda strong { display: block; margin-bottom: 0.25rem; font-size: 0.9rem; }
+
+    .mes-item.atual {
+      border-color: var(--brand);
+      box-shadow: 0 2px 8px rgba(26, 46, 31, 0.08);
+    }
+
+    .mes-item.mes-total {
+      background: var(--cream);
+      border-style: dashed;
+    }
 
     .mes-item.atual .mes-tit::after {
       content: " · mês atual";
@@ -2148,13 +2231,13 @@
     <div class="sheet">
       <h2 id="diarioTitulo">Diário do balcão</h2>
       <p class="subtitle" id="diarioSubtitulo" style="margin-bottom:0.65rem">Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro.</p>
-      <p class="hint" id="diarioAoVivo" style="margin:-0.35rem 0 0.65rem;text-align:left" hidden><strong>Ao vivo na nuvem</strong> — atualiza a cada 3 segundos. Abra no PC com o mesmo login do mercado.</p>
+      <p class="hint" id="diarioAoVivo" style="margin:-0.35rem 0 0.65rem;text-align:left" hidden>Atualiza sozinho a cada 3 segundos.</p>
       <div class="filtros-movs" id="diarioAbas" role="tablist" aria-label="Diário ou resumo mensal">
         <button type="button" class="active" data-diario-aba="dia">Diário</button>
         <button type="button" data-diario-aba="mes">Por mês</button>
       </div>
-      <div id="diarioLista" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem"></div>
-      <div id="diarioMeses" style="max-height:min(55vh, 22rem);overflow:auto;margin-bottom:0.75rem" hidden></div>
+      <div id="diarioLista" class="diario-corpo"></div>
+      <div id="diarioMeses" class="diario-corpo" hidden></div>
       <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
     </div>
   </div>
@@ -2744,6 +2827,32 @@
       return false;
     }
 
+    function ehDiarioSync(texto) {
+      const t = String(texto || "").trim();
+      return t === "✅" || /^Caderno salvo na nuvem$/i.test(t) || /^Caderno salvo neste celular$/i.test(t);
+    }
+
+    function classeDiario(texto) {
+      const t = String(texto || "");
+      if (/^Fiado/i.test(t)) return "log-fiado";
+      if (/^Recebeu/i.test(t)) return "log-pagamento";
+      if (/Quitou/i.test(t)) return "log-quitou";
+      if (/Falha/i.test(t)) return "log-erro";
+      return "";
+    }
+
+    function barraSyncDiario(logs) {
+      if (!diarioNuvemAtivo()) return "";
+      const sync = (logs || []).find((l) => ehDiarioSync(l.texto));
+      const ts = sync?.ts || state.ultimoSalvoNuvem;
+      if (!ts) return "";
+      return `<div class="diario-sync-bar" title="Caderno sincronizado na nuvem">
+        <span aria-hidden="true">✅</span>
+        <span>Nuvem ok</span>
+        <span class="sync-hora">${formatQuandoSegundos(ts)}</span>
+      </div>`;
+    }
+
     function resultadoMes(recebido, fiado) {
       const diff = Math.round((recebido - fiado) * 100) / 100;
       if (Math.abs(diff) <= 0.009) {
@@ -2777,10 +2886,8 @@
       const totalFiado = lista.reduce((s, x) => s + x.fiado, 0);
       const resumoGeral = resultadoMes(totalRecebido, totalFiado);
       const ajuda = `<div class="mes-ajuda">
-        <strong>Como ler este resumo</strong>
-        Dinheiro que entrou = clientes pagaram fiado naquele mês (Pix, dinheiro, cartão…).<br>
-        Mercadoria fiada = compras que você lançou fiado naquele mês.<br>
-        Resultado do mês = diferença entre os dois. Não é lucro da loja — só movimento do caderno fiado.
+        <strong>Como ler</strong>
+        Entrou = pagamentos do mês · Fiada = compras fiado do mês · Resultado = diferença (não é lucro da loja).
       </div>`;
       box.innerHTML =
         ajuda +
@@ -2797,7 +2904,7 @@
           </div>`;
           })
           .join("") +
-        `<div class="mes-item" style="border-top:2px solid var(--line);margin-top:0.35rem;padding-top:0.75rem">
+        `<div class="mes-item mes-total">
           <div class="mes-tit">Desde o início</div>
           <div class="l ok"><span>Dinheiro que entrou</span><span>${exibirValorResumo(totalRecebido)}</span></div>
           <div class="l debt"><span>Mercadoria fiada</span><span>${exibirValorResumo(totalFiado)}</span></div>
@@ -2810,20 +2917,25 @@
       const box = $("#diarioLista");
       if (!box) return;
       const logs = lerDiario();
-      if (!logs.length) {
+      const eventos = logs.filter((l) => !ehDiarioSync(l.texto));
+      if (!eventos.length && !barraSyncDiario(logs)) {
         box.innerHTML = '<div class="vazio" style="padding:0.8rem">Nenhum registro ainda.</div>';
         return;
       }
-      box.innerHTML = logs
-        .map(
-          (l) => `
-          <div class="log-item">
-            <div>${exibirTextoDiario(l.texto)}</div>
+      box.innerHTML =
+        barraSyncDiario(logs) +
+        (eventos.length
+          ? eventos
+              .map(
+                (l) => `
+          <div class="log-item ${classeDiario(l.texto)}">
+            <div class="log-texto">${exibirTextoDiario(l.texto)}</div>
             <div class="quando">${formatQuandoSegundos(l.ts)}</div>
           </div>
         `
-        )
-        .join("");
+              )
+              .join("")
+          : '<div class="vazio" style="padding:0.5rem 0">Só sincronização por enquanto — lançamentos aparecem aqui.</div>');
     }
 
     function abrirDiario() {
@@ -2976,7 +3088,6 @@
               state.salvandoNuvem = false;
               state.ultimoSalvoNuvem = Date.now();
               avisarOutrasAbasSalvou();
-              registrarDiario("Caderno salvo na nuvem");
               atualizarSaveStatusUI();
             })
             .catch((err) => {
@@ -2986,8 +3097,6 @@
               registrarDiario("Falha ao salvar na nuvem: " + (err.message || "erro"));
             });
         }, 450);
-      } else {
-        registrarDiario("Caderno salvo neste celular");
       }
     }
 
@@ -4303,8 +4412,8 @@
       $("#diarioLista").hidden = !dia;
       $("#diarioMeses").hidden = dia;
       $("#diarioSubtitulo").textContent = dia
-        ? "Cada lançamento e salvamento com hora, minuto e segundo. Se sumir algo, olhe aqui primeiro."
-        : "Resumo mês a mês: quanto entrou em pagamentos, quanto saiu fiado e o resultado.";
+        ? "Lançamentos do balcão com data e hora. O ✅ no topo mostra a última sincronização na nuvem."
+        : "Resumo mês a mês: quanto entrou, quanto saiu fiado e o resultado.";
       const aoVivo = $("#diarioAoVivo");
       if (aoVivo) aoVivo.hidden = !dia || !diarioNuvemAtivo();
       document.querySelectorAll("#diarioAbas button").forEach((btn) => {
