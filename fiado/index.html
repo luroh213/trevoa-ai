@@ -1244,6 +1244,77 @@
 
     .graf-dia.vazio .graf-bar { opacity: 0.15; }
 
+    .dia-resumo-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .dia-resumo-card .dia-resumo-data {
+      font-weight: 800;
+      font-size: 0.92rem;
+      color: var(--brand);
+      margin-bottom: 0.35rem;
+    }
+
+    .dia-resumo-card .dia-linha {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.9rem;
+      margin-top: 0.2rem;
+    }
+
+    .dia-resumo-card .dia-linha.ok span:last-child { color: var(--ok); font-weight: 700; }
+    .dia-resumo-card .dia-linha.debt span:last-child { color: var(--debt); font-weight: 700; }
+
+    .rank-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.55rem 0.65rem;
+      align-items: center;
+      padding: 0.7rem 0.75rem;
+      margin-bottom: 0.45rem;
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      background: #fff;
+    }
+
+    .rank-item .rank-num {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--brand);
+      min-width: 1.75rem;
+    }
+
+    .rank-item .rank-nome {
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1.3;
+    }
+
+    .rank-item .rank-sub {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      margin-top: 0.1rem;
+    }
+
+    .rank-item .rank-val {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--ok);
+      white-space: nowrap;
+    }
+
+    .secao-painel .secao-desc {
+      font-size: 0.82rem;
+      color: var(--ink-soft);
+      margin: -0.25rem 0 0.5rem;
+      line-height: 1.4;
+    }
+
     .lista-dia-grupo {
       margin-bottom: 0.55rem;
     }
@@ -1634,7 +1705,6 @@
     .painel-card.mes-total {
       background: var(--cream);
       border-style: dashed;
-      cursor: default;
     }
 
     .painel-modal .passo {
@@ -3154,93 +3224,153 @@
       return `${d}/${mo}/${y.slice(2)}`;
     }
 
-    function renderGraficoMes(stats) {
+    function coletarTotal() {
+      const lista = totaisPorMes();
+      const stats = {
+        mes: "__total__",
+        fiado: 0,
+        recebido: 0,
+        qtdFiado: 0,
+        qtdPag: 0,
+        clientesPagaram: new Set(),
+        pagamentos: [],
+        porMes: [],
+        pagPorDia: new Map(),
+        fiadoPorDia: new Map(),
+      };
+      lista.forEach((x) => {
+        const s = coletarMes(x.mes);
+        stats.fiado += s.fiado;
+        stats.recebido += s.recebido;
+        stats.qtdFiado += s.qtdFiado;
+        stats.qtdPag += s.qtdPag;
+        s.pagamentos.forEach((p) => {
+          stats.clientesPagaram.add(p.nome);
+          stats.pagamentos.push(p);
+        });
+        stats.porMes.push(s);
+      });
+      stats.fiado = Math.round(stats.fiado * 100) / 100;
+      stats.recebido = Math.round(stats.recebido * 100) / 100;
+      stats.qtdClientesPagaram = stats.clientesPagaram.size;
+      stats.saldoFim = totalAberto();
+      return stats;
+    }
+
+    function renderDiasMesSimples(stats) {
       const yyyyMm = stats.mes;
       const [y, mo] = yyyyMm.split("-").map(Number);
       const diasNoMes = new Date(y, mo, 0).getDate();
-      let max = 0;
-      const dias = [];
-      for (let d = 1; d <= diasNoMes; d++) {
+      const linhas = [];
+      for (let d = diasNoMes; d >= 1; d--) {
         const iso = `${yyyyMm}-${String(d).padStart(2, "0")}`;
         const rec = stats.pagPorDia.get(iso) || 0;
         const fi = stats.fiadoPorDia.get(iso) || 0;
-        max = Math.max(max, rec, fi);
-        dias.push({ d, rec, fi });
+        if (rec <= 0.009 && fi <= 0.009) continue;
+        const partes = [];
+        if (rec > 0.009) partes.push(`<div class="dia-linha ok"><span>Entrou (pagamentos)</span><span>${exibirValorResumo(rec)}</span></div>`);
+        if (fi > 0.009) partes.push(`<div class="dia-linha debt"><span>Saiu fiado (compras)</span><span>${exibirValorResumo(fi)}</span></div>`);
+        linhas.push(`<div class="dia-resumo-card"><div class="dia-resumo-data">${formatDataBRcurta(iso)}</div>${partes.join("")}</div>`);
       }
-      if (max <= 0.009) {
-        return '<p class="vazio" style="padding:0.5rem 0;font-size:0.85rem">Sem movimentação neste mês.</p>';
+      if (!linhas.length) {
+        return '<p class="vazio" style="padding:0.5rem 0;font-size:0.85rem">Nenhum movimento neste mês.</p>';
       }
-      const bars = dias
-        .map(({ d, rec, fi }) => {
-          const hRec = rec > 0 ? Math.max(8, Math.round((rec / max) * 100)) : 0;
-          const hFi = fi > 0 ? Math.max(8, Math.round((fi / max) * 100)) : 0;
-          return `<div class="graf-dia" title="Dia ${d}: recebido ${formatBRL(rec)}, fiado ${formatBRL(fi)}">
-        <div class="graf-col"><div class="graf-bar recebido" style="height:${hRec}%"></div></div>
-        <div class="graf-col"><div class="graf-bar fiado" style="height:${hFi}%"></div></div>
-        <span class="graf-label">${d}</span>
-      </div>`;
+      return `<p class="secao-desc">Dia a dia — quanto entrou e quanto saiu fiado. Do mais recente pro mais antigo.</p>${linhas.join("")}`;
+    }
+
+    function renderMesesResumo(porMes) {
+      if (!porMes.length) {
+        return '<p class="vazio" style="font-size:0.85rem">Nenhum mês com movimento.</p>';
+      }
+      return `<p class="secao-desc">Resumo de cada mês desde que começou a usar o Fiado.</p>${porMes
+        .map((s) => {
+          const partes = [];
+          if (s.recebido > 0.009) partes.push(`<div class="dia-linha ok"><span>Entrou</span><span>${exibirValorResumo(s.recebido)}</span></div>`);
+          if (s.fiado > 0.009) partes.push(`<div class="dia-linha debt"><span>Fiado</span><span>${exibirValorResumo(s.fiado)}</span></div>`);
+          return `<div class="dia-resumo-card"><div class="dia-resumo-data">${escapeHtml(rotuloMes(s.mes))}</div>${partes.join("")}</div>`;
         })
-        .join("");
-      return `<div class="graf-legenda"><span><i class="dot recebido"></i> Recebido</span><span><i class="dot fiado"></i> Fiado</span></div><div class="grafico-mes">${bars}</div>`;
+        .join("")}`;
+    }
+
+    function renderRankingPagadores(pagamentos, rotuloSub) {
+      const topPag = {};
+      pagamentos.forEach((p) => {
+        topPag[p.nome] = (topPag[p.nome] || 0) + p.valor;
+      });
+      const topLista = Object.entries(topPag)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+      if (!topLista.length) {
+        return '<p class="vazio" style="font-size:0.85rem">Ninguém pagou neste período.</p>';
+      }
+      return `<p class="secao-desc">Ranking de quem mais pagou fiado ${rotuloSub}.</p>${topLista
+        .map(
+          ([nome, val], i) => `
+        <div class="rank-item">
+          <span class="rank-num">${i + 1}º</span>
+          <div>
+            <div class="rank-nome">${escapeHtml(nome)}</div>
+            <div class="rank-sub">Total pago ${rotuloSub}</div>
+          </div>
+          <span class="rank-val">${exibirValorResumo(val)}</span>
+        </div>`
+        )
+        .join("")}`;
     }
 
     function renderDetalheMes(yyyyMm) {
       const box = $("#diarioMesDetalhe");
       if (!box) return;
-      const s = coletarMes(yyyyMm);
+      const ehTotal = yyyyMm === "__total__";
+      const s = ehTotal ? coletarTotal() : coletarMes(yyyyMm);
+      const titulo = ehTotal ? "Desde o início" : rotuloMes(yyyyMm);
+      const rotuloSub = ehTotal ? "desde o início" : "neste mês";
+
       const pagPorDia = new Map();
       s.pagamentos.sort((a, b) => b.ts - a.ts).forEach((p) => {
         if (!pagPorDia.has(p.data)) pagPorDia.set(p.data, []);
         pagPorDia.get(p.data).push(p);
       });
       const diasPag = [...pagPorDia.keys()].sort((a, b) => b.localeCompare(a));
-      const topPag = {};
-      s.pagamentos.forEach((p) => {
-        topPag[p.nome] = (topPag[p.nome] || 0) + p.valor;
-      });
-      const topLista = Object.entries(topPag)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
-      const listaPag = diasPag.length
+      const listaPag = !ehTotal && diasPag.length
         ? diasPag
             .map((dia) => {
+              const totalDia = pagPorDia.get(dia).reduce((acc, p) => acc + p.valor, 0);
               const itens = pagPorDia
                 .get(dia)
                 .map(
                   (p) =>
-                    `<div class="log-item log-pagamento" style="margin-bottom:0.35rem;padding:0.55rem 0.65rem"><div class="log-texto">${escapeHtml(p.nome)} — ${formatBRL(p.valor)}${p.forma ? ` (${escapeHtml(rotuloForma(p.forma))})` : ""}</div></div>`
+                    `<div class="log-item log-pagamento" style="margin-bottom:0.35rem;padding:0.55rem 0.65rem"><div class="log-texto">${escapeHtml(p.nome)} pagou ${formatBRL(p.valor)}${p.forma ? ` (${escapeHtml(rotuloForma(p.forma))})` : ""}</div></div>`
                 )
                 .join("");
-              return `<div class="lista-dia-grupo"><div class="dia-tit">${formatDataBRcurta(dia)}</div>${itens}</div>`;
+              return `<div class="lista-dia-grupo"><div class="dia-tit">${formatDataBRcurta(dia)} — total ${formatBRL(totalDia)}</div>${itens}</div>`;
             })
             .join("")
-        : '<p class="vazio" style="font-size:0.85rem">Nenhum pagamento neste mês.</p>';
-      const topHtml = topLista.length
-        ? topLista
-            .map(
-              ([nome, val]) =>
-                `<div class="metric-row ok" style="display:flex;justify-content:space-between;margin-top:0.25rem;font-size:0.9rem"><span>${escapeHtml(nome)}</span><span style="font-weight:700;color:var(--ok)">${exibirValorResumo(val)}</span></div>`
-            )
-            .join("")
-        : '<p class="vazio" style="font-size:0.85rem">—</p>';
+        : ehTotal
+          ? ""
+          : '<p class="vazio" style="font-size:0.85rem">Nenhum pagamento neste mês.</p>';
+
+      const movimentoHtml = ehTotal ? renderMesesResumo(s.porMes) : renderDiasMesSimples(s);
+      const rankingHtml = renderRankingPagadores(s.pagamentos, rotuloSub);
+      const saldoLabel = ehTotal ? "Em aberto agora (todo o caderno)" : "Em aberto no fim do mês";
 
       box.innerHTML = `
     <button type="button" class="btn ghost btn-voltar-painel" id="btnVoltarMesLista">← Voltar aos meses</button>
-    <h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:1.2rem;color:var(--brand);margin-bottom:0.65rem;text-transform:capitalize">${escapeHtml(rotuloMes(yyyyMm))}</h2>
-    <div class="painel-nota"><strong>Importante</strong>Fiado lançado neste mês pode ser pago depois — em outro mês. Recebido e Fiado são separados de propósito.</div>
+    <h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:1.2rem;color:var(--brand);margin-bottom:0.65rem;text-transform:capitalize">${escapeHtml(titulo)}</h2>
+    <div class="painel-nota"><strong>Lembrete</strong>Fiado de um mês pode ser pago em outro. Por isso <em>Entrou</em> e <em>Fiado</em> aparecem separados — não significa prejuízo.</div>
     <div class="kpi-grid">
-      <div class="kpi-box ok"><div class="kpi-label">Recebido</div><div class="kpi-val">${exibirValorResumo(s.recebido)}</div></div>
-      <div class="kpi-box debt"><div class="kpi-label">Fiado dado</div><div class="kpi-val">${exibirValorResumo(s.fiado)}</div></div>
+      <div class="kpi-box ok"><div class="kpi-label">Total recebido</div><div class="kpi-val">${exibirValorResumo(s.recebido)}</div></div>
+      <div class="kpi-box debt"><div class="kpi-label">Total fiado</div><div class="kpi-val">${exibirValorResumo(s.fiado)}</div></div>
       <div class="kpi-box brand"><div class="kpi-label">Pagamentos</div><div class="kpi-val">${s.qtdPag}</div></div>
       <div class="kpi-box brand"><div class="kpi-label">Clientes pagaram</div><div class="kpi-val">${s.qtdClientesPagaram}</div></div>
     </div>
     <div class="kpi-box brand" style="margin-bottom:0.75rem">
-      <div class="kpi-label">Em aberto no fim do mês</div>
+      <div class="kpi-label">${saldoLabel}</div>
       <div class="kpi-val">${exibirValorResumo(s.saldoFim)}</div>
     </div>
-    <div class="secao-painel"><h3>Movimento por dia</h3>${renderGraficoMes(s)}</div>
-    <div class="secao-painel"><h3>Pagamentos por dia</h3>${listaPag}</div>
-    <div class="secao-painel"><h3>Quem mais pagou</h3>${topHtml}</div>`;
+    <div class="secao-painel"><h3>${ehTotal ? "Mês a mês" : "Dia a dia"}</h3>${movimentoHtml}</div>
+    ${ehTotal ? "" : `<div class="secao-painel"><h3>Quem pagou e quanto</h3><p class="secao-desc">Lista de pagamentos ${rotuloSub}, agrupados por dia.</p>${listaPag}</div>`}
+    <div class="secao-painel"><h3>Quem mais pagou</h3>${rankingHtml}</div>`;
       $("#btnVoltarMesLista")?.addEventListener("click", () => {
         diarioMesSel = null;
         aplicarDiarioAba();
@@ -3273,12 +3403,12 @@
           </button>`;
           })
           .join("") +
-        `<div class="painel-card mes-total" style="cursor:default">
-          <div class="card-tit">Desde o início</div>
+        `<button type="button" class="painel-card mes-total" data-mes="__total__">
+          <div class="card-tit">Desde o início<span class="ver-mais">Ver detalhes →</span></div>
           <div class="metric-row ok"><span>Total recebido</span><span>${exibirValorResumo(totalRecebido)}</span></div>
           <div class="metric-row debt"><span>Total fiado</span><span>${exibirValorResumo(totalFiado)}</span></div>
-          <div class="card-meta">${lista.length} ${lista.length === 1 ? "mês" : "meses"} com movimento</div>
-        </div>`;
+          <div class="card-meta">${lista.length} ${lista.length === 1 ? "mês" : "meses"} com movimento · toque para ver tudo</div>
+        </button>`;
       box.querySelectorAll("[data-mes]").forEach((btn) => {
         btn.addEventListener("click", () => {
           diarioMesSel = btn.dataset.mes;
