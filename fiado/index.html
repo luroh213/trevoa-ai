@@ -3318,6 +3318,84 @@
         .join("")}`;
     }
 
+    function renderComparacaoMes(yyyyMm, s) {
+      const lista = totaisPorMes();
+      const idx = lista.findIndex((x) => x.mes === yyyyMm);
+      if (idx < 0 || idx + 1 >= lista.length) return "";
+      const ant = lista[idx + 1];
+      const nomeAnt = rotuloMes(ant.mes);
+      const linha = (atual, anterior, rotulo, colorir) => {
+        const diff = Math.round((atual - anterior) * 100) / 100;
+        if (Math.abs(diff) < 0.005) {
+          return `<div class="dia-linha"><span>${rotulo}</span><span>igual a ${escapeHtml(nomeAnt)}</span></div>`;
+        }
+        const cls = colorir ? (diff > 0 ? "ok" : "debt") : "";
+        const seta = diff > 0 ? "↑" : "↓";
+        const texto = diff > 0 ? "a mais" : "a menos";
+        return `<div class="dia-linha ${cls}"><span>${rotulo}</span><span>${exibirValorResumo(Math.abs(diff))} ${texto} ${seta}</span></div>`;
+      };
+      return `<div class="dia-resumo-card" style="margin-bottom:0.75rem">
+      <div class="dia-resumo-data">Comparado com ${escapeHtml(nomeAnt)}</div>
+      ${linha(s.recebido, ant.recebido, "Entrou", true)}
+      ${linha(s.fiado, ant.fiado, "Fiado", false)}
+    </div>`;
+    }
+
+    function analiseDiaSemana() {
+      const hoje = hojeISO();
+      let primeiro = null;
+      const tot = [];
+      for (let w = 0; w < 7; w++) tot.push({ rec: 0, fi: 0 });
+      state.clientes.forEach((c) => {
+        (c.movs || []).forEach((m) => {
+          const iso = dataMov(m);
+          if (!iso || iso > hoje) return;
+          if (!primeiro || iso < primeiro) primeiro = iso;
+          const w = new Date(iso + "T12:00:00").getDay();
+          const v = Number(m.valor) || 0;
+          if (m.tipo === "debito") tot[w].fi += v;
+          else tot[w].rec += v;
+        });
+      });
+      if (!primeiro) return null;
+      const qtd = [0, 0, 0, 0, 0, 0, 0];
+      const dt = new Date(primeiro + "T12:00:00");
+      const fim = new Date(hoje + "T12:00:00");
+      while (dt <= fim) {
+        qtd[dt.getDay()]++;
+        dt.setDate(dt.getDate() + 1);
+      }
+      const nomes = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+      return nomes.map((nome, w) => ({
+        nome,
+        dias: qtd[w],
+        mediaRec: qtd[w] ? tot[w].rec / qtd[w] : 0,
+        mediaFi: qtd[w] ? tot[w].fi / qtd[w] : 0,
+      }));
+    }
+
+    function renderFolgaSemana() {
+      const sem = analiseDiaSemana();
+      if (!sem) return "";
+      const validos = sem.filter((s) => s.dias > 0);
+      if (!validos.length) return "";
+      const ordenado = [...validos].sort((a, b) => a.mediaRec + a.mediaFi - (b.mediaRec + b.mediaFi));
+      const fraco = ordenado[0];
+      const linhas = ordenado
+        .map((s, i) => {
+          const destaque = i === 0;
+          return `<div class="dia-resumo-card"${destaque ? ' style="border:2px solid var(--ok)"' : ""}>
+        <div class="dia-resumo-data">${s.nome}${destaque ? ' <span style="color:var(--ok)">— dia mais fraco</span>' : ""}</div>
+        <div class="dia-linha ok"><span>Entra em média</span><span>${exibirValorResumo(s.mediaRec)}</span></div>
+        <div class="dia-linha debt"><span>Sai fiado em média</span><span>${exibirValorResumo(s.mediaFi)}</span></div>
+      </div>`;
+        })
+        .join("");
+      return `<p class="secao-desc">Média de movimento em cada dia da semana, desde o início. Quanto menor, mais fraco o dia.</p>
+    <div class="painel-nota"><strong>Melhor dia pra folgar: ${escapeHtml(fraco.nome)}</strong>É o dia da semana que menos movimenta no seu caderno.</div>
+    ${linhas}`;
+    }
+
     function renderDetalheMes(yyyyMm) {
       const box = $("#diarioMesDetalhe");
       if (!box) return;
@@ -3353,6 +3431,8 @@
       const movimentoHtml = ehTotal ? renderMesesResumo(s.porMes) : renderDiasMesSimples(s);
       const rankingHtml = renderRankingPagadores(s.pagamentos, rotuloSub);
       const saldoLabel = ehTotal ? "Em aberto agora (todo o caderno)" : "Em aberto no fim do mês";
+      const cmpHtml = ehTotal ? "" : renderComparacaoMes(yyyyMm, s);
+      const folgaHtml = ehTotal ? renderFolgaSemana() : "";
 
       box.innerHTML = `
     <button type="button" class="btn ghost btn-voltar-painel" id="btnVoltarMesLista">← Voltar aos meses</button>
@@ -3364,13 +3444,15 @@
       <div class="kpi-box brand"><div class="kpi-label">Pagamentos</div><div class="kpi-val">${s.qtdPag}</div></div>
       <div class="kpi-box brand"><div class="kpi-label">Clientes pagaram</div><div class="kpi-val">${s.qtdClientesPagaram}</div></div>
     </div>
+    ${cmpHtml}
     <div class="kpi-box brand" style="margin-bottom:0.75rem">
       <div class="kpi-label">${saldoLabel}</div>
       <div class="kpi-val">${exibirValorResumo(s.saldoFim)}</div>
     </div>
     <div class="secao-painel"><h3>${ehTotal ? "Mês a mês" : "Dia a dia"}</h3>${movimentoHtml}</div>
     ${ehTotal ? "" : `<div class="secao-painel"><h3>Quem pagou e quanto</h3><p class="secao-desc">Lista de pagamentos ${rotuloSub}, agrupados por dia.</p>${listaPag}</div>`}
-    <div class="secao-painel"><h3>Quem mais pagou</h3>${rankingHtml}</div>`;
+    <div class="secao-painel"><h3>Quem mais pagou</h3>${rankingHtml}</div>
+    ${ehTotal ? `<div class="secao-painel"><h3>Melhor dia pra folgar</h3>${folgaHtml}</div>` : ""}`;
       $("#btnVoltarMesLista")?.addEventListener("click", () => {
         diarioMesSel = null;
         aplicarDiarioAba();
