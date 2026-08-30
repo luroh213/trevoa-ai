@@ -3374,6 +3374,20 @@
       }));
     }
 
+    function renderFolgaResumo() {
+      const sem = analiseDiaSemana();
+      if (!sem) return "";
+      const validos = sem.filter((s) => s.dias > 0);
+      if (!validos.length) return "";
+      const ordenado = [...validos].sort((a, b) => a.mediaRec + a.mediaFi - (b.mediaRec + b.mediaFi));
+      const fraco = ordenado[0];
+      return `<div class="painel-card" style="cursor:default;border:2px solid var(--ok)">
+        <div class="card-tit">Melhor dia pra folgar</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--ok);margin:0.15rem 0">${escapeHtml(fraco.nome)}</div>
+        <div class="card-meta">É o dia da semana que menos movimenta · entra em média ${exibirValorResumo(fraco.mediaRec)} · a lista completa está em "Desde o início"</div>
+      </div>`;
+    }
+
     function renderFolgaSemana() {
       const sem = analiseDiaSemana();
       if (!sem) return "";
@@ -3449,10 +3463,10 @@
       <div class="kpi-label">${saldoLabel}</div>
       <div class="kpi-val">${exibirValorResumo(s.saldoFim)}</div>
     </div>
+    ${ehTotal ? `<div class="secao-painel"><h3>Melhor dia pra folgar</h3>${folgaHtml}</div>` : ""}
     <div class="secao-painel"><h3>${ehTotal ? "Mês a mês" : "Dia a dia"}</h3>${movimentoHtml}</div>
     ${ehTotal ? "" : `<div class="secao-painel"><h3>Quem pagou e quanto</h3><p class="secao-desc">Lista de pagamentos ${rotuloSub}, agrupados por dia.</p>${listaPag}</div>`}
-    <div class="secao-painel"><h3>Quem mais pagou</h3>${rankingHtml}</div>
-    ${ehTotal ? `<div class="secao-painel"><h3>Melhor dia pra folgar</h3>${folgaHtml}</div>` : ""}`;
+    <div class="secao-painel"><h3>Quem mais pagou</h3>${rankingHtml}</div>`;
       $("#btnVoltarMesLista")?.addEventListener("click", () => {
         diarioMesSel = null;
         aplicarDiarioAba();
@@ -3472,6 +3486,7 @@
       const totalFiado = lista.reduce((s, x) => s + x.fiado, 0);
       const ajuda = `<div class="painel-nota"><strong>Como ler</strong>Recebido = pagamentos daquele mês. Fiado = compras fiadas daquele mês. Fiado de agosto pode ser pago em setembro — isso é normal. Toque no mês para ver detalhes.</div>`;
       box.innerHTML =
+        renderFolgaResumo() +
         ajuda +
         lista
           .map((x) => {
