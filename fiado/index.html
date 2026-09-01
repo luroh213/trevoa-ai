@@ -1513,7 +1513,12 @@
     }
 
     .home-bar.recolhida {
-      padding: 0.4rem;
+      padding: 0.55rem 0.3rem;
+      background: var(--brand);
+      border-left: none;
+      border-radius: 0.75rem 0 0 0.75rem;
+      box-shadow: -4px 0 16px rgba(26, 46, 31, 0.28);
+      backdrop-filter: none;
     }
 
     .home-bar.recolhida > *:not(.btn-menu-toggle) {
@@ -1521,7 +1526,16 @@
     }
 
     .home-bar.recolhida .btn-menu-toggle {
-      border-color: var(--brand);
+      align-self: center;
+      width: 1.45rem;
+      min-height: 3.4rem;
+      padding: 0.25rem 0;
+      border: none;
+      background: transparent;
+      color: #eef5ef;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
     }
 
     .btn-menu-toggle {
@@ -2831,7 +2845,9 @@
       if (!bar || !btn) return;
       const recolhido = !!lerConfig().menuRecolhido;
       bar.classList.toggle("recolhida", recolhido);
-      btn.textContent = recolhido ? "←" : "→";
+      btn.innerHTML = recolhido
+        ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
+        : "→";
       btn.title = recolhido ? "Abrir menu de botões" : "Recolher menu pra liberar a tela";
       btn.setAttribute("aria-label", recolhido ? "Abrir menu de botões" : "Recolher menu");
       btn.setAttribute("aria-expanded", recolhido ? "false" : "true");
