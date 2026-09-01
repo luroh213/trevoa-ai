@@ -1513,7 +1513,15 @@
     }
 
     .home-bar.recolhida {
-      transform: translateY(-50%) translateX(calc(100% - 2.5rem));
+      padding: 0.4rem;
+    }
+
+    .home-bar.recolhida > *:not(.btn-menu-toggle) {
+      display: none;
+    }
+
+    .home-bar.recolhida .btn-menu-toggle {
+      border-color: var(--brand);
     }
 
     .btn-menu-toggle {

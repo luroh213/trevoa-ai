@@ -1,6 +1,6 @@
 /* Service worker — internet primeiro, cache só como plano B (offline).
    index.html NÃO vai pro cache: sempre pega versão nova quando online. */
-const CACHE = "fiado-v33-menu-recolher";
+const CACHE = "fiado-v34-menu-pilula";
 const ASSETS = [
   "./config.js",
   "./cloud.js",
