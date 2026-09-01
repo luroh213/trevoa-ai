@@ -1509,6 +1509,27 @@
       border-radius: 1rem 0 0 1rem;
       max-height: 92dvh;
       overflow-y: auto;
+      transition: transform 0.25s ease;
+    }
+
+    .home-bar.recolhida {
+      transform: translateY(-50%) translateX(calc(100% - 2.5rem));
+    }
+
+    .btn-menu-toggle {
+      font: inherit;
+      align-self: flex-start;
+      flex: 0 0 auto;
+      width: 1.7rem;
+      padding: 0.5rem 0;
+      border: 1.5px solid var(--line);
+      border-radius: 0.55rem;
+      background: #fff;
+      color: var(--brand);
+      font-weight: 800;
+      font-size: 0.95rem;
+      line-height: 1;
+      cursor: pointer;
     }
 
     .home-bar .btn {
@@ -2209,6 +2230,7 @@
       </div>
 
       <nav class="home-bar" aria-label="Ações da conta">
+        <button type="button" class="btn-menu-toggle" id="btnMenuToggle" title="Recolher menu pra liberar a tela" aria-label="Recolher menu" aria-expanded="true">→</button>
         <div class="trial-pill" id="trialPill"></div>
         <div class="home-bar-right">
           <span class="save-status" id="saveStatus" title="Último registro / nuvem"></span>
@@ -2793,6 +2815,23 @@
       renderHome();
       if (state.ativoId) abrirDetalhe(state.ativoId);
       if (!$("#diarioModal")?.hidden) aplicarDiarioAba();
+    }
+
+    function aplicarMenuRecolhidoUI() {
+      const bar = document.querySelector(".home-bar");
+      const btn = $("#btnMenuToggle");
+      if (!bar || !btn) return;
+      const recolhido = !!lerConfig().menuRecolhido;
+      bar.classList.toggle("recolhida", recolhido);
+      btn.textContent = recolhido ? "←" : "→";
+      btn.title = recolhido ? "Abrir menu de botões" : "Recolher menu pra liberar a tela";
+      btn.setAttribute("aria-label", recolhido ? "Abrir menu de botões" : "Recolher menu");
+      btn.setAttribute("aria-expanded", recolhido ? "false" : "true");
+    }
+
+    function toggleMenuRecolhido() {
+      salvarConfig({ menuRecolhido: !lerConfig().menuRecolhido });
+      aplicarMenuRecolhidoUI();
     }
 
     function formatDataBR(iso) {
@@ -4115,6 +4154,7 @@
       initSincroniaAbas();
       iniciarDiarioBackground();
       aplicarOcultarValoresUI();
+      aplicarMenuRecolhidoUI();
       atualizarBannerAba();
       atualizarSaveStatusUI();
       atualizarNomeMercadoUI();
@@ -6165,6 +6205,7 @@
       });
     });
     $("#btnOcultarValores")?.addEventListener("click", toggleOcultarValores);
+    $("#btnMenuToggle")?.addEventListener("click", toggleMenuRecolhido);
     $("#diarioModal")?.addEventListener("click", (e) => {
       if (e.target === $("#diarioModal")) fecharDiario();
     });
