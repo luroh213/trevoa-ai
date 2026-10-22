@@ -3763,6 +3763,123 @@
       return { clientes: nuvem, qtd };
     }
 
+    function diarioRecuperadoKey() {
+      return cacheKeyCaderno() + ":diarioRecuperado";
+    }
+
+    // Diário do aparelho guarda "Fiado R$ X — Nome" mesmo quando o lançamento não chegou na nuvem.
+    function lancamentosFaltandoNoDiario() {
+      const desde = new Date(2026, 9, 19).getTime();
+      let feitos;
+      try {
+        feitos = new Set(JSON.parse(localStorage.getItem(diarioRecuperadoKey()) || "[]"));
+      } catch {
+        feitos = new Set();
+      }
+      const formas = { dinheiro: "dinheiro", pix: "pix", "débito": "debito", "crédito": "credito" };
+      const valorDe = (s) => Number(s.replace(/\./g, "").replace(",", "."));
+      const norm = (s) => String(s || "").trim().toLowerCase();
+      const logs = lerDiario()
+        .filter((e) => e && e.ts >= desde)
+        .sort((a, b) => a.ts - b.ts);
+      const cancelados = [];
+      const lista = [];
+      logs.forEach((e) => {
+        const t = String(e.texto || "");
+        const canc = t.match(/^(?:Desfez|Apagou) (fiado|pagamento) R\$\s*([\d.]+,\d{2}) — (.+)$/);
+        if (canc) {
+          cancelados.push({ tipo: canc[1] === "fiado" ? "debito" : "pagamento", valor: valorDe(canc[2]), nome: norm(canc[3]), ts: e.ts });
+          return;
+        }
+        const m = t.match(/^(Fiado|Recebeu) R\$\s*([\d.]+,\d{2})(?: \(([^)]+)\))? — (.+)$/);
+        if (!m || feitos.has(e.id)) return;
+        const tipo = m[1] === "Fiado" ? "debito" : "pagamento";
+        let nome = m[4];
+        let nota = "";
+        if (tipo === "debito" && nome.includes(" · ")) {
+          nota = nome.slice(nome.indexOf(" · ") + 3);
+          nome = nome.slice(0, nome.indexOf(" · "));
+        }
+        lista.push({
+          id: e.id,
+          ts: e.ts,
+          tipo,
+          valor: valorDe(m[2]),
+          forma: tipo === "pagamento" ? formas[norm(m[3])] || "dinheiro" : null,
+          nome: nome.trim(),
+          nota,
+        });
+      });
+      return lista.filter((it) => {
+        const ci = cancelados.findIndex(
+          (k) => k.ts > it.ts && k.tipo === it.tipo && k.nome === norm(it.nome) && Math.abs(k.valor - it.valor) < 0.005
+        );
+        if (ci >= 0) {
+          cancelados.splice(ci, 1);
+          return false;
+        }
+        const c = (state.clientes || []).find((x) => norm(x.nome) === norm(it.nome));
+        if (!c) return true;
+        return !(c.movs || []).some(
+          (mv) => mv.tipo === it.tipo && Math.abs(Number(mv.valor) - it.valor) < 0.005 && Math.abs((mv.ts || 0) - it.ts) < 10 * 60000
+        );
+      });
+    }
+
+    async function oferecerRecuperarDoDiario() {
+      const faltando = lancamentosFaltandoNoDiario();
+      if (!faltando.length) return;
+      const itens = faltando
+        .map(
+          (it, i) =>
+            `<label style="display:flex;gap:0.5rem;align-items:flex-start;padding:0.35rem 0;border-bottom:1px solid #e3ebe4">` +
+            `<input type="checkbox" data-rec="${i}" checked style="width:1.3rem;height:1.3rem;margin-top:0.1rem">` +
+            `<span><strong>${escapeHtml(it.nome)}</strong> — ${it.tipo === "debito" ? "Fiado" : "Recebeu"} ${formatBRL(it.valor)}` +
+            `<br><small>${formatQuando(it.ts)}${it.nota ? " · " + escapeHtml(it.nota) : ""}</small></span></label>`
+        )
+        .join("");
+      const ok = await pedirConfirmacao({
+        titulo: "Lançamentos que não salvaram",
+        corpo:
+          `Achei no Diário deste aparelho <strong>${faltando.length}</strong> lançamento(s) que não estão no caderno. ` +
+          `Desmarque o que estiver errado e toque em Lançar.` +
+          `<div style="max-height:45vh;overflow:auto;margin-top:0.6rem;text-align:left">${itens}</div>`,
+        dica: "Cada um entra no dia e hora em que foi feito.",
+        botaoSim: "Lançar os marcados",
+      });
+      if (!ok) return;
+      const marcados = new Set(
+        [...document.querySelectorAll("#confirmCorpo input[data-rec]")].filter((x) => x.checked).map((x) => Number(x.dataset.rec))
+      );
+      let feitos;
+      try {
+        feitos = JSON.parse(localStorage.getItem(diarioRecuperadoKey()) || "[]");
+      } catch {
+        feitos = [];
+      }
+      let qtd = 0;
+      faltando.forEach((it, i) => {
+        feitos.push(it.id);
+        if (!marcados.has(i)) return;
+        let c = (state.clientes || []).find((x) => x.nome.trim().toLowerCase() === it.nome.toLowerCase());
+        if (!c) {
+          c = { id: uid(), nome: it.nome, fone: "", obs: "", limite: null, criadoEm: it.ts, movs: [] };
+          state.clientes.push(c);
+        }
+        const d = new Date(it.ts - new Date(it.ts).getTimezoneOffset() * 60000);
+        const mov = { id: uid(), tipo: it.tipo, valor: it.valor, nota: it.nota, dataRef: d.toISOString().slice(0, 10), ts: it.ts };
+        if (it.forma) mov.forma = it.forma;
+        c.movs.push(mov);
+        qtd++;
+      });
+      localStorage.setItem(diarioRecuperadoKey(), JSON.stringify(feitos));
+      if (!qtd) return;
+      salvar();
+      registrarDiario(`Recuperou ${qtd} lançamento(s) do Diário`);
+      renderHome();
+      toast(`${qtd} lançamento(s) recuperado(s)`);
+    }
+
     function salvar() {
       if (state.cadernoDesatualizado) {
         tentarMesclarCadernoLocal();
@@ -4230,6 +4347,7 @@
       }
       renderHome();
       mostrar("#viewHome");
+      if (!isAdmin()) oferecerRecuperarDoDiario();
     }
 
     function onboardingFeito() {
