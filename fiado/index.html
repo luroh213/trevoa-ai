@@ -3926,6 +3926,7 @@
     }
 
     async function oferecerRecuperarDoDiario(manual) {
+      marcarRecuperadosAntigos();
       enviarDiarioRecuperadoNuvem();
       const faltando = lancamentosFaltandoNoDiario();
       if (!faltando.length) {
@@ -3969,19 +3970,57 @@
           c = { id: uid(), nome: it.nome, fone: "", obs: "", limite: null, criadoEm: it.ts, movs: [] };
           state.clientes.push(c);
         }
-        const d = new Date(it.ts - new Date(it.ts).getTimezoneOffset() * 60000);
-        const mov = { id: uid(), tipo: it.tipo, valor: it.valor, nota: it.nota, dataRef: d.toISOString().slice(0, 10), ts: it.ts };
+        const mov = { id: uid(), tipo: it.tipo, valor: it.valor, nota: notaRecuperado(it.nota), dataRef: isoDoTs(it.ts), ts: it.ts };
         if (it.forma) mov.forma = it.forma;
         c.movs.push(mov);
+        registrarDiarioRecuperado(mov, c);
         qtd++;
       });
       localStorage.setItem(diarioRecuperadoKey(), JSON.stringify(feitos));
+      localStorage.setItem(diarioRecuperadoKey() + ":marcados", "1");
       if (!qtd) return;
       salvar();
       enviarDiarioRecuperadoNuvem();
-      registrarDiario(`Recuperou ${qtd} lançamento(s) do Diário`);
       renderHome();
-      toast(`${qtd} lançamento(s) recuperado(s)`);
+      toast(`${qtd} lançamento(s) recuperado(s) — veja no Histórico de cada cliente`);
+    }
+
+    const MARCA_RECUPERADO = "Recuperado (não tinha salvado)";
+
+    function notaRecuperado(nota) {
+      if (String(nota || "").includes(MARCA_RECUPERADO)) return nota;
+      return nota ? `${nota} · ${MARCA_RECUPERADO}` : MARCA_RECUPERADO;
+    }
+
+    function registrarDiarioRecuperado(mov, c) {
+      const rotulo = mov.tipo === "debito" ? "fiado" : "pagamento";
+      registrarDiario(`Recuperou ${rotulo} ${formatBRL(mov.valor)} — ${c.nome} (feito em ${formatQuando(mov.ts)})`);
+    }
+
+    // Recuperados pela versão anterior entraram sem marca: o mov tem o mesmo ts da linha do Diário.
+    function marcarRecuperadosAntigos() {
+      const flag = diarioRecuperadoKey() + ":marcados";
+      if (localStorage.getItem(flag)) return;
+      let feitos;
+      try {
+        feitos = new Set(JSON.parse(localStorage.getItem(diarioRecuperadoKey()) || "[]"));
+      } catch {
+        return;
+      }
+      if (!feitos.size) return;
+      const tsRecuperados = new Set(lerDiario().filter((e) => feitos.has(e.id)).map((e) => e.ts));
+      const marcados = [];
+      (state.clientes || []).forEach((c) =>
+        (c.movs || []).forEach((m) => {
+          if (!tsRecuperados.has(m.ts) || String(m.nota || "").includes(MARCA_RECUPERADO)) return;
+          m.nota = notaRecuperado(m.nota);
+          marcados.push([m, c]);
+        })
+      );
+      localStorage.setItem(flag, "1");
+      if (!marcados.length) return;
+      marcados.sort((a, b) => a[0].ts - b[0].ts).forEach(([m, c]) => registrarDiarioRecuperado(m, c));
+      salvar();
     }
 
     function salvar() {
