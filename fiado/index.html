@@ -3582,14 +3582,14 @@
         barraSyncDiario(logs) +
         (eventos.length
           ? eventos
-              .map(
-                (l) => `
+        .map(
+          (l) => `
           <div class="log-item ${classeDiario(l.texto)}">
             <div class="log-texto">${exibirTextoDiario(l.texto)}</div>
             <div class="quando">${formatQuandoSegundos(l.ts)}</div>
           </div>
         `
-              )
+        )
               .join("")
           : '<div class="vazio" style="padding:0.5rem 0">Só sincronização por enquanto — lançamentos aparecem aqui.</div>');
     }
@@ -3741,8 +3741,9 @@
 
     // Lançamentos feitos depois do último sync ok que a nuvem não tem (ex.: sem internet).
     function juntarPendentesLocais(nuvem, local) {
-      const syncOk = Number(localStorage.getItem(syncOkKey())) || 0;
-      if (!syncOk || !Array.isArray(local)) return { clientes: nuvem, qtd: 0 };
+      // Aparelho que nunca rodou a versão com marca de sync: considera pendente desde 19/10/2026.
+      const syncOk = Number(localStorage.getItem(syncOkKey())) || new Date(2026, 9, 19).getTime();
+      if (!Array.isArray(local)) return { clientes: nuvem, qtd: 0 };
       const ids = new Set();
       nuvem.forEach((c) => (c.movs || []).forEach((m) => ids.add(m.id)));
       const porId = new Map(nuvem.map((c) => [c.id, c]));
