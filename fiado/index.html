@@ -1713,6 +1713,26 @@
 
     .aviso-teste strong { color: var(--brand); }
 
+    .diario-dia-bar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.45rem;
+      margin-bottom: 0.4rem;
+    }
+    .diario-dia-bar[hidden] { display: none; }
+    .diario-dia-bar .btn { min-width: 3rem; font-size: 1.1rem; }
+    .diario-dia-bar input[type="date"] {
+      font: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 0.55rem;
+      border: 1px solid var(--line, #cfdcd2);
+      border-radius: 0.6rem;
+      background: #fff;
+      color: inherit;
+    }
+
     .log-item {
       padding: 0.75rem 0.85rem;
       margin-bottom: 0.45rem;
@@ -2581,6 +2601,12 @@
         <button type="button" class="active" data-diario-aba="dia">Diário</button>
         <button type="button" data-diario-aba="mes">Por mês</button>
       </div>
+      <div class="diario-dia-bar" id="diarioDiaBar">
+        <button type="button" class="btn" id="btnDiaAnterior" aria-label="Dia anterior">◀</button>
+        <input type="date" id="diarioDiaInput" aria-label="Escolher dia">
+        <button type="button" class="btn" id="btnDiaProximo" aria-label="Próximo dia">▶</button>
+      </div>
+      <p class="hint" id="diarioDiaInfo" style="margin:0 0 0.5rem;text-align:left"></p>
       <div id="diarioLista" class="painel-corpo"></div>
       <div id="diarioMeses" class="painel-corpo" hidden></div>
       <div id="diarioMesDetalhe" class="painel-corpo" hidden></div>
@@ -2888,6 +2914,8 @@
       });
     }
 
+    const DIARIO_MAX_LOCAL = 5000;
+
     function journalKey() {
       return JOURNAL_KEY_PREFIX + ":" + cacheKeyCaderno();
     }
@@ -2909,7 +2937,7 @@
       const entry = { id: uid(), texto, ts: Date.now() };
       const logs = lerDiario();
       logs.unshift(entry);
-      localStorage.setItem(journalKey(), JSON.stringify(logs.slice(0, 120)));
+      localStorage.setItem(journalKey(), JSON.stringify(logs.slice(0, DIARIO_MAX_LOCAL)));
       atualizarSaveStatusUI();
       if (!opts?.skipNuvem) enviarDiarioNuvem(entry);
     }
@@ -2923,7 +2951,7 @@
         merged.push({ id: e.id, texto: e.texto, ts: Number(e.ts) || Date.now() });
       }
       merged.sort((a, b) => b.ts - a.ts);
-      return merged.slice(0, 120);
+      return merged.slice(0, DIARIO_MAX_LOCAL);
     }
 
     function mesclarDiarioRemoto(remoto) {
@@ -3570,13 +3598,64 @@
       });
     }
 
+    function isoDoTs(ts) {
+      const d = new Date(ts);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    }
+
+    function inicioDoDia(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Date(y, m - 1, d).getTime();
+    }
+
+    function mudarDiaDiario(iso) {
+      if (!iso) return;
+      diarioDiaSel = iso > hojeISO() ? hojeISO() : iso;
+      renderDiario();
+      puxarDiarioDoDia(diarioDiaSel);
+    }
+
+    function andarDiaDiario(delta) {
+      const d = new Date(inicioDoDia(diarioDiaSel || hojeISO()));
+      d.setDate(d.getDate() + delta);
+      mudarDiaDiario(isoDoTs(d.getTime()));
+    }
+
+    async function puxarDiarioDoDia(iso) {
+      if (!diarioNuvemAtivo() || !FiadoCloud.listarDiarioPeriodo) return;
+      const de = inicioDoDia(iso);
+      const ate = new Date(de);
+      ate.setDate(ate.getDate() + 1);
+      try {
+        const remoto = await FiadoCloud.listarDiarioPeriodo(de, ate.getTime());
+        if (mesclarDiarioRemoto(remoto) && diarioDiaSel === iso) renderDiario();
+      } catch (_) {
+        /* SQL do histórico ainda não aplicado: fica só com o que tem no aparelho */
+      }
+    }
+
     function renderDiario() {
       const box = $("#diarioLista");
       if (!box) return;
+      if (!diarioDiaSel) diarioDiaSel = hojeISO();
+      const input = $("#diarioDiaInput");
+      if (input) {
+        input.max = hojeISO();
+        if (input.value !== diarioDiaSel) input.value = diarioDiaSel;
+      }
+      const prox = $("#btnDiaProximo");
+      if (prox) prox.disabled = diarioDiaSel >= hojeISO();
       const logs = lerDiario();
-      const eventos = logs.filter((l) => !ehDiarioSync(l.texto));
+      const eventos = logs.filter((l) => !ehDiarioSync(l.texto) && isoDoTs(l.ts) === diarioDiaSel);
+      const info = $("#diarioDiaInfo");
+      if (info) {
+        const qtd = eventos.filter((l) => /^(Fiado|Recebeu) /.test(l.texto)).length;
+        info.textContent =
+          (diarioDiaSel === hojeISO() ? "Hoje" : formatDataBR(diarioDiaSel)) +
+          ` — ${qtd} lançamento${qtd === 1 ? "" : "s"}. Use ◀ ▶ pra ver outros dias.`;
+      }
       if (!eventos.length && !barraSyncDiario(logs)) {
-        box.innerHTML = '<div class="vazio" style="padding:0.8rem">Nenhum registro ainda.</div>';
+        box.innerHTML = '<div class="vazio" style="padding:0.8rem">Nenhum registro neste dia.</div>';
         return;
       }
       box.innerHTML =
@@ -3592,13 +3671,15 @@
         `
         )
               .join("")
-          : '<div class="vazio" style="padding:0.5rem 0">Só sincronização por enquanto — lançamentos aparecem aqui.</div>');
+          : '<div class="vazio" style="padding:0.5rem 0">Nenhum lançamento neste dia.</div>');
     }
 
     function abrirDiario() {
       diarioAba = "dia";
       diarioMesSel = null;
+      diarioDiaSel = hojeISO();
       aplicarDiarioAba();
+      puxarDiarioDoDia(diarioDiaSel);
       atualizarDiarioAoVivoUI();
       const modal = $("#diarioModal");
       modal.hidden = false;
@@ -3827,7 +3908,25 @@
       });
     }
 
+    function enviarDiarioRecuperadoNuvem() {
+      if (!diarioNuvemAtivo()) return;
+      const chave = diarioRecuperadoKey() + ":nuvem";
+      let feitos, enviados;
+      try {
+        feitos = new Set(JSON.parse(localStorage.getItem(diarioRecuperadoKey()) || "[]"));
+        enviados = new Set(JSON.parse(localStorage.getItem(chave) || "[]"));
+      } catch {
+        return;
+      }
+      const pendentes = lerDiario().filter((e) => feitos.has(e.id) && !enviados.has(e.id));
+      if (!pendentes.length) return;
+      Promise.all(pendentes.map((e) => FiadoCloud.registrarDiarioEvento(e).then(() => enviados.add(e.id)).catch(() => {}))).then(
+        () => localStorage.setItem(chave, JSON.stringify([...enviados]))
+      );
+    }
+
     async function oferecerRecuperarDoDiario(manual) {
+      enviarDiarioRecuperadoNuvem();
       const faltando = lancamentosFaltandoNoDiario();
       if (!faltando.length) {
         if (manual) toast("Nada faltando — tudo do Diário deste aparelho está no caderno");
@@ -3879,6 +3978,7 @@
       localStorage.setItem(diarioRecuperadoKey(), JSON.stringify(feitos));
       if (!qtd) return;
       salvar();
+      enviarDiarioRecuperadoNuvem();
       registrarDiario(`Recuperou ${qtd} lançamento(s) do Diário`);
       renderHome();
       toast(`${qtd} lançamento(s) recuperado(s)`);
@@ -5233,11 +5333,14 @@
 
     let diarioAba = "dia";
     let diarioMesSel = null;
+    let diarioDiaSel = null;
 
     function aplicarDiarioAba() {
       const dia = diarioAba === "dia";
       const detalhe = !dia && diarioMesSel;
       $("#diarioLista").hidden = !dia;
+      $("#diarioDiaBar").hidden = !dia;
+      $("#diarioDiaInfo").hidden = !dia;
       $("#diarioMeses").hidden = dia || detalhe;
       $("#diarioMesDetalhe").hidden = !detalhe;
       $("#diarioAbas").hidden = detalhe;
@@ -6346,6 +6449,9 @@
     });
     $("#btnDiario")?.addEventListener("click", abrirDiario);
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
+    $("#btnDiaAnterior")?.addEventListener("click", () => andarDiaDiario(-1));
+    $("#btnDiaProximo")?.addEventListener("click", () => andarDiaDiario(1));
+    $("#diarioDiaInput")?.addEventListener("change", (e) => mudarDiaDiario(e.target.value));
     $("#btnRecuperarDiario")?.addEventListener("click", () => {
       fecharDiario();
       oferecerRecuperarDoDiario(true);

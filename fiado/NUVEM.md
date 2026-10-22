@@ -23,6 +23,8 @@ window.FIADO_CLOUD = {
 
 8. **Segurança + backup:** rode também `patch-backup-e-rate-limit.sql`. Trava o login por 15 min após 5 senhas erradas seguidas (por usuário) e cria a RPC `fiado_admin_backup`, usada pelo script `backup/fiado-backup.ps1` — backup diário em JSON na pasta `backup/dumps/` (agendado no Windows, 21h30) com envio por e-mail opcional (configure `emailAppPassword` em `backup/backup-config.json`, que fica fora do git).
 
+9. **Diário com histórico:** rode também `patch-diario-historico.sql`. O Diário passa a guardar até 50.000 registros por mercado (antes 500, cerca de uma semana) e cria a RPC que o app usa para mostrar o Diário de um dia escolhido (botões ◀ ▶).
+
 ## Contas padrão (depois do SQL)
 
 | Quem | Usuário | Senha |

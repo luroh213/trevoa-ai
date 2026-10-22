@@ -275,6 +275,20 @@
     }));
   }
 
+  async function listarDiarioPeriodo(de, ate) {
+    const data = await rpc("fiado_listar_diario_periodo", {
+      p_token: getToken(),
+      p_de: de,
+      p_ate: ate,
+    });
+    if (!data || !data.ok) throw new Error("Não deu pra carregar o diário do dia");
+    return (data.eventos || []).map((e) => ({
+      id: e.id,
+      texto: e.texto,
+      ts: Number(e.ts) || Date.now(),
+    }));
+  }
+
   async function listarLixeira(limite) {
     const data = await rpc("fiado_listar_lixeira", {
       p_token: getToken(),
@@ -325,6 +339,7 @@
     mercadoInfo,
     registrarDiarioEvento,
     listarDiario,
+    listarDiarioPeriodo,
     listarLixeira,
   };
 })(window);
