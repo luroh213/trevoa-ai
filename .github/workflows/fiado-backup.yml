@@ -1,0 +1,26 @@
+name: Backup diario do Fiado
+
+on:
+  schedule:
+    - cron: "30 0 * * *" # 21h30 no horario de Brasilia (00h30 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: fiado/backup/backup_nuvem.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Gerar backup e mandar por e-mail
+        env:
+          FIADO_BACKUP_CONFIG: ${{ secrets.FIADO_BACKUP_CONFIG }}
+        run: python fiado/backup/backup_nuvem.py
