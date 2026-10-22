@@ -3040,15 +3040,7 @@
         atualizarBannerAba();
       }
       if (data.t === "salvou") {
-        if (mesclarClientesRemotos(lerClientesDoCacheLocal())) {
-          registrarDiario("Mesclou lançamentos de outra aba");
-          toast("Outra aba salvou — lançamentos unidos");
-        } else {
-          state.cadernoDesatualizado = true;
-          registrarDiario("Outra aba salvou o caderno — toque Atualizar antes de lançar");
-          atualizarBannerAba();
-          toast("Outra aba alterou o caderno. Toque Atualizar.", true);
-        }
+        tentarMesclarCadernoLocal();
       }
     }
 
@@ -3082,10 +3074,7 @@
         if (e.key === ck && e.newValue) {
           try {
             const remote = JSON.parse(e.newValue);
-            if (remote?.clientes && mesclarClientesRemotos(remote.clientes)) {
-              registrarDiario("Mesclou lançamentos de outra aba");
-              toast("Outra aba salvou — lançamentos unidos");
-            }
+            if (remote?.clientes) mesclarClientesRemotos(remote.clientes);
           } catch (_) {
             /* ignore */
           }
@@ -3120,6 +3109,7 @@
         .then(() => {
           state.salvandoNuvem = false;
           state.ultimoSalvoNuvem = Date.now();
+          marcarSyncOk();
         })
         .catch(() => {
           state.salvandoNuvem = false;
@@ -3187,9 +3177,11 @@
 
     function exigirCadernoAtualizado() {
       if (!state.cadernoDesatualizado) return true;
-      toast("Atualize o caderno primeiro — outra aba salvou por cima", true);
+      tentarMesclarCadernoLocal();
+      state.cadernoDesatualizado = false;
       atualizarBannerAba();
-      return false;
+      atualizarSaveStatusUI();
+      return true;
     }
 
     function ehDiarioSync(texto) {
@@ -3735,11 +3727,45 @@
       localStorage.setItem(cacheKeyCaderno(), JSON.stringify({ clientes: state.clientes }));
     }
 
+    function syncOkKey() {
+      return cacheKeyCaderno() + ":syncOk";
+    }
+
+    function marcarSyncOk() {
+      try {
+        localStorage.setItem(syncOkKey(), String(Date.now()));
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    // Lançamentos feitos depois do último sync ok que a nuvem não tem (ex.: sem internet).
+    function juntarPendentesLocais(nuvem, local) {
+      const syncOk = Number(localStorage.getItem(syncOkKey())) || 0;
+      if (!syncOk || !Array.isArray(local)) return { clientes: nuvem, qtd: 0 };
+      const ids = new Set();
+      nuvem.forEach((c) => (c.movs || []).forEach((m) => ids.add(m.id)));
+      const porId = new Map(nuvem.map((c) => [c.id, c]));
+      let qtd = 0;
+      local.forEach((lc) => {
+        const novos = (lc.movs || []).filter((m) => (m.ts || 0) > syncOk && !ids.has(m.id));
+        if (!novos.length) return;
+        let alvo = porId.get(lc.id);
+        if (!alvo) {
+          alvo = { ...lc, movs: [] };
+          nuvem.push(alvo);
+          porId.set(lc.id, alvo);
+        }
+        alvo.movs = [...(alvo.movs || []), ...novos].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        qtd += novos.length;
+      });
+      return { clientes: nuvem, qtd };
+    }
+
     function salvar() {
-      if (state.cadernoDesatualizado && !tentarMesclarCadernoLocal()) {
-        toast("Atualize o caderno antes de salvar — outra aba alterou", true);
-        atualizarBannerAba();
-        return;
+      if (state.cadernoDesatualizado) {
+        tentarMesclarCadernoLocal();
+        state.cadernoDesatualizado = false;
       }
       salvarLocalCache();
       avisarOutrasAbasSalvou();
@@ -3754,6 +3780,7 @@
             .then(() => {
               state.salvandoNuvem = false;
               state.ultimoSalvoNuvem = Date.now();
+              marcarSyncOk();
               avisarOutrasAbasSalvou();
               atualizarSaveStatusUI();
             })
@@ -3775,8 +3802,16 @@
           return;
         }
         try {
-          state.clientes = await FiadoCloud.carregarCaderno();
+          const nuvem = await FiadoCloud.carregarCaderno();
+          const { clientes, qtd } = juntarPendentesLocais(nuvem, lerClientesDoCacheLocal());
+          state.clientes = clientes;
           salvarLocalCache();
+          if (qtd > 0) {
+            registrarDiario(`Recuperou ${qtd} lançamento(s) feitos sem internet`);
+            salvar();
+          } else {
+            marcarSyncOk();
+          }
           return;
         } catch (err) {
           toast("Sem nuvem agora — usando cópia deste celular", true);
