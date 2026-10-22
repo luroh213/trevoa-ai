@@ -2584,6 +2584,7 @@
       <div id="diarioLista" class="painel-corpo"></div>
       <div id="diarioMeses" class="painel-corpo" hidden></div>
       <div id="diarioMesDetalhe" class="painel-corpo" hidden></div>
+      <button type="button" class="btn full" id="btnRecuperarDiario" style="margin-bottom:0.45rem">Procurar lançamentos que não salvaram</button>
       <button type="button" class="btn full" id="btnFecharDiario">Fechar</button>
     </div>
   </div>
@@ -3826,9 +3827,12 @@
       });
     }
 
-    async function oferecerRecuperarDoDiario() {
+    async function oferecerRecuperarDoDiario(manual) {
       const faltando = lancamentosFaltandoNoDiario();
-      if (!faltando.length) return;
+      if (!faltando.length) {
+        if (manual) toast("Nada faltando — tudo do Diário deste aparelho está no caderno");
+        return;
+      }
       const itens = faltando
         .map(
           (it, i) =>
@@ -6342,6 +6346,10 @@
     });
     $("#btnDiario")?.addEventListener("click", abrirDiario);
     $("#btnFecharDiario")?.addEventListener("click", fecharDiario);
+    $("#btnRecuperarDiario")?.addEventListener("click", () => {
+      fecharDiario();
+      oferecerRecuperarDoDiario(true);
+    });
     document.querySelectorAll("#diarioAbas button").forEach((btn) => {
       btn.addEventListener("click", () => {
         diarioAba = btn.dataset.diarioAba || "dia";
