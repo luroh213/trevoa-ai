@@ -289,6 +289,24 @@
     }));
   }
 
+  // Resumo de todos os mercados (só admin): datas, último acesso e sessões ativas
+  async function adminResumo() {
+    const data = await rpc("fiado_admin_resumo_mercados", { p_token: getToken() });
+    if (!data || !data.ok) throw new Error("Não deu pra carregar os mercados");
+    return data.mercados || [];
+  }
+
+  // Define até quando o mercado está liberado (null = vitalício)
+  async function adminDefinirValidade(mercadoId, ateIso) {
+    const data = await rpc("fiado_admin_definir_validade", {
+      p_token: getToken(),
+      p_mercado_id: mercadoId,
+      p_ate: ateIso || null,
+    });
+    if (!data || !data.ok) throw new Error((data && data.erro) || "Não deu pra salvar a validade");
+    return data;
+  }
+
   // Até quando a licença paga vale (null se não pagou ou se a função ainda não foi criada no banco)
   async function validadeMercado() {
     const data = await rpc("fiado_mercado_validade", { p_token: getToken() });
@@ -367,5 +385,7 @@
     listarLixeira,
     criarPix,
     validadeMercado,
+    adminResumo,
+    adminDefinirValidade,
   };
 })(window);

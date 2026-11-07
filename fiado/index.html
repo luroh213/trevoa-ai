@@ -1692,6 +1692,48 @@
       align-items: start;
     }
 
+    .adm-off {
+      display: none !important;
+    }
+
+    .adm-side a.ativo {
+      background: var(--accent-soft);
+      color: var(--brand);
+      border-color: var(--accent);
+    }
+
+    @media (min-width: 900px) {
+      .adm-side a.ativo {
+        background: rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+        border: none;
+      }
+    }
+
+    .adm-info {
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+      margin-top: 0.2rem;
+      line-height: 1.4;
+    }
+
+    .adm-validade-row {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 0.4rem;
+    }
+
+    .adm-validade-row input[type="date"] {
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.5rem;
+      border: 1.5px solid var(--line);
+      background: #fff;
+    }
+
     .pix-auto {
       margin-bottom: 0.85rem;
     }
@@ -2714,13 +2756,11 @@
             <img class="logo" src="./icon.svg" alt="" width="36" height="36" />
             <span>Fiado</span>
           </div>
-          <a href="#adminCloudSheet">Mercados</a>
-          <a href="#adm-licenca">Licença e teste</a>
-          <a href="#adm-clientes">Caderno</a>
-          <a href="#adm-historico">Histórico</a>
-          <a href="#adm-cobranca">Cobrança PIX</a>
-          <a href="#adm-senha">Senha admin</a>
-          <a href="#adm-dados">Dados</a>
+          <a href="#" data-cat="geral" class="ativo">Visão geral</a>
+          <a href="#" data-cat="mercados">Mercados</a>
+          <a href="#" data-cat="cobranca">Cobrança e planos</a>
+          <a href="#" data-cat="seguranca">Segurança</a>
+          <a href="#" data-cat="dados">Dados</a>
         </nav>
 
         <div class="adm-main">
@@ -2750,13 +2790,13 @@
           </div>
 
           <div class="adm-grid">
-        <div class="adm-card adm-span-12" id="adm-vencimentos" hidden>
+        <div class="adm-card adm-span-12" id="adm-vencimentos" data-cat="geral" hidden>
           <h2>Licenças e vencimentos</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Mercados em teste, ordenados pelo que vence primeiro. Teste de <span id="adminVencDias">14</span> dias contados a partir do primeiro login.</p>
           <div class="admin-lista" id="adminVencLista"></div>
         </div>
 
-        <div class="adm-card adm-span-8" id="adminCloudSheet" hidden>
+        <div class="adm-card adm-span-8" id="adminCloudSheet" data-cat="mercados" hidden>
           <h2>Mercados na nuvem</h2>
           <p class="subtitle" id="adminCloudStatus" style="margin-bottom:0.75rem">—</p>
           <div class="admin-lista" id="adminListaMercados" style="margin-bottom:0.75rem"></div>
@@ -2778,7 +2818,7 @@
           </p>
         </div>
 
-        <div class="adm-card adm-span-4" id="adm-licenca">
+        <div class="adm-card adm-span-4" id="adm-licenca" data-cat="mercados">
           <h2>Licença / teste</h2>
           <div class="admin-status" id="adminLicencaStatus">—</div>
           <div class="codigo-box" id="adminCodigoBox">—</div>
@@ -2792,7 +2832,7 @@
           </div>
         </div>
 
-        <div class="adm-card adm-span-4" id="adm-cobranca">
+        <div class="adm-card adm-span-4" id="adm-cobranca" data-cat="cobranca">
           <h2>Cobrança (PIX)</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Aparece na tela quando o teste acaba.</p>
           <label class="field">
@@ -2806,7 +2846,7 @@
           <button type="button" class="btn primary full" id="btnAdminSalvarPix">Salvar cobrança</button>
         </div>
 
-        <div class="adm-card adm-span-4" id="adminContaLocalSheet">
+        <div class="adm-card adm-span-4" id="adminContaLocalSheet" data-cat="mercados">
           <h2>Conta do mercado (modo local)</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Só vale se a nuvem estiver desligada. Com nuvem, use “Mercados na nuvem”.</p>
           <label class="field">
@@ -2824,7 +2864,7 @@
           <button type="button" class="btn primary full" id="btnAdminSalvarConta">Salvar conta</button>
         </div>
 
-        <div class="adm-card adm-span-4" id="adm-senha">
+        <div class="adm-card adm-span-4" id="adm-senha" data-cat="seguranca">
           <h2>Senha do administrador</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Só você usa. Usuário: <strong id="adminUserLabel">admin</strong></p>
           <label class="field">
@@ -2842,7 +2882,7 @@
           <button type="button" class="btn primary full" id="btnAdminTrocarSenha">Trocar senha admin</button>
         </div>
 
-        <div class="adm-card adm-span-8" id="adm-clientes">
+        <div class="adm-card adm-span-8" id="adm-clientes" hidden>
           <h2>Caderno do balcão</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Clientes e saldos do caderno aberto neste aparelho.</p>
           <div class="search" style="margin-bottom:0.55rem">
@@ -2853,13 +2893,13 @@
           <button type="button" class="btn full" id="btnAdminAbrirBalcao" style="margin-top:0.45rem">Abrir app do balcão</button>
         </div>
 
-        <div class="adm-card adm-span-4" id="adm-historico">
+        <div class="adm-card adm-span-4" id="adm-historico" data-cat="geral">
           <h2>Histórico de ações</h2>
           <div id="adminLogAcoes" class="admin-lista" style="max-height:12rem"></div>
           <button type="button" class="btn full" id="btnAdminLimparLog" style="margin-top:0.55rem">Limpar histórico</button>
         </div>
 
-        <div class="adm-card adm-span-12" id="adm-dados">
+        <div class="adm-card adm-span-12" id="adm-dados" data-cat="dados">
           <h2>Dados</h2>
           <div class="adm-dados-row">
             <button type="button" class="btn" id="btnAdminBackup">Guardar / restaurar caderno</button>
@@ -5202,12 +5242,41 @@
       renderAdminLog();
     }
 
+    function dataBR(iso) {
+      return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
+    }
+
+    function dataHoraBR(iso) {
+      return iso ? new Date(iso).toLocaleString("pt-BR") : "nunca";
+    }
+
+    // Linha de detalhes de cada mercado: liberação, vencimento, último acesso e sessões
+    function infoMercado(m) {
+      const partes = [];
+      partes.push(m.pagoEm ? `Liberado em ${dataBR(m.pagoEm)}` : "Sem data de liberação");
+      if (m.pagoAte) partes.push(`vence em ${dataBR(m.pagoAte)}`);
+      else if (m.pago) partes.push("vitalício");
+      partes.push(`último acesso ${dataHoraBR(m.ultimoAcesso)}`);
+      if (m.sessoesAtivas) partes.push(`${m.sessoesAtivas} sessão(ões) ativa(s)`);
+      return partes.join(" · ");
+    }
+
+    // Menu do admin: mostra só uma categoria por vez
+    function mostrarCategoriaAdmin(cat) {
+      document.querySelectorAll("#viewAdmin .adm-card[data-cat]").forEach((c) => {
+        c.classList.toggle("adm-off", c.dataset.cat !== cat);
+      });
+      document.querySelectorAll("#viewAdmin .adm-side a[data-cat]").forEach((a) => {
+        a.classList.toggle("ativo", a.dataset.cat === cat);
+      });
+    }
+
     async function renderAdminMercados() {
       const box = $("#adminListaMercados");
       if (!box || !cloudOn()) return;
       box.innerHTML = `<div class="vazio" style="padding:0.8rem">Carregando mercados…</div>`;
       try {
-        const lista = await FiadoCloud.listarMercados();
+        const lista = await FiadoCloud.adminResumo();
         const kpi = $("#adminKpiMercados");
         if (kpi) kpi.textContent = String(lista.length);
         renderVencimentos(lista);
@@ -5225,6 +5294,7 @@
                 <div>
                   <div><strong>${escapeHtml(m.nome || m.usuario)}</strong> · @${escapeHtml(m.usuario)}</div>
                   <div class="quando">${st}${aberto ? " · aberto agora" : ""}</div>
+                  <div class="adm-info">${escapeHtml(infoMercado(m))}</div>
                 </div>
                 <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
                   <button type="button" class="btn ghost" data-editar-mercado="${m.id}">Editar</button>
@@ -5241,6 +5311,14 @@
                 <label class="field">
                   Nova senha do balcão
                   <input type="password" data-edit-senha="${m.id}" placeholder="Deixe vazio pra manter a atual" autocomplete="new-password" />
+                </label>
+                <label class="field">
+                  Liberado até (vencimento)
+                  <div class="adm-validade-row">
+                    <input type="date" data-validade="${m.id}" value="${m.pagoAte ? m.pagoAte.slice(0, 10) : ""}" />
+                    <button type="button" class="btn primary" data-salvar-validade="${m.id}">Salvar data</button>
+                    <button type="button" class="btn ghost" data-vitalicio="${m.id}">Vitalício</button>
+                  </div>
                 </label>
                 <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
                   <button type="button" class="btn primary" data-salvar-mercado="${m.id}">Salvar</button>
@@ -5266,6 +5344,31 @@
         });
         box.querySelectorAll("[data-salvar-mercado]").forEach((btn) => {
           btn.addEventListener("click", () => adminSalvarMercado(btn.dataset.salvarMercado));
+        });
+        box.querySelectorAll("[data-salvar-validade]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.salvarValidade;
+            const valor = box.querySelector(`[data-validade="${id}"]`).value;
+            const ate = valor ? new Date(valor + "T23:59:59").toISOString() : null;
+            try {
+              await FiadoCloud.adminDefinirValidade(id, ate);
+              toast("Vencimento salvo");
+              await renderAdminMercados();
+            } catch (err) {
+              toast(err.message || "Erro ao salvar", true);
+            }
+          });
+        });
+        box.querySelectorAll("[data-vitalicio]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            try {
+              await FiadoCloud.adminDefinirValidade(btn.dataset.vitalicio, null);
+              toast("Marcado como vitalício");
+              await renderAdminMercados();
+            } catch (err) {
+              toast(err.message || "Erro ao salvar", true);
+            }
+          });
         });
       } catch (err) {
         box.innerHTML = `<div class="vazio" style="padding:0.8rem">${escapeHtml(err.message || "Erro ao listar")}</div>`;
@@ -7070,6 +7173,13 @@
     $("#btnAdminLimparLog").addEventListener("click", adminLimparLog);
     $("#btnCopiarPix").addEventListener("click", copiarPixBloqueado);
     $("#pixAuto").hidden = !cloudOn();
+    document.querySelectorAll("#viewAdmin .adm-side a[data-cat]").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        mostrarCategoriaAdmin(a.dataset.cat);
+      });
+    });
+    mostrarCategoriaAdmin("geral");
     // Atualiza o temporizador a cada minuto (só na nuvem); a validade é buscada a cada 5 min
     let ticksValidade = 0;
     carregarValidadePaga();
