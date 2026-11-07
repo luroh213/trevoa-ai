@@ -314,8 +314,21 @@
     return data.pagoAte || null;
   }
 
+  // Validade completa (pagoAte, ultimoPagamento, ...)
+  async function validadeCompleta() {
+    const data = await rpc("fiado_mercado_validade", { p_token: getToken() });
+    if (!data || !data.ok) return null;
+    return data;
+  }
+
+  // Planos com preço definido (lista pública)
+  async function listarPlanos() {
+    const data = await rpc("fiado_listar_planos", {});
+    return (data && data.planos) || [];
+  }
+
   // Gera a cobrança PIX pelo servidor (a chave do Mercado Pago fica só no Supabase)
-  async function criarPix() {
+  async function criarPix(plano, meses) {
     if (!configured()) throw new Error("Nuvem não configurada");
     const res = await fetch(`${cfg.url.replace(/\/$/, "")}/functions/v1/pix-criar`, {
       method: "POST",
@@ -324,7 +337,7 @@
         apikey: cfg.anonKey,
         Authorization: `Bearer ${cfg.anonKey}`,
       },
-      body: JSON.stringify({ token: getToken() }),
+      body: JSON.stringify({ token: getToken(), plano: plano || "anual", meses: meses || 1 }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) throw new Error(data.erro || "Não deu pra gerar o PIX");
@@ -387,5 +400,7 @@
     validadeMercado,
     adminResumo,
     adminDefinirValidade,
+    validadeCompleta,
+    listarPlanos,
   };
 })(window);

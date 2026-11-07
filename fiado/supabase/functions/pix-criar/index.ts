@@ -1,6 +1,6 @@
 // Edge Function: pix-criar
-// Gera uma cobrança PIX no Mercado Pago para o mercado logado.
-// Chamada pelo app: POST { token, valor } → devolve o código copia-e-cola e o QR.
+// Gera uma cobrança PIX no Mercado Pago para o mercado logado, para o plano escolhido.
+// Chamada pelo app: POST { token, plano } → devolve o código copia-e-cola e o QR.
 //
 // Segredos (Supabase → Edge Functions → Secrets):
 //   MP_ACCESS_TOKEN   → Access Token do Mercado Pago (NUNCA no site)
@@ -13,7 +13,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MP_TOKEN = Deno.env.get("MP_ACCESS_TOKEN")!;
 const PAYER_EMAIL = Deno.env.get("PIX_PAYER_EMAIL") || "pagamento@fiado.app";
-const VALOR_PADRAO = 97;
 
 const sbHeaders = {
   apikey: SERVICE_KEY,
@@ -25,7 +24,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, erro: "Método inválido" }, 405);
 
-  let body: { token?: string; valor?: number };
+  let body: { token?: string; plano?: string; meses?: number };
   try {
     body = await req.json();
   } catch {
@@ -45,16 +44,33 @@ Deno.serve(async (req) => {
   const mercadoId = sessao.acting_mercado_id || sessao.mercado_id;
   if (!mercadoId) return json({ ok: false, erro: "Nenhum mercado selecionado" }, 400);
 
-  // 2) Valor da licença (o cadastrado no admin, se não vier do app)
+  // 2) Plano escolhido e preço (definido no banco)
+  const codigo = body.plano || "anual";
+  const pRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/planos?codigo=eq.${encodeURIComponent(codigo)}&ativo=eq.true&select=codigo,nome,valor,flexivel`,
+    { headers: sbHeaders },
+  );
+  const [plano] = await pRes.json();
+  if (!plano) return json({ ok: false, erro: "Plano não encontrado" }, 400);
+  const precoUnit = Number(plano.valor);
+  if (!(precoUnit > 0)) return json({ ok: false, erro: "Este plano ainda não tem preço definido" }, 400);
+
+  // Plano flexível: o cliente escolhe de 1 a 12 meses. Os outros planos são sempre 1 pacote.
+  let meses = 1;
+  if (plano.flexivel) {
+    meses = Math.floor(Number(body.meses) || 1);
+    if (meses < 1 || meses > 12) return json({ ok: false, erro: "Escolha de 1 a 12 meses" }, 400);
+  }
+  const valor = Math.round(precoUnit * meses * 100) / 100;
+
+  // 3) Nome do mercado (só para a descrição da cobrança)
   const mRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/mercados?id=eq.${mercadoId}&select=valor_licenca,nome`,
+    `${SUPABASE_URL}/rest/v1/mercados?id=eq.${mercadoId}&select=nome`,
     { headers: sbHeaders },
   );
   const [mercado] = await mRes.json();
-  const valor = Number(body.valor ?? mercado?.valor_licenca ?? VALOR_PADRAO);
-  if (!(valor > 0)) return json({ ok: false, erro: "Valor inválido" }, 400);
 
-  // 3) Cria o pagamento PIX no Mercado Pago
+  // 4) Cria o pagamento PIX no Mercado Pago. external_reference = "mercado|plano"
   const webhook = `${SUPABASE_URL}/functions/v1/pix-webhook`;
   const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
@@ -65,10 +81,10 @@ Deno.serve(async (req) => {
     },
     body: JSON.stringify({
       transaction_amount: valor,
-      description: `Licença Fiado — ${mercado?.nome || "mercado"}`,
+      description: `${plano.nome}${plano.flexivel ? ` (${meses} mes${meses > 1 ? "es" : ""})` : ""} — ${mercado?.nome || "Fiado"}`,
       payment_method_id: "pix",
       payer: { email: PAYER_EMAIL },
-      external_reference: mercadoId,
+      external_reference: `${mercadoId}|${codigo}|${meses}`,
       notification_url: webhook,
     }),
   });
@@ -77,7 +93,7 @@ Deno.serve(async (req) => {
     return json({ ok: false, erro: pago.message || "Não deu pra gerar o PIX" }, 502);
   }
 
-  // 4) Guarda a cobrança para o webhook conferir depois
+  // 5) Guarda a cobrança para o webhook conferir depois
   await fetch(`${SUPABASE_URL}/rest/v1/pagamentos_pix`, {
     method: "POST",
     headers: { ...sbHeaders, Prefer: "return=minimal" },
@@ -85,6 +101,7 @@ Deno.serve(async (req) => {
       id: String(pago.id),
       mercado_id: mercadoId,
       valor,
+      plano: codigo,
       status: pago.status || "pending",
     }),
   });
@@ -93,6 +110,8 @@ Deno.serve(async (req) => {
   return json({
     ok: true,
     pagamentoId: String(pago.id),
+    plano: codigo,
+    meses,
     valor,
     copiaECola: tx.qr_code || "",
     qrBase64: tx.qr_code_base64 || "",

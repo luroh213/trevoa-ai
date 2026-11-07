@@ -2402,6 +2402,7 @@
           <div class="brand">Fiado</div>
         </div>
         <p class="gate-msg" id="bloqueadoMsg">O período de teste acabou. O acesso ficou bloqueado.</p>
+        <div id="slotLicencaBloqueado"></div>
         <div class="sheet">
           <div class="pix-auto" id="pixAuto" hidden>
             <button type="button" class="btn primary full" id="btnPagarPix">Pagar com PIX (libera sozinho)</button>
@@ -2626,6 +2627,7 @@
         <button type="button" class="btn ghost" id="btnVoltarConta">←</button>
         <h1>Minha conta</h1>
       </div>
+      <div id="slotLicencaConta"></div>
       <div class="sheet">
         <h2>Nome da loja</h2>
         <label class="field">
@@ -2651,6 +2653,22 @@
         <button type="button" class="btn primary full" id="btnTrocarSenhaMercado">Trocar senha</button>
       </div>
     </section>
+
+    <!-- Bloco de licença (vencimento, timer, planos e QR): usado na Minha conta e na tela de bloqueio -->
+    <template id="tplLicenca">
+      <div class="sheet lic-card">
+        <h2>Minha licença</h2>
+        <div class="lic-resumo">—</div>
+        <div class="lic-tempo"></div>
+        <div class="lic-planos" style="margin-top:0.75rem"></div>
+        <div class="pix-gerado lic-pix" hidden>
+          <img class="lic-qr" alt="QR Code PIX" width="200" height="200" />
+          <textarea class="lic-codigo" readonly rows="3"></textarea>
+          <button type="button" class="btn full lic-copiar" style="margin-top:0.45rem">Copiar código PIX</button>
+          <p class="hint lic-status-pix" style="text-align:center;margin-top:0.55rem">Aguardando pagamento…</p>
+        </div>
+      </div>
+    </template>
 
     <!-- DETALHE -->
     <section id="viewDetalhe" class="view">
@@ -4788,9 +4806,165 @@
         const ate = await FiadoCloud.validadeMercado();
         FiadoCloud.patchMeta({ pagoAte: ate });
         atualizarPillTrial();
+        atualizarLicencas();
       } catch (_) {
         /* sem a função no banco: continua sem a data */
       }
+    }
+
+    // ===== Bloco de licença (Minha conta e tela de bloqueio) =====
+    const timersRenovacao = new WeakMap();
+
+    function montarLicencas() {
+      ["#slotLicencaConta", "#slotLicencaBloqueado"].forEach((sel) => {
+        const slot = $(sel);
+        if (!slot || slot.firstElementChild) return;
+        slot.appendChild($("#tplLicenca").content.cloneNode(true));
+      });
+      document.querySelectorAll(".lic-card").forEach((root) => {
+        if (root.dataset.pronto) return;
+        root.dataset.pronto = "1";
+        root.querySelector(".lic-copiar").addEventListener("click", async () => {
+          const codigo = root.querySelector(".lic-codigo").value || "";
+          if (!codigo) return;
+          try {
+            await navigator.clipboard.writeText(codigo);
+            toast("Código PIX copiado");
+          } catch {
+            toast("Não deu pra copiar", true);
+          }
+        });
+      });
+      carregarPlanosLicencas();
+    }
+
+    function atualizarLicencas() {
+      const mostrar = cloudOn();
+      document.querySelectorAll(".lic-card").forEach((root) => {
+        root.hidden = !mostrar;
+        if (mostrar) atualizarResumoLicenca(root);
+      });
+    }
+
+    function atualizarResumoLicenca(root) {
+      const meta = FiadoCloud.getMeta() || {};
+      const resumo = root.querySelector(".lic-resumo");
+      const tempo = root.querySelector(".lic-tempo");
+      if (estaPago()) {
+        if (!meta.pagoAte) {
+          resumo.textContent = "Licença liberada";
+          tempo.textContent = "Plano vitalício: não vence";
+          return;
+        }
+        const ate = new Date(meta.pagoAte);
+        const ms = ate - Date.now();
+        resumo.textContent = `Vence em ${ate.toLocaleDateString("pt-BR")} às ${ate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+        tempo.textContent = ms > 0
+          ? `Faltam ${formatarTempoRestante(ms)}`
+          : "Licença vencida. Escolha um plano abaixo.";
+      } else {
+        const ms = tempoRestanteTrialMs();
+        resumo.textContent = "Período de teste grátis";
+        tempo.textContent = ms > 0
+          ? `Faltam ${formatarTempoRestante(ms)}`
+          : "Teste encerrado. Escolha um plano abaixo.";
+      }
+    }
+
+    async function carregarPlanosLicencas() {
+      let planos = [];
+      try {
+        planos = await FiadoCloud.listarPlanos();
+      } catch (_) {
+        planos = [];
+      }
+      document.querySelectorAll(".lic-card .lic-planos").forEach((box) => {
+        if (!planos.length) {
+          box.innerHTML = '<p class="hint">Os planos ainda não estão disponíveis.</p>';
+          return;
+        }
+        box.innerHTML = planos
+          .map((p) => {
+            const valor = Number(p.valor);
+            if (p.flexivel) {
+              const opcoes = Array.from({ length: 12 }, (_, i) =>
+                `<option value="${i + 1}">${i + 1} ${i === 0 ? "mês" : "meses"}</option>`
+              ).join("");
+              return `
+                <div class="lic-flex" style="margin-top:0.45rem;display:flex;gap:0.4rem">
+                  <select class="lic-select" data-meses-de="${escapeHtml(p.codigo)}" style="flex:0 0 auto;font:inherit;border-radius:0.6rem;border:1.5px solid var(--line);padding:0.5rem">${opcoes}</select>
+                  <button type="button" class="btn full" data-plano="${escapeHtml(p.codigo)}" data-flex="1">
+                    ${escapeHtml(p.nome)} · ${formatBRL(valor)}
+                  </button>
+                </div>`;
+            }
+            const preco = formatBRL(valor);
+            return `<button type="button" class="btn full" data-plano="${escapeHtml(p.codigo)}" style="margin-top:0.45rem">${escapeHtml(p.nome)} · ${preco}</button>`;
+          })
+          .join("");
+        box.querySelectorAll("[data-plano]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const codigo = btn.dataset.plano;
+            const sel = btn.parentElement.querySelector(`[data-meses-de="${codigo}"]`);
+            const meses = sel ? Number(sel.value) : 1;
+            renovarPlanoLicenca(btn.closest(".lic-card"), codigo, meses);
+          });
+        });
+        // Mostra o total conforme o cliente escolhe os meses
+        box.querySelectorAll("[data-meses-de]").forEach((sel) => {
+          const planoInfo = planos.find((p) => p.codigo === sel.dataset.mesesDe);
+          const btn = sel.parentElement.querySelector("[data-plano]");
+          const atualizar = () => {
+            const n = Number(sel.value);
+            btn.textContent = `${planoInfo.nome} · ${formatBRL(Number(planoInfo.valor) * n)} (${n} ${n === 1 ? "mês" : "meses"})`;
+          };
+          sel.addEventListener("change", atualizar);
+          atualizar();
+        });
+      });
+    }
+
+    async function renovarPlanoLicenca(root, codigo, meses) {
+      const box = root.querySelector(".lic-pix");
+      const st = root.querySelector(".lic-status-pix");
+      try {
+        const res = await FiadoCloud.criarPix(codigo, meses);
+        root.querySelector(".lic-qr").src = res.qrBase64 ? `data:image/png;base64,${res.qrBase64}` : "";
+        root.querySelector(".lic-codigo").value = res.copiaECola || "";
+        st.textContent = "Aguardando pagamento…";
+        box.hidden = false;
+      } catch (err) {
+        toast(err.message || "Erro ao gerar o PIX", true);
+        return;
+      }
+
+      // Confirma quando chegar um pagamento novo (ultimoPagamento depois de agora)
+      const inicio = Date.now() - 60000;
+      clearInterval(timersRenovacao.get(root));
+      let n = 0;
+      const t = setInterval(async () => {
+        n++;
+        try {
+          const v = await FiadoCloud.validadeCompleta();
+          if (v && v.ultimoPagamento && new Date(v.ultimoPagamento).getTime() >= inicio) {
+            clearInterval(t);
+            FiadoCloud.patchMeta({ pago: true, bloqueado: false, pagoAte: v.pagoAte || null });
+            st.textContent = "Pagamento confirmado! Licença atualizada.";
+            toast("Licença renovada!");
+            atualizarLicencas();
+            atualizarPillTrial();
+            if (root.closest("#viewBloqueado") && estaPago()) await entrarNoApp();
+            return;
+          }
+        } catch (_) {
+          /* tenta de novo */
+        }
+        if (n >= 150) {
+          clearInterval(t);
+          st.textContent = "Ainda não confirmou. Se já pagou, aguarde um pouco e recarregue a tela.";
+        }
+      }, 4000);
+      timersRenovacao.set(root, t);
     }
 
     let pixTimer = null;
@@ -7182,10 +7356,13 @@
     mostrarCategoriaAdmin("geral");
     // Atualiza o temporizador a cada minuto (só na nuvem); a validade é buscada a cada 5 min
     let ticksValidade = 0;
+    montarLicencas();
+    atualizarLicencas();
     carregarValidadePaga();
     setInterval(() => {
       if (!cloudOn()) return;
       atualizarPillTrial();
+      atualizarLicencas();
       if (++ticksValidade % 5 === 0) carregarValidadePaga();
     }, 60000);
     $("#btnPagarPix").addEventListener("click", pagarComPix);

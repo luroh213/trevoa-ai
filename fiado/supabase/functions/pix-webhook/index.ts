@@ -2,6 +2,8 @@
 // O Mercado Pago chama esta URL quando um pagamento muda de status.
 // Não confiamos no corpo da notificação: pegamos o pagamento direto na API
 // do Mercado Pago (com o nosso token) e só então liberamos o mercado.
+// Os dias do plano são SOMADOS à validade atual (pagou antes do vencimento, não perde dias).
+// Pagamento já aprovado antes não é contado de novo.
 //
 // Segredo necessário: MP_ACCESS_TOKEN
 
@@ -10,7 +12,6 @@ import { corsHeaders, json } from "../_shared/http.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MP_TOKEN = Deno.env.get("MP_ACCESS_TOKEN")!;
-const DIAS_LICENCA = 30;
 
 const sbHeaders = {
   apikey: SERVICE_KEY,
@@ -29,7 +30,6 @@ Deno.serve(async (req) => {
     /* alguns avisos chegam só pela query string */
   }
 
-  // O Mercado Pago manda o id no corpo (data.id) ou na query (data.id=...)
   const paymentId =
     body?.data?.id ?? url.searchParams.get("data.id") ?? url.searchParams.get("id");
   const tipo = body?.type ?? url.searchParams.get("type") ?? url.searchParams.get("topic");
@@ -45,10 +45,23 @@ Deno.serve(async (req) => {
     if (!mpRes.ok) return json({ ok: false, erro: "Pagamento não encontrado" }, 502);
     const pago = await mpRes.json();
 
-    const mercadoId = pago.external_reference;
+    // external_reference = "mercado|plano" (cobranças antigas podem vir só com o mercado)
+    const [mercadoId, codigoPlano, mesesRef] = String(pago.external_reference || "").split("|");
     if (!mercadoId) return json({ ok: true, ignorado: true });
+    const codigo = codigoPlano || "anual";
+    const meses = Math.max(1, Math.floor(Number(mesesRef) || 1));
 
-    // 2) Atualiza o registro da cobrança
+    // 2) Não conta o mesmo pagamento duas vezes
+    const antRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/pagamentos_pix?id=eq.${pago.id}&select=status`,
+      { headers: sbHeaders },
+    );
+    const [anterior] = await antRes.json();
+    if (anterior && anterior.status === "approved") {
+      return json({ ok: true, status: "approved", ja_contado: true });
+    }
+
+    // 3) Atualiza o registro da cobrança
     await fetch(`${SUPABASE_URL}/rest/v1/pagamentos_pix?id=eq.${pago.id}`, {
       method: "PATCH",
       headers: { ...sbHeaders, Prefer: "return=minimal" },
@@ -58,13 +71,37 @@ Deno.serve(async (req) => {
       }),
     });
 
-    // 3) Se foi aprovado, libera o mercado pelo prazo da licença
+    // 4) Se foi aprovado, libera ou estende o mercado pelo plano
     if (pago.status === "approved") {
-      const ate = new Date(Date.now() + DIAS_LICENCA * 86400000).toISOString();
+      const pRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/planos?codigo=eq.${encodeURIComponent(codigo)}&select=dias`,
+        { headers: sbHeaders },
+      );
+      const [plano] = await pRes.json();
+      // Dias = dias do plano x quantidade de meses pagos (vitalício continua sem prazo)
+      const diasBase = plano ? plano.dias : 30;
+      const dias = diasBase === null ? null : Number(diasBase) * meses;
+
+      let patch: Record<string, unknown>;
+      if (dias === null) {
+        // Vitalício: não vence nunca
+        patch = { pago: true, bloqueado: false, pago_ate: null };
+      } else {
+        const mRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/mercados?id=eq.${mercadoId}&select=pago_ate`,
+          { headers: sbHeaders },
+        );
+        const [mercado] = await mRes.json();
+        const atual = mercado?.pago_ate ? new Date(mercado.pago_ate).getTime() : 0;
+        const base = Math.max(Date.now(), atual);
+        const ate = new Date(base + Number(dias) * 86400000).toISOString();
+        patch = { pago: true, bloqueado: false, pago_ate: ate };
+      }
+
       const libRes = await fetch(`${SUPABASE_URL}/rest/v1/mercados?id=eq.${mercadoId}`, {
         method: "PATCH",
         headers: { ...sbHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ pago: true, bloqueado: false, pago_ate: ate }),
+        body: JSON.stringify(patch),
       });
       if (!libRes.ok) return json({ ok: false, erro: "Falha ao liberar" }, 500);
     }
