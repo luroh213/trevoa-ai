@@ -296,6 +296,19 @@
     return data.mercados || [];
   }
 
+  // Admin edita as datas do cliente: pagamento, vencimento ou vitalício
+  async function adminDefinirDatas(mercadoId, { pagoEm, venceEm, vitalicio }) {
+    const data = await rpc("fiado_admin_definir_datas", {
+      p_token: getToken(),
+      p_mercado_id: mercadoId,
+      p_pago_em: pagoEm || null,
+      p_vence_em: venceEm || null,
+      p_vitalicio: !!vitalicio,
+    });
+    if (!data || !data.ok) throw new Error((data && data.erro) || "Não deu pra salvar as datas");
+    return data;
+  }
+
   // Lucros recebidos com PIX (só admin)
   async function adminFinanceiro() {
     const data = await rpc("fiado_admin_financeiro", { p_token: getToken() });
@@ -408,6 +421,7 @@
     adminResumo,
     adminDefinirValidade,
     adminFinanceiro,
+    adminDefinirDatas,
     validadeCompleta,
     listarPlanos,
   };

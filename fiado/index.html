@@ -1870,6 +1870,21 @@
       width: 100%;
     }
 
+    .admN-datas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+      gap: 0.6rem;
+    }
+
+    .admN-datas input[type="date"] {
+      font: inherit;
+      padding: 0.6rem 0.7rem;
+      border-radius: 0.6rem;
+      border: 1.5px solid var(--line);
+      background: #fff;
+      width: 100%;
+    }
+
     @media (max-width: 600px) {
       .admN-top h1 {
         font-size: 1.3rem;
@@ -3210,6 +3225,21 @@
           <h2 id="admPainelNome">—</h2>
           <div class="admN-status-grande" id="admPainelStatus">—</div>
           <p class="subtitle" id="admPainelInfo"></p>
+
+          <h3 class="admN-sub">Datas do cliente</h3>
+          <div class="admN-datas">
+            <label class="field">
+              Pagou em
+              <input id="admDataPago" type="date" />
+            </label>
+            <label class="field">
+              Vence em
+              <input id="admDataVence" type="date" />
+            </label>
+          </div>
+          <div class="admN-acoes" style="margin-top:0.5rem">
+            <button type="button" class="btn primary" data-acao="salvarDatas">Salvar datas</button>
+          </div>
 
           <h3 class="admN-sub">Dar mais tempo de acesso</h3>
           <div class="admN-acoes">
@@ -6124,6 +6154,8 @@
       $("#admPainelStatus").textContent = admStatus(m).txt;
       $("#admPainelInfo").textContent =
         `Liberado em ${dataBR(m.pagoEm)} · último acesso ${dataHoraBR(m.ultimoAcesso)}`;
+      $("#admDataPago").value = m.pagoEm ? m.pagoEm.slice(0, 10) : "";
+      $("#admDataVence").value = m.pagoAte ? m.pagoAte.slice(0, 10) : "";
     }
 
     async function admAcao(acao) {
@@ -6145,7 +6177,14 @@
           toast("Senha do cliente trocada");
           return;
         }
-        if (acao === "vitalicio") {
+        if (acao === "salvarDatas") {
+          const pagoDia = $("#admDataPago").value;
+          const venceDia = $("#admDataVence").value;
+          await FiadoCloud.adminDefinirDatas(m.id, {
+            pagoEm: pagoDia ? new Date(pagoDia + "T12:00:00").toISOString() : null,
+            venceEm: venceDia ? new Date(venceDia + "T23:59:59").toISOString() : null,
+          });
+        } else if (acao === "vitalicio") {
           await FiadoCloud.adminDefinirValidade(m.id, null);
         } else if (acao.startsWith("mais")) {
           const dias = Number(acao.slice(4));
