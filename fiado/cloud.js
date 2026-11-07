@@ -296,6 +296,13 @@
     return data.mercados || [];
   }
 
+  // Lucros recebidos com PIX (só admin)
+  async function adminFinanceiro() {
+    const data = await rpc("fiado_admin_financeiro", { p_token: getToken() });
+    if (!data || !data.ok) throw new Error("Não deu pra carregar os lucros");
+    return data;
+  }
+
   // Define até quando o mercado está liberado (null = vitalício)
   async function adminDefinirValidade(mercadoId, ateIso) {
     const data = await rpc("fiado_admin_definir_validade", {
@@ -400,6 +407,7 @@
     validadeMercado,
     adminResumo,
     adminDefinirValidade,
+    adminFinanceiro,
     validadeCompleta,
     listarPlanos,
   };
