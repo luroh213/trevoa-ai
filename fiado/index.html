@@ -1734,6 +1734,90 @@
       background: #fff;
     }
 
+    .prazo-chip {
+      display: block;
+      width: 100%;
+      margin: 0 0 0.75rem;
+      padding: 0.8rem 1rem;
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 800;
+      text-align: left;
+      color: #fff;
+      background: var(--brand);
+      border: none;
+      border-radius: 1rem;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(26, 46, 31, 0.18);
+    }
+
+    .prazo-chip[hidden] {
+      display: none;
+    }
+
+    .plano-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: 1rem;
+      padding: 1rem 1.05rem;
+      margin-top: 0.75rem;
+    }
+
+    .plano-topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .plano-nome {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .plano-preco {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--brand);
+    }
+
+    .plano-vantagens {
+      margin: 0.6rem 0 0.8rem 1.1rem;
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+
+    .plano-acao {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .plano-acao select {
+      font: inherit;
+      border-radius: 0.6rem;
+      border: 1.5px solid var(--line);
+      padding: 0.5rem;
+      background: #fff;
+    }
+
+    .lic-tempo {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--brand);
+      margin-top: 0.25rem;
+    }
+
+    .lic-resumo {
+      font-size: 0.98rem;
+      color: var(--ink-soft);
+    }
+
     .pix-auto {
       margin-bottom: 0.85rem;
     }
@@ -2487,6 +2571,8 @@
           </div>
         </header>
 
+        <button type="button" class="prazo-chip" id="prazoChip" hidden>Carregando prazo…</button>
+
         <div class="aviso-teste" id="avisoTeste"></div>
 
         <div class="checklist" id="checklistPrimeira">
@@ -2586,6 +2672,7 @@
           <button type="button" class="btn ghost" id="btnOcultarValores" title="Esconder totais do resumo">Ocultar</button>
           <button type="button" class="btn ghost" id="btnDiario" title="Diário do dia e resumo por mês">Diário</button>
           <button type="button" class="btn ghost" id="btnLixeira" title="Lançamentos apagados — dá pra recuperar">Lixeira</button>
+          <button type="button" class="btn ghost" id="btnMeuPlano" title="Seu plano, vencimento e pagamento" hidden>Meu plano</button>
           <button type="button" class="btn ghost" id="btnMinhaConta" title="Nome da loja e senha" hidden>Conta</button>
           <button type="button" class="btn ghost" id="btnInstalarHome" title="Instalar app no PC ou celular">App</button>
           <button type="button" class="btn ghost" id="btnSair" title="Sair">Sair</button>
@@ -2627,7 +2714,6 @@
         <button type="button" class="btn ghost" id="btnVoltarConta">←</button>
         <h1>Minha conta</h1>
       </div>
-      <div id="slotLicencaConta"></div>
       <div class="sheet">
         <h2>Nome da loja</h2>
         <label class="field">
@@ -2654,10 +2740,19 @@
       </div>
     </section>
 
-    <!-- Bloco de licença (vencimento, timer, planos e QR): usado na Minha conta e na tela de bloqueio -->
+    <!-- MEU PLANO -->
+    <section id="viewPlano" class="view">
+      <div class="topbar">
+        <button type="button" class="btn ghost" id="btnVoltarPlano">←</button>
+        <h1>Meu plano</h1>
+      </div>
+      <div id="slotLicencaPlano"></div>
+    </section>
+
+    <!-- Bloco de licença (vencimento, timer, planos e QR): usado em Meu plano e na tela de bloqueio -->
     <template id="tplLicenca">
       <div class="sheet lic-card">
-        <h2>Minha licença</h2>
+        <h2>Seu plano</h2>
         <div class="lic-resumo">—</div>
         <div class="lic-tempo"></div>
         <div class="lic-planos" style="margin-top:0.75rem"></div>
@@ -4816,7 +4911,7 @@
     const timersRenovacao = new WeakMap();
 
     function montarLicencas() {
-      ["#slotLicencaConta", "#slotLicencaBloqueado"].forEach((sel) => {
+      ["#slotLicencaPlano", "#slotLicencaBloqueado"].forEach((sel) => {
         const slot = $(sel);
         if (!slot || slot.firstElementChild) return;
         slot.appendChild($("#tplLicenca").content.cloneNode(true));
@@ -4844,6 +4939,7 @@
         root.hidden = !mostrar;
         if (mostrar) atualizarResumoLicenca(root);
       });
+      atualizarPrazoChip();
     }
 
     function atualizarResumoLicenca(root) {
@@ -4871,6 +4967,38 @@
       }
     }
 
+    // Vantagens mostradas em cada plano (o preço vem do banco)
+    const VANTAGENS_PLANO = {
+      mensal: (valor) => [
+        `${formatBRL(valor)} por mês`,
+        "Sem compromisso: pague só os meses que quiser",
+        "Pode adiantar até 12 meses de uma vez",
+      ],
+      trimestral: (valor) => [
+        `Um pagamento cobre 3 meses (${formatBRL(valor / 3)} por mês)`,
+        "Não precisa lembrar de renovar todo mês",
+      ],
+      anual: (valor) => [
+        `Cerca de ${formatBRL(valor / 12)} por mês`,
+        "Equivale a 2 meses de graça",
+        "Melhor custo-benefício para quem usa todo ano",
+      ],
+      vitalicio: () => [
+        "Paga uma vez e nunca vence",
+        "Equivale a cerca de 2,5 anos do plano anual",
+        "Sem renovação, sem lembrete",
+      ],
+    };
+
+    // Chip no topo da tela inicial e prazo no bloco do Meu plano
+    function atualizarPrazoChip() {
+      const chip = $("#prazoChip");
+      const pill = $("#trialPill");
+      if (!chip) return;
+      chip.hidden = !cloudOn();
+      if (pill) chip.textContent = pill.textContent;
+    }
+
     async function carregarPlanosLicencas() {
       let planos = [];
       try {
@@ -4886,20 +5014,30 @@
         box.innerHTML = planos
           .map((p) => {
             const valor = Number(p.valor);
+            const vant = VANTAGENS_PLANO[p.codigo] ? VANTAGENS_PLANO[p.codigo](valor, p) : [];
+            const lista = vant.map((v) => `<li>${escapeHtml(v)}</li>`).join("");
+            let acao;
             if (p.flexivel) {
               const opcoes = Array.from({ length: 12 }, (_, i) =>
                 `<option value="${i + 1}">${i + 1} ${i === 0 ? "mês" : "meses"}</option>`
               ).join("");
-              return `
-                <div class="lic-flex" style="margin-top:0.45rem;display:flex;gap:0.4rem">
-                  <select class="lic-select" data-meses-de="${escapeHtml(p.codigo)}" style="flex:0 0 auto;font:inherit;border-radius:0.6rem;border:1.5px solid var(--line);padding:0.5rem">${opcoes}</select>
-                  <button type="button" class="btn full" data-plano="${escapeHtml(p.codigo)}" data-flex="1">
-                    ${escapeHtml(p.nome)} · ${formatBRL(valor)}
-                  </button>
+              acao = `
+                <div class="plano-acao">
+                  <select class="lic-select" data-meses-de="${escapeHtml(p.codigo)}">${opcoes}</select>
+                  <button type="button" class="btn primary full" data-plano="${escapeHtml(p.codigo)}">Pagar ${formatBRL(valor)}</button>
                 </div>`;
+            } else {
+              acao = `<button type="button" class="btn primary full" data-plano="${escapeHtml(p.codigo)}">Pagar ${formatBRL(valor)} com PIX</button>`;
             }
-            const preco = formatBRL(valor);
-            return `<button type="button" class="btn full" data-plano="${escapeHtml(p.codigo)}" style="margin-top:0.45rem">${escapeHtml(p.nome)} · ${preco}</button>`;
+            return `
+              <div class="plano-card">
+                <div class="plano-topo">
+                  <div class="plano-nome">${escapeHtml(p.nome)}</div>
+                  <div class="plano-preco">${formatBRL(valor)}</div>
+                </div>
+                <ul class="plano-vantagens">${lista}</ul>
+                ${acao}
+              </div>`;
           })
           .join("");
         box.querySelectorAll("[data-plano]").forEach((btn) => {
@@ -4916,7 +5054,7 @@
           const btn = sel.parentElement.querySelector("[data-plano]");
           const atualizar = () => {
             const n = Number(sel.value);
-            btn.textContent = `${planoInfo.nome} · ${formatBRL(Number(planoInfo.valor) * n)} (${n} ${n === 1 ? "mês" : "meses"})`;
+            btn.textContent = `Pagar ${formatBRL(Number(planoInfo.valor) * n)} (${n} ${n === 1 ? "mês" : "meses"})`;
           };
           sel.addEventListener("change", atualizar);
           atualizar();
@@ -5277,6 +5415,8 @@
     function atualizarBotaoConta() {
       const btn = $("#btnMinhaConta");
       if (btn) btn.hidden = !(cloudOn() && !isAdmin() && !!FiadoCloud.getToken());
+      const btnPlano = $("#btnMeuPlano");
+      if (btnPlano) btnPlano.hidden = !(cloudOn() && !isAdmin() && !!FiadoCloud.getToken());
     }
 
     function abrirConta() {
@@ -7190,6 +7330,15 @@
       mostrar("#viewLogin");
     });
     $("#btnMinhaConta")?.addEventListener("click", abrirConta);
+    $("#btnMeuPlano")?.addEventListener("click", () => {
+      mostrar("#viewPlano");
+      atualizarLicencas();
+    });
+    $("#prazoChip")?.addEventListener("click", () => {
+      mostrar("#viewPlano");
+      atualizarLicencas();
+    });
+    $("#btnVoltarPlano")?.addEventListener("click", () => mostrar("#viewHome"));
     $("#btnVoltarConta")?.addEventListener("click", () => {
       mostrar("#viewHome");
       renderHome();
