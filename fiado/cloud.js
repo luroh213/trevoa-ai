@@ -289,6 +289,30 @@
     }));
   }
 
+  // Até quando a licença paga vale (null se não pagou ou se a função ainda não foi criada no banco)
+  async function validadeMercado() {
+    const data = await rpc("fiado_mercado_validade", { p_token: getToken() });
+    if (!data || !data.ok) return null;
+    return data.pagoAte || null;
+  }
+
+  // Gera a cobrança PIX pelo servidor (a chave do Mercado Pago fica só no Supabase)
+  async function criarPix() {
+    if (!configured()) throw new Error("Nuvem não configurada");
+    const res = await fetch(`${cfg.url.replace(/\/$/, "")}/functions/v1/pix-criar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: cfg.anonKey,
+        Authorization: `Bearer ${cfg.anonKey}`,
+      },
+      body: JSON.stringify({ token: getToken() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.erro || "Não deu pra gerar o PIX");
+    return data;
+  }
+
   async function listarLixeira(limite) {
     const data = await rpc("fiado_listar_lixeira", {
       p_token: getToken(),
@@ -341,5 +365,7 @@
     listarDiario,
     listarDiarioPeriodo,
     listarLixeira,
+    criarPix,
+    validadeMercado,
   };
 })(window);

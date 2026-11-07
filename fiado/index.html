@@ -1591,6 +1591,274 @@
       }
     }
 
+    /* ===== Painel ADM: dashboard (PC primeiro, celular empilha) ===== */
+    .wrap:has(#viewAdmin.active) {
+      max-width: 80rem;
+    }
+
+    #viewAdmin .adm {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .adm-side {
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding-bottom: 0.2rem;
+    }
+
+    .adm-side-brand {
+      display: none;
+    }
+
+    .adm-side a {
+      white-space: nowrap;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      padding: 0.5rem 0.8rem;
+      border-radius: 0.6rem;
+      border: 1.5px solid var(--line);
+      background: var(--cream);
+    }
+
+    .adm-side a:hover {
+      color: var(--ink);
+      border-color: var(--brand);
+    }
+
+    .adm-main {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .adm-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: var(--cream);
+      border: 1.5px solid var(--line);
+      border-radius: 1rem;
+      padding: 0.9rem 1.1rem;
+    }
+
+    .adm-head h1 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .adm-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+      gap: 0.75rem;
+    }
+
+    .adm-kpi {
+      background: var(--cream);
+      border: 1.5px solid var(--line);
+      border-radius: 1rem;
+      padding: 0.95rem 1.1rem;
+    }
+
+    .adm-kpi .label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink-soft);
+    }
+
+    .adm-kpi .valor {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+    }
+
+    .adm-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .pix-auto {
+      margin-bottom: 0.85rem;
+    }
+
+    .pix-gerado {
+      margin-top: 0.75rem;
+      text-align: center;
+    }
+
+    .pix-gerado img {
+      display: block;
+      margin: 0 auto;
+      max-width: 200px;
+      width: 100%;
+      height: auto;
+      background: #fff;
+      border-radius: 0.6rem;
+      padding: 0.4rem;
+    }
+
+    .pix-gerado textarea {
+      width: 100%;
+      font: inherit;
+      font-size: 0.8rem;
+      border-radius: 0.6rem;
+      border: 1.5px solid var(--line);
+      padding: 0.5rem;
+      background: #fff;
+      resize: none;
+    }
+
+    .adm-venc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .adm-venc-tag {
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .adm-venc-tag.ok { background: #dcefe3; color: var(--ok); }
+    .adm-venc-tag.alerta { background: #f6e7cf; color: var(--warn); }
+    .adm-venc-tag.perigo { background: #f4d9d9; color: var(--debt); }
+
+    .adm-dados-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .adm-dados-row .btn {
+      flex: 1 1 14rem;
+    }
+
+    .adm-card {
+      background: var(--cream);
+      border: 1.5px solid var(--line);
+      border-radius: 1rem;
+      padding: 1.1rem 1.2rem 1.2rem;
+      min-width: 0;
+      margin: 0;
+      scroll-margin-top: 1rem;
+    }
+
+    .adm-card[hidden] {
+      display: none;
+    }
+
+    .adm-card h2 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.2rem;
+    }
+
+    .adm-card > .subtitle {
+      margin-bottom: 0.8rem;
+    }
+
+    .adm-card .btn.full + .btn.full {
+      margin-top: 0.45rem;
+    }
+
+    @media (min-width: 900px) {
+      #viewAdmin .adm {
+        grid-template-columns: 13.5rem minmax(0, 1fr);
+      }
+
+      .adm-side {
+        position: sticky;
+        top: 1rem;
+        flex-direction: column;
+        overflow: visible;
+        gap: 0.2rem;
+        padding: 1rem 0.7rem;
+        border-radius: 1rem;
+        background: var(--brand);
+      }
+
+      .adm-side-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        color: #f4f7f3;
+        font-family: "Bricolage Grotesque", sans-serif;
+        font-weight: 800;
+        font-size: 1.05rem;
+        padding: 0.3rem 0.5rem 0.9rem;
+        margin-bottom: 0.4rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .adm-side-brand .logo {
+        width: 1.8rem;
+        height: 1.8rem;
+      }
+
+      .adm-side a {
+        background: transparent;
+        border: none;
+        color: #c9d8cb;
+        padding: 0.6rem 0.75rem;
+      }
+
+      .adm-side a:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        border: none;
+      }
+
+      .adm-grid {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        grid-auto-flow: row dense;
+      }
+
+      .adm-span-8 { grid-column: span 8; }
+      .adm-span-4 { grid-column: span 4; }
+      .adm-span-6 { grid-column: span 6; }
+      .adm-span-12 { grid-column: 1 / -1; }
+
+      #viewAdmin .adm-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      #viewAdmin .adm-card .admin-lista {
+        max-height: 22rem;
+      }
+
+      #viewAdmin #adminLogAcoes {
+        max-height: 20rem;
+      }
+    }
+
+    @media (max-width: 899px) {
+      .adm-grid > * {
+        grid-column: auto;
+      }
+    }
+
     .mov-actions {
       grid-column: 1 / -1;
       display: flex;
@@ -1612,20 +1880,6 @@
 
     .btn-desfazer {
       width: 100%;
-      margin-bottom: 0.75rem;
-    }
-
-    .admin-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .admin-stack .sheet h2 {
-      font-family: "Bricolage Grotesque", sans-serif;
-      font-size: 1.05rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
       margin-bottom: 0.75rem;
     }
 
@@ -2107,6 +2361,16 @@
         </div>
         <p class="gate-msg" id="bloqueadoMsg">O período de teste acabou. O acesso ficou bloqueado.</p>
         <div class="sheet">
+          <div class="pix-auto" id="pixAuto" hidden>
+            <button type="button" class="btn primary full" id="btnPagarPix">Pagar com PIX (libera sozinho)</button>
+            <div class="pix-gerado" id="pixGerado" hidden>
+              <img id="pixQr" alt="QR Code PIX" width="200" height="200" />
+              <p class="subtitle" style="margin:0.5rem 0">Abra o app do banco, escolha PIX e pague lendo o QR ou colando o código:</p>
+              <textarea id="pixCodigo" readonly rows="3"></textarea>
+              <button type="button" class="btn full" id="btnCopiarPixAuto" style="margin-top:0.45rem">Copiar código PIX</button>
+              <p class="hint" id="pixStatus" style="text-align:center;margin-top:0.55rem">Aguardando pagamento…</p>
+            </div>
+          </div>
           <div class="pix-box" id="pixBoxBloqueado">
             <div class="label">Valor pra liberar</div>
             <div class="valor" id="bloqueadoValor">R$ 97,00</div>
@@ -2444,30 +2708,55 @@
 
     <!-- ADMIN -->
     <section id="viewAdmin" class="view">
-      <div class="topbar">
-        <div class="brand-mark" style="flex:1">
-          <img class="logo" src="./icon.svg" alt="" width="36" height="36" />
-          <div>
-            <h1 style="margin:0">Administrador</h1>
-            <p class="subtitle" style="margin:0" id="adminSubtitle">Painel de gestão do Fiado</p>
+      <div class="adm">
+        <nav class="adm-side" aria-label="Seções do painel">
+          <div class="adm-side-brand">
+            <img class="logo" src="./icon.svg" alt="" width="36" height="36" />
+            <span>Fiado</span>
           </div>
-        </div>
-        <button type="button" class="btn ghost" id="btnSairAdmin">Sair</button>
-      </div>
+          <a href="#adminCloudSheet">Mercados</a>
+          <a href="#adm-licenca">Licença e teste</a>
+          <a href="#adm-clientes">Caderno</a>
+          <a href="#adm-historico">Histórico</a>
+          <a href="#adm-cobranca">Cobrança PIX</a>
+          <a href="#adm-senha">Senha admin</a>
+          <a href="#adm-dados">Dados</a>
+        </nav>
 
-      <div class="resumo duo">
-        <div>
-          <div class="label">Total em aberto</div>
-          <div class="valor alerta" id="adminTotalAberto">R$ 0,00</div>
-        </div>
-        <div>
-          <div class="label">Clientes</div>
-          <div class="valor" id="adminTotalClientes">0</div>
-        </div>
-      </div>
+        <div class="adm-main">
+          <div class="adm-head">
+            <div class="brand-mark">
+              <div>
+                <h1 style="margin:0">Painel do administrador</h1>
+                <p class="subtitle" style="margin:0" id="adminSubtitle">Painel de gestão do Fiado</p>
+              </div>
+            </div>
+            <button type="button" class="btn ghost" id="btnSairAdmin">Sair</button>
+          </div>
 
-      <div class="admin-stack">
-        <div class="sheet" id="adminCloudSheet" hidden>
+          <div class="adm-kpis">
+            <div class="adm-kpi">
+              <div class="label">Total em aberto</div>
+              <div class="valor alerta" id="adminTotalAberto">R$ 0,00</div>
+            </div>
+            <div class="adm-kpi">
+              <div class="label">Clientes no caderno</div>
+              <div class="valor" id="adminTotalClientes">0</div>
+            </div>
+            <div class="adm-kpi">
+              <div class="label">Mercados na nuvem</div>
+              <div class="valor" id="adminKpiMercados">—</div>
+            </div>
+          </div>
+
+          <div class="adm-grid">
+        <div class="adm-card adm-span-12" id="adm-vencimentos" hidden>
+          <h2>Licenças e vencimentos</h2>
+          <p class="subtitle" style="margin-bottom:0.75rem">Mercados em teste, ordenados pelo que vence primeiro. Teste de <span id="adminVencDias">14</span> dias contados a partir do primeiro login.</p>
+          <div class="admin-lista" id="adminVencLista"></div>
+        </div>
+
+        <div class="adm-card adm-span-8" id="adminCloudSheet" hidden>
           <h2>Mercados na nuvem</h2>
           <p class="subtitle" id="adminCloudStatus" style="margin-bottom:0.75rem">—</p>
           <div class="admin-lista" id="adminListaMercados" style="margin-bottom:0.75rem"></div>
@@ -2477,7 +2766,7 @@
           </label>
           <label class="field">
             Senha do balcão
-            <input id="novoMercadoSenha" type="text" placeholder="mín. 4 caracteres" autocomplete="off" />
+            <input id="novoMercadoSenha" type="password" placeholder="mín. 4 caracteres" autocomplete="new-password" />
           </label>
           <label class="field">
             Nome na tela
@@ -2489,7 +2778,7 @@
           </p>
         </div>
 
-        <div class="sheet">
+        <div class="adm-card adm-span-4" id="adm-licenca">
           <h2>Licença / teste</h2>
           <div class="admin-status" id="adminLicencaStatus">—</div>
           <div class="codigo-box" id="adminCodigoBox">—</div>
@@ -2503,7 +2792,7 @@
           </div>
         </div>
 
-        <div class="sheet">
+        <div class="adm-card adm-span-4" id="adm-cobranca">
           <h2>Cobrança (PIX)</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Aparece na tela quando o teste acaba.</p>
           <label class="field">
@@ -2517,7 +2806,7 @@
           <button type="button" class="btn primary full" id="btnAdminSalvarPix">Salvar cobrança</button>
         </div>
 
-        <div class="sheet" id="adminContaLocalSheet">
+        <div class="adm-card adm-span-4" id="adminContaLocalSheet">
           <h2>Conta do mercado (modo local)</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Só vale se a nuvem estiver desligada. Com nuvem, use “Mercados na nuvem”.</p>
           <label class="field">
@@ -2530,12 +2819,12 @@
           </label>
           <label class="field">
             Senha do balcão
-            <input id="adminSenhaBalcao" type="text" autocomplete="off" />
+            <input id="adminSenhaBalcao" type="password" autocomplete="new-password" />
           </label>
           <button type="button" class="btn primary full" id="btnAdminSalvarConta">Salvar conta</button>
         </div>
 
-        <div class="sheet">
+        <div class="adm-card adm-span-4" id="adm-senha">
           <h2>Senha do administrador</h2>
           <p class="subtitle" style="margin-bottom:0.75rem">Só você usa. Usuário: <strong id="adminUserLabel">admin</strong></p>
           <label class="field">
@@ -2553,8 +2842,9 @@
           <button type="button" class="btn primary full" id="btnAdminTrocarSenha">Trocar senha admin</button>
         </div>
 
-        <div class="sheet">
-          <h2>Clientes do fiado</h2>
+        <div class="adm-card adm-span-8" id="adm-clientes">
+          <h2>Caderno do balcão</h2>
+          <p class="subtitle" style="margin-bottom:0.75rem">Clientes e saldos do caderno aberto neste aparelho.</p>
           <div class="search" style="margin-bottom:0.55rem">
             <input id="adminBusca" type="search" placeholder="Buscar cliente…" autocomplete="off" />
           </div>
@@ -2563,16 +2853,20 @@
           <button type="button" class="btn full" id="btnAdminAbrirBalcao" style="margin-top:0.45rem">Abrir app do balcão</button>
         </div>
 
-        <div class="sheet">
+        <div class="adm-card adm-span-4" id="adm-historico">
           <h2>Histórico de ações</h2>
           <div id="adminLogAcoes" class="admin-lista" style="max-height:12rem"></div>
           <button type="button" class="btn full" id="btnAdminLimparLog" style="margin-top:0.55rem">Limpar histórico</button>
         </div>
 
-        <div class="sheet">
+        <div class="adm-card adm-span-12" id="adm-dados">
           <h2>Dados</h2>
-          <button type="button" class="btn full" id="btnAdminBackup">Guardar / restaurar caderno</button>
-          <button type="button" class="btn danger full" id="btnAdminZerar" style="margin-top:0.45rem">Apagar todos os clientes</button>
+          <div class="adm-dados-row">
+            <button type="button" class="btn" id="btnAdminBackup">Guardar / restaurar caderno</button>
+            <button type="button" class="btn danger" id="btnAdminZerar">Apagar todos os clientes</button>
+          </div>
+        </div>
+          </div>
         </div>
       </div>
     </section>
@@ -4198,13 +4492,47 @@
       return formatDataBR(`${yy}-${mm}-${dd}`);
     }
 
+    // Tempo que falta até o fim do teste (nuvem). Vai até 00:00 do dia em que o teste acaba,
+    // igual à regra de acesso (diasRestantesTrial), para o cliente não ver uma data e ser bloqueado antes.
+    function tempoRestanteTrialMs() {
+      const meta = FiadoCloud.getMeta() || {};
+      const trialDias = Number(meta.trialDias) || LICENCA.trialDias;
+      if (!meta.trialInicio) return trialDias * 86400000;
+      const fim = new Date(meta.trialInicio);
+      fim.setDate(fim.getDate() + trialDias);
+      fim.setHours(0, 0, 0, 0);
+      return fim - Date.now();
+    }
+
+    function formatarTempoRestante(ms) {
+      const minutos = Math.floor(ms / 60000);
+      const dias = Math.floor(minutos / 1440);
+      const horas = Math.floor((minutos % 1440) / 60);
+      const min = minutos % 60;
+      if (dias > 0) return `${dias} dia${dias === 1 ? "" : "s"} e ${horas} h`;
+      if (horas > 0) return `${horas} h ${String(min).padStart(2, "0")} min`;
+      return `${min} min`;
+    }
+
     function atualizarPillTrial() {
       const el = $("#trialPill");
       const aviso = $("#avisoTeste");
       if (!el) return;
       if (estaPago()) {
         el.className = "trial-pill pago";
-        el.textContent = cloudOn() ? "Nuvem · liberado" : "Acesso liberado";
+        if (cloudOn()) {
+          const meta = FiadoCloud.getMeta() || {};
+          if (meta.pagoAte) {
+            const ms = new Date(meta.pagoAte).getTime() - Date.now();
+            el.textContent = ms > 0
+              ? `Nuvem · Licença paga: ${formatarTempoRestante(ms)} restantes`
+              : "Nuvem · Licença vencida";
+          } else {
+            el.textContent = "Nuvem · liberado";
+          }
+        } else {
+          el.textContent = "Acesso liberado";
+        }
         if (aviso) {
           aviso.classList.remove("show");
           aviso.innerHTML = "";
@@ -4214,7 +4542,12 @@
       const dias = diasRestantesTrial();
       el.className = "trial-pill" + (dias <= 3 ? " urgente" : "");
       const prefix = cloudOn() ? "Nuvem · " : "";
-      if (dias <= 0) {
+      if (cloudOn()) {
+        const ms = tempoRestanteTrialMs();
+        el.textContent = ms <= 0
+          ? prefix + "Teste encerrado"
+          : `${prefix}Teste: ${formatarTempoRestante(ms)} restantes`;
+      } else if (dias <= 0) {
         el.textContent = prefix + "Teste encerrado";
       } else if (dias === 1) {
         el.textContent = prefix + "Teste: último dia";
@@ -4405,6 +4738,74 @@
         ? `https://wa.me/55${fone.replace(/^55/, "")}?text=${texto}`
         : `https://wa.me/?text=${texto}`;
       window.open(url, "_blank");
+    }
+
+    // Busca até quando a licença paga vale e guarda no aparelho (só na nuvem).
+    // Se a função ainda não existir no banco, o app segue sem a data.
+    async function carregarValidadePaga() {
+      if (!cloudOn() || !FiadoCloud.getToken()) return;
+      try {
+        const ate = await FiadoCloud.validadeMercado();
+        FiadoCloud.patchMeta({ pagoAte: ate });
+        atualizarPillTrial();
+      } catch (_) {
+        /* sem a função no banco: continua sem a data */
+      }
+    }
+
+    let pixTimer = null;
+
+    async function pagarComPix() {
+      const btn = $("#btnPagarPix");
+      btn.disabled = true;
+      try {
+        const res = await FiadoCloud.criarPix();
+        $("#pixQr").src = res.qrBase64 ? `data:image/png;base64,${res.qrBase64}` : "";
+        $("#pixCodigo").value = res.copiaECola || "";
+        $("#pixStatus").textContent = "Aguardando pagamento…";
+        $("#pixGerado").hidden = false;
+        acompanharPix();
+      } catch (err) {
+        toast(err.message || "Erro ao gerar o PIX", true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function acompanharPix() {
+      clearInterval(pixTimer);
+      let tentativas = 0;
+      pixTimer = setInterval(async () => {
+        tentativas++;
+        try {
+          const info = await FiadoCloud.mercadoInfo();
+          if (info && info.pago) {
+            clearInterval(pixTimer);
+            FiadoCloud.patchMeta({ pago: true, bloqueado: false });
+            $("#pixStatus").textContent = "Pagamento confirmado!";
+            toast("Acesso liberado!");
+            await entrarNoApp();
+            return;
+          }
+        } catch (_) {
+          /* tenta de novo no próximo ciclo */
+        }
+        if (tentativas >= 150) {
+          clearInterval(pixTimer);
+          $("#pixStatus").textContent = "Ainda não confirmou. Se já pagou, feche e abra o app.";
+        }
+      }, 4000);
+    }
+
+    async function copiarPixAuto() {
+      const codigo = $("#pixCodigo").value || "";
+      if (!codigo) return;
+      try {
+        await navigator.clipboard.writeText(codigo);
+        toast("Código PIX copiado");
+      } catch {
+        toast("Não deu pra copiar", true);
+      }
     }
 
     async function copiarPixBloqueado() {
@@ -4807,6 +5208,9 @@
       box.innerHTML = `<div class="vazio" style="padding:0.8rem">Carregando mercados…</div>`;
       try {
         const lista = await FiadoCloud.listarMercados();
+        const kpi = $("#adminKpiMercados");
+        if (kpi) kpi.textContent = String(lista.length);
+        renderVencimentos(lista);
         const ativo = mercadoAdminAtivoId();
         if (!lista.length) {
           box.innerHTML = `<div class="vazio" style="padding:0.8rem">Nenhum mercado ainda. Crie o primeiro abaixo.</div>`;
@@ -4836,7 +5240,7 @@
                 </label>
                 <label class="field">
                   Nova senha do balcão
-                  <input type="text" data-edit-senha="${m.id}" placeholder="Deixe vazio pra manter a atual" autocomplete="off" />
+                  <input type="password" data-edit-senha="${m.id}" placeholder="Deixe vazio pra manter a atual" autocomplete="new-password" />
                 </label>
                 <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
                   <button type="button" class="btn primary" data-salvar-mercado="${m.id}">Salvar</button>
@@ -4931,6 +5335,50 @@
       } catch (err) {
         toast(err.message || "Erro ao salvar", true);
       }
+    }
+
+    function renderVencimentos(lista) {
+      const card = $("#adm-vencimentos");
+      const box = $("#adminVencLista");
+      if (!card || !box) return;
+      card.hidden = false;
+      const DIA = 86400000;
+      const dias = $("#adminVencDias");
+      if (dias) dias.textContent = String(LICENCA.trialDias);
+
+      const itens = lista
+        .map((m) => {
+          if (m.pago) return { m, situacao: "pago", restam: null };
+          if (m.bloqueado) return { m, situacao: "bloqueado", restam: null };
+          if (!m.trialInicio) return { m, situacao: "sem início", restam: null };
+          const fim = new Date(m.trialInicio).getTime() + LICENCA.trialDias * DIA;
+          const restam = Math.ceil((fim - Date.now()) / DIA);
+          return { m, situacao: restam > 0 ? "teste" : "vencido", restam };
+        })
+        .filter((i) => i.situacao === "teste" || i.situacao === "vencido")
+        .sort((a, b) => a.restam - b.restam);
+
+      if (!itens.length) {
+        box.innerHTML = `<div class="vazio" style="padding:0.8rem">Nenhum teste em andamento. Todos os mercados estão pagos ou bloqueados.</div>`;
+        return;
+      }
+
+      box.innerHTML = itens
+        .map(({ m, situacao, restam }) => {
+          const tom = situacao === "vencido" || restam <= 2 ? "perigo" : restam <= 5 ? "alerta" : "ok";
+          const texto = situacao === "vencido"
+            ? "Teste vencido"
+            : `Vence em ${restam} dia${restam === 1 ? "" : "s"}`;
+          return `
+            <div class="log-item adm-venc-item">
+              <div>
+                <div><strong>${escapeHtml(m.nome || m.usuario)}</strong> · @${escapeHtml(m.usuario)}</div>
+                <div class="quando">Início do teste: ${escapeHtml(formatQuando(new Date(m.trialInicio).getTime()))}</div>
+              </div>
+              <div class="adm-venc-tag ${tom}">${texto}</div>
+            </div>`;
+        })
+        .join("");
     }
 
     function renderAdminLog() {
@@ -6621,6 +7069,17 @@
     $("#btnAdminExportarDevedores").addEventListener("click", adminExportarDevedores);
     $("#btnAdminLimparLog").addEventListener("click", adminLimparLog);
     $("#btnCopiarPix").addEventListener("click", copiarPixBloqueado);
+    $("#pixAuto").hidden = !cloudOn();
+    // Atualiza o temporizador a cada minuto (só na nuvem); a validade é buscada a cada 5 min
+    let ticksValidade = 0;
+    carregarValidadePaga();
+    setInterval(() => {
+      if (!cloudOn()) return;
+      atualizarPillTrial();
+      if (++ticksValidade % 5 === 0) carregarValidadePaga();
+    }, 60000);
+    $("#btnPagarPix").addEventListener("click", pagarComPix);
+    $("#btnCopiarPixAuto").addEventListener("click", copiarPixAuto);
     $("#btnAdminAbrirBalcao").addEventListener("click", async () => {
       if (cloudOn() && isAdmin() && !mercadoAdminAtivoId()) {
         toast("Abra um mercado em Mercados na nuvem primeiro", true);
