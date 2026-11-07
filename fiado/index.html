@@ -1696,6 +1696,203 @@
       display: none !important;
     }
 
+    /* ===== Painel novo do admin ===== */
+    .admN {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 62rem;
+      margin: 0 auto;
+    }
+
+    .admN-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: linear-gradient(135deg, #1a2e1f 0%, #2d4a35 60%, #3c5e44 100%);
+      color: #f4f7f3;
+      border-radius: 1.2rem;
+      padding: 1.2rem 1.4rem;
+      box-shadow: 0 12px 30px rgba(26, 46, 31, 0.25);
+    }
+
+    .admN-top h1 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .admN-top .subtitle {
+      color: #c9d8cb;
+    }
+
+    .admN-top .btn.ghost {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .admN-resumo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      gap: 0.8rem;
+    }
+
+    .admN-card {
+      background: rgba(244, 247, 243, 0.92);
+      border: 1px solid rgba(180, 194, 181, 0.7);
+      border-radius: 1.1rem;
+      padding: 1.1rem 1.2rem;
+      box-shadow: 0 6px 18px rgba(20, 32, 24, 0.06);
+    }
+
+    .admN-card[hidden] {
+      display: none;
+    }
+
+    .admN-resumo .admN-card {
+      background: linear-gradient(160deg, #ffffff 0%, #f1f6f1 100%);
+    }
+
+    .admN-rotulo {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--ink-soft);
+    }
+
+    .admN-numero {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--brand);
+      margin-top: 0.2rem;
+    }
+
+    .admN-bloco h2 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin-bottom: 0.2rem;
+    }
+
+    .admN-sub {
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink-soft);
+      margin: 1rem 0 0.5rem;
+    }
+
+    .admN-lista {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-top: 0.8rem;
+    }
+
+    .admN-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0.9rem;
+      padding: 0.8rem 0.95rem;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+
+    .admN-item:hover {
+      box-shadow: 0 8px 20px rgba(20, 32, 24, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .admN-item.sel {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    .admN-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .admN-nome {
+      font-weight: 800;
+      font-size: 1.02rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admN-usuario {
+      font-size: 0.82rem;
+      color: var(--ink-soft);
+      margin-top: 0.15rem;
+    }
+
+    .admN-chip {
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .admN-chip.vit { background: #e7dcf5; color: #5b3a8a; }
+    .admN-chip.ativo { background: #dcefe3; color: var(--ok); }
+    .admN-chip.teste { background: #f6e7cf; color: var(--warn); }
+    .admN-chip.bloq { background: #f4d9d9; color: var(--debt); }
+
+    .admN-status-grande {
+      display: inline-block;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--brand);
+      background: #eef4f0;
+      border-radius: 0.7rem;
+      padding: 0.35rem 0.8rem;
+      margin: 0.4rem 0 0.2rem;
+    }
+
+    .admN-acoes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+      gap: 0.5rem;
+    }
+
+    .admN-acoes .btn {
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .admN-top h1 {
+        font-size: 1.3rem;
+      }
+
+      .admN-item {
+        flex-wrap: wrap;
+      }
+
+      .admN-info {
+        flex: 1 1 100%;
+      }
+
+      .admN-item .btn {
+        flex: 1 1 auto;
+      }
+    }
+
+    #admPainelN {
+      border-color: var(--accent);
+      box-shadow: 0 10px 28px rgba(196, 92, 38, 0.15);
+    }
+
     .adm-side a.ativo {
       background: var(--accent-soft);
       color: var(--brand);
@@ -2978,6 +3175,99 @@
 
     <!-- ADMIN -->
     <section id="viewAdmin" class="view">
+      <!-- NOVO PAINEL (simples) -->
+      <div class="admN">
+        <header class="admN-top">
+          <div>
+            <h1>Painel do administrador</h1>
+            <p class="subtitle">Seus clientes e seus pagamentos</p>
+          </div>
+          <button type="button" class="btn ghost" id="admSair">Sair</button>
+        </header>
+
+        <div class="admN-resumo">
+          <div class="admN-card">
+            <div class="admN-rotulo">Recebido com PIX</div>
+            <div class="admN-numero" id="admTotalRecebido">R$ 0,00</div>
+          </div>
+          <div class="admN-card">
+            <div class="admN-rotulo">Pagamentos feitos</div>
+            <div class="admN-numero" id="admQtdPagamentos">0</div>
+          </div>
+          <div class="admN-card">
+            <div class="admN-rotulo">Clientes</div>
+            <div class="admN-numero" id="admQtdClientes">0</div>
+          </div>
+        </div>
+
+        <div class="admN-card admN-bloco">
+          <h2>Clientes</h2>
+          <p class="subtitle">Toque em <strong>Gerenciar</strong> para ver as opções de cada um.</p>
+          <div id="admListaN" class="admN-lista"></div>
+        </div>
+
+        <div class="admN-card admN-bloco" id="admPainelN" hidden>
+          <h2 id="admPainelNome">—</h2>
+          <div class="admN-status-grande" id="admPainelStatus">—</div>
+          <p class="subtitle" id="admPainelInfo"></p>
+
+          <h3 class="admN-sub">Dar mais tempo de acesso</h3>
+          <div class="admN-acoes">
+            <button type="button" class="btn primary" data-acao="mais30">+ 1 mês</button>
+            <button type="button" class="btn primary" data-acao="mais90">+ 3 meses</button>
+            <button type="button" class="btn primary" data-acao="mais365">+ 1 ano</button>
+            <button type="button" class="btn" data-acao="vitalicio">Vitalício</button>
+          </div>
+
+          <h3 class="admN-sub">Outras opções</h3>
+          <div class="admN-acoes">
+            <button type="button" class="btn" data-acao="reiniciar">Reiniciar teste de 14 dias</button>
+            <button type="button" class="btn" data-acao="bloquear">Bloquear acesso</button>
+            <button type="button" class="btn" data-acao="desbloquear">Desbloquear</button>
+            <button type="button" class="btn" data-acao="abrir">Abrir caderno desse cliente</button>
+          </div>
+
+          <label class="field">
+            Trocar a senha desse cliente
+            <input id="admSenhaCliente" type="password" autocomplete="new-password" placeholder="nova senha (mín. 4)" />
+          </label>
+          <button type="button" class="btn full" data-acao="senha">Salvar nova senha</button>
+          <button type="button" class="btn ghost full" id="admFecharPainel" style="margin-top:0.6rem">Fechar</button>
+        </div>
+
+        <div class="admN-card admN-bloco">
+          <h2>Novo cliente</h2>
+          <label class="field">
+            Usuário (para entrar)
+            <input id="admNovoUser" type="text" autocomplete="off" placeholder="ex.: seuluiz" />
+          </label>
+          <label class="field">
+            Senha
+            <input id="admNovoSenha" type="password" autocomplete="new-password" placeholder="mín. 4 caracteres" />
+          </label>
+          <label class="field">
+            Nome na tela
+            <input id="admNovoNome" type="text" placeholder="ex.: Mercado do Luiz" />
+          </label>
+          <button type="button" class="btn primary full" id="admCriar">Criar cliente</button>
+        </div>
+
+        <div class="admN-card admN-bloco">
+          <h2>Minha senha de administrador</h2>
+          <label class="field">
+            Senha atual
+            <input id="admSenhaAtualN" type="password" autocomplete="current-password" />
+          </label>
+          <label class="field">
+            Nova senha
+            <input id="admSenhaNovaN" type="password" autocomplete="new-password" />
+          </label>
+          <button type="button" class="btn full" id="admTrocarMinha">Trocar minha senha</button>
+        </div>
+      </div>
+
+      <!-- PAINEL ANTIGO (oculto, mantido por compatibilidade) -->
+      <div hidden>
       <div class="adm">
         <nav class="adm-side" aria-label="Seções do painel">
           <div class="adm-side-brand">
@@ -3155,6 +3445,7 @@
         </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   </div>
@@ -5729,6 +6020,7 @@
         }
         await renderAdminMercados();
         await renderLucros();
+        await admCarregarTudo();
       } else {
         const lic = lerLicencaLocal();
         const dias = diasRestantesTrial();
@@ -5763,6 +6055,175 @@
       renderAdminClientes();
       renderAdminLog();
     }
+
+    // ===== Painel novo do admin =====
+    let admMercados = [];
+    let admSelecionado = null;
+
+    function admStatus(m) {
+      if (m.bloqueado) return { txt: "Bloqueado", cls: "bloq" };
+      if (m.pago && !m.pagoAte) return { txt: "Vitalício", cls: "vit" };
+      if (m.pago && m.pagoAte) {
+        const aindaValido = new Date(m.pagoAte).getTime() > Date.now();
+        return aindaValido
+          ? { txt: `Ativo até ${dataBR(m.pagoAte)}`, cls: "ativo" }
+          : { txt: "Vencido", cls: "bloq" };
+      }
+      return { txt: "Em teste", cls: "teste" };
+    }
+
+    async function admCarregarTudo() {
+      if (!cloudOn() || !isAdmin()) return;
+      try {
+        const [lista, fin] = await Promise.all([FiadoCloud.adminResumo(), FiadoCloud.adminFinanceiro()]);
+        admMercados = lista;
+        $("#admTotalRecebido").textContent = formatBRL(Number(fin.total || 0));
+        $("#admQtdPagamentos").textContent = String(fin.quantidade || 0);
+        $("#admQtdClientes").textContent = String(lista.length);
+        admDesenharLista();
+        admDesenharPainel();
+      } catch (err) {
+        toast(err.message || "Erro ao carregar o painel", true);
+      }
+    }
+
+    function admDesenharLista() {
+      const box = $("#admListaN");
+      if (!box) return;
+      if (!admMercados.length) {
+        box.innerHTML = '<p class="subtitle">Nenhum cliente ainda. Crie o primeiro abaixo.</p>';
+        return;
+      }
+      box.innerHTML = admMercados
+        .map((m) => {
+          const st = admStatus(m);
+          const sel = m.id === admSelecionado ? " sel" : "";
+          return `
+            <div class="admN-item${sel}">
+              <div class="admN-info">
+                <div class="admN-nome">${escapeHtml(m.nome || m.usuario)}</div>
+                <div class="admN-usuario">@${escapeHtml(m.usuario)} · último acesso ${escapeHtml(dataHoraBR(m.ultimoAcesso))}</div>
+              </div>
+              <span class="admN-chip ${st.cls}">${escapeHtml(st.txt)}</span>
+              <button type="button" class="btn primary" data-gerir="${escapeHtml(m.id)}">Gerenciar</button>
+            </div>`;
+        })
+        .join("");
+    }
+
+    function admDesenharPainel() {
+      const painel = $("#admPainelN");
+      const m = admMercados.find((x) => x.id === admSelecionado);
+      if (!painel) return;
+      if (!m) {
+        painel.hidden = true;
+        return;
+      }
+      painel.hidden = false;
+      $("#admPainelNome").textContent = m.nome || m.usuario;
+      $("#admPainelStatus").textContent = admStatus(m).txt;
+      $("#admPainelInfo").textContent =
+        `Liberado em ${dataBR(m.pagoEm)} · último acesso ${dataHoraBR(m.ultimoAcesso)}`;
+    }
+
+    async function admAcao(acao) {
+      const m = admMercados.find((x) => x.id === admSelecionado);
+      if (!m) return;
+      try {
+        if (acao === "abrir") {
+          await adminAbrirMercado(m.id);
+          return;
+        }
+        if (acao === "senha") {
+          const nova = ($("#admSenhaCliente").value || "").trim();
+          if (nova.length < 4) {
+            toast("A senha precisa ter pelo menos 4 caracteres", true);
+            return;
+          }
+          await FiadoCloud.atualizarMercado({ id: m.id, senha: nova });
+          $("#admSenhaCliente").value = "";
+          toast("Senha do cliente trocada");
+          return;
+        }
+        if (acao === "vitalicio") {
+          await FiadoCloud.adminDefinirValidade(m.id, null);
+        } else if (acao.startsWith("mais")) {
+          const dias = Number(acao.slice(4));
+          const base = Math.max(Date.now(), m.pagoAte ? new Date(m.pagoAte).getTime() : 0);
+          await FiadoCloud.adminDefinirValidade(m.id, new Date(base + dias * 86400000).toISOString());
+        } else if (acao === "bloquear") {
+          await FiadoCloud.atualizarMercado({ id: m.id, bloqueado: true });
+        } else if (acao === "desbloquear") {
+          await FiadoCloud.atualizarMercado({ id: m.id, bloqueado: false });
+        } else if (acao === "reiniciar") {
+          await FiadoCloud.atualizarMercado({ id: m.id, reiniciarTrial: true });
+        }
+        toast("Pronto!");
+        await admCarregarTudo();
+      } catch (err) {
+        toast(err.message || "Não deu certo", true);
+      }
+    }
+
+    async function admCriarCliente() {
+      const usuario = ($("#admNovoUser").value || "").trim().toLowerCase();
+      const senha = ($("#admNovoSenha").value || "").trim();
+      const nome = ($("#admNovoNome").value || "").trim() || "Fiado";
+      if (!usuario || senha.length < 4) {
+        toast("Usuário e senha (mín. 4) são obrigatórios", true);
+        return;
+      }
+      try {
+        const res = await FiadoCloud.criarMercado(usuario, senha, nome);
+        if (res && res.ok === false) throw new Error(res.erro || "Não deu pra criar");
+        $("#admNovoUser").value = "";
+        $("#admNovoSenha").value = "";
+        $("#admNovoNome").value = "";
+        toast("Cliente criado");
+        await admCarregarTudo();
+      } catch (err) {
+        toast(err.message || "Não deu pra criar", true);
+      }
+    }
+
+    async function admTrocarMinhaSenha() {
+      const atual = $("#admSenhaAtualN").value || "";
+      const nova = $("#admSenhaNovaN").value || "";
+      if (nova.length < 4) {
+        toast("A nova senha precisa ter pelo menos 4 caracteres", true);
+        return;
+      }
+      try {
+        const res = await FiadoCloud.trocarSenhaAdmin(atual, nova);
+        if (res && res.ok === false) throw new Error(res.erro || "Senha atual incorreta");
+        $("#admSenhaAtualN").value = "";
+        $("#admSenhaNovaN").value = "";
+        toast("Senha do administrador trocada");
+      } catch (err) {
+        toast(err.message || "Não deu pra trocar a senha", true);
+      }
+    }
+
+    $("#admSair")?.addEventListener("click", () => $("#btnSairAdmin")?.click());
+    $("#admFecharPainel")?.addEventListener("click", () => {
+      admSelecionado = null;
+      admDesenharLista();
+      admDesenharPainel();
+    });
+    $("#admListaN")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-gerir]");
+      if (!btn) return;
+      admSelecionado = btn.dataset.gerir;
+      admDesenharLista();
+      admDesenharPainel();
+      $("#admPainelN").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    $("#admPainelN")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-acao]");
+      if (btn) admAcao(btn.dataset.acao);
+    });
+    $("#admCriar")?.addEventListener("click", admCriarCliente);
+    $("#admTrocarMinha")?.addEventListener("click", admTrocarMinhaSenha);
 
     async function renderLucros() {
       const card = $("#adm-lucros");
